@@ -638,8 +638,9 @@ kbd{background:#020617;border:1px solid #475569;color:var(--gold-2);padding:2px 
       <h3>Veri Klasörleri</h3>
       <span class="sbadge">7 Klasör</span>
       <span class="line"></span>
+      <span class="more" onclick="toggleVeri()">Göster <i class="bi bi-chevron-down" id="veriChevron"></i></span>
     </div>
-    <div class="tools-grid">
+    <div class="tools-grid" id="veriGrid" style="display:none">
       <div class="tool" onclick="App.klasor('C:\\Users\\omery\\OneDrive\\Desktop\\📂 PANELLER\\IS_VERILERI','IS_VERILERI')">
         <div class="t-ic folder"><i class="bi bi-database-fill"></i></div>
         <div><h4>IS_VERILERI</h4><p>Vergi levhaları · JSON</p></div>
@@ -685,20 +686,6 @@ kbd{background:#020617;border:1px solid #475569;color:var(--gold-2);padding:2px 
     <div class="beyan-card" id="beyanList"></div>
   </section>
 
-  <!-- Sektör Dağılımı -->
-  <section class="section">
-    <div class="section-h">
-      <i class="bi bi-pie-chart-fill" style="color:var(--gold-2);font-size:14px"></i>
-      <h3>Sektör Dağılımı</h3>
-      <span class="line"></span>
-    </div>
-    <div class="sys-list">
-      <div class="sys"><span class="sys-dot" style="background:#a855f7;box-shadow:0 0 7px #a855f770"></span><span class="sys-name">Serbest Meslek (SMM)</span><span class="sys-val">8 mükellef</span></div>
-      <div class="sys"><span class="sys-dot" style="background:#3b82f6;box-shadow:0 0 7px #3b82f670"></span><span class="sys-name">Perakende / Mal Satışı</span><span class="sys-val">4 mükellef</span></div>
-      <div class="sys"><span class="sys-dot" style="background:#f59e0b;box-shadow:0 0 7px #f59e0b70"></span><span class="sys-name">İşletme Defteri</span><span class="sys-val">2 mükellef</span></div>
-      <div class="sys"><span class="sys-dot" style="background:#d4af37;box-shadow:0 0 7px #d4af3770"></span><span class="sys-name">Bilanço Esası</span><span class="sys-val">1 mükellef</span></div>
-    </div>
-  </section>
 </div>
 
 </div><!-- /two-col -->
@@ -710,9 +697,9 @@ kbd{background:#020617;border:1px solid #475569;color:var(--gold-2);padding:2px 
     <h3>Firma Künyeleri</h3>
     <span class="sbadge">37 Firma</span>
     <span class="line"></span>
-    <span class="more" id="kunyeToggle" onclick="KK.toggle()">Gizle <i class="bi bi-chevron-up"></i></span>
+    <span class="more" id="kunyeToggle" onclick="KK.toggle()">Göster <i class="bi bi-chevron-down"></i></span>
   </div>
-  <div id="kunyeSection">
+  <div id="kunyeSection" style="display:none">
     <div class="kunye-toolbar">
       <div class="kunye-search-wrap">
         <i class="bi bi-search"></i>
@@ -836,7 +823,7 @@ function kkRenk(f){
 
 const KK = {
   aktifFiltre:'tum',
-  gorunur:true,
+  gorunur:false,
 
   toggle(){
     this.gorunur=!this.gorunur;
@@ -932,6 +919,15 @@ function toggleEski(){
   const ac=el.style.display==='none';
   el.style.display=ac?'block':'none';
   ch.className='bi bi-chevron-'+(ac?'up':'down');
+}
+
+function toggleVeri(){
+  const el=document.getElementById('veriGrid');
+  const ch=document.getElementById('veriChevron');
+  const ac=el.style.display==='none';
+  el.style.display=ac?'grid':'none';
+  ch.className='bi bi-chevron-'+(ac?'up':'down');
+  ch.parentElement.firstChild.textContent=ac?'Gizle ':'Göster ';
 }
 
 const App = {
