@@ -127,8 +127,15 @@
             });
             btns += '</div>';
             uyumBox += btns;
-            uyumBox += '<div style="overflow:auto;border:1px solid #5b1a1a;border-radius:8px;margin-bottom:18px"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#2a1414;text-align:left">' + ['Fatura No', 'Tarih', 'Gönderen', 'VKN/TC', 'Durum'].map(x => '<th style="padding:8px">' + x + '</th>').join('') + '</tr></thead><tbody id="__eksikBody">';
-            eksik.forEach(x => { const a = ayOf(x); const gizli = (aktifAy !== 'tum' && a !== aktifAy); uyumBox += '<tr class="eksikRow" data-ay="' + a + '" style="border-top:1px solid #3a1a1a;' + (gizli ? 'display:none' : '') + '"><td style="padding:7px;color:#fca5a5;font-weight:700">' + (x.no || '') + '</td><td style="padding:7px">' + (x.tarih || '').slice(0, 10) + '</td><td style="padding:7px">' + (x.unvan || '').slice(0, 50) + '</td><td style="padding:7px">' + (x.vkn || '') + '</td><td style="padding:7px">' + (x.status || '') + '</td></tr>'; });
+            /* Araç gideri tespiti — kısıtlamaya tabi, otomatik işlenmez, uyarılır */
+            const aracRe = /tüvturk|tuvturk|muayene istasyon|akaryakıt|akaryakit|petrol ofisi|opet|shell|aytemiz|total ?energ|bp ?petrol|benzin|motorin|lpg|oto ?lastik|lastik|oto ?yıkama|oto ?servis|oto ?kiralama|rent ?a ?car|kasko|trafik sigorta|zorunlu mali|otopark|otoyol|hgs|ogs|köprü geçiş|araç ?bakım|yedek parça|galeri|otomotiv|motorlu taşıt/i;
+            const isArac = x => aracRe.test((x.unvan || '') + ' ' + (x.no || ''));
+            const aracSay = eksik.filter(isArac).length;
+            if (aracSay) {
+              uyumBox += '<div style="margin-bottom:10px;padding:9px 13px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.4);border-radius:8px;color:#fca5a5;font-size:12.5px"><b>🚗 ' + aracSay + ' araç faturası tespit edildi.</b> Araç giderleri (akaryakıt, muayene, kasko, lastik, bakım) <b>özel kısıtlamaya</b> tabidir — binek otoda gider/KDV kısıtı uygulanır. Bunlar <b>otomatik işlenmez</b>, aşağıda 🚗 işaretli; lütfen elle kontrol edip uygun türde gir.</div>';
+            }
+            uyumBox += '<div style="overflow:auto;border:1px solid #5b1a1a;border-radius:8px;margin-bottom:18px"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#2a1414;text-align:left">' + ['Fatura No', 'Tarih', 'Gönderen', 'VKN/TC', 'Durum', 'Tür'].map(x => '<th style="padding:8px">' + x + '</th>').join('') + '</tr></thead><tbody id="__eksikBody">';
+            eksik.forEach(x => { const a = ayOf(x); const gizli = (aktifAy !== 'tum' && a !== aktifAy); const arac = isArac(x); const tur = arac ? '<span style="color:#fca5a5;font-weight:700">🚗 ARAÇ</span>' : '<span style="color:#9aa6c0">—</span>'; uyumBox += '<tr class="eksikRow" data-ay="' + a + '" style="border-top:1px solid #3a1a1a;' + (arac ? 'background:rgba(239,68,68,.06);' : '') + (gizli ? 'display:none' : '') + '"><td style="padding:7px;color:#fca5a5;font-weight:700">' + (x.no || '') + '</td><td style="padding:7px">' + (x.tarih || '').slice(0, 10) + '</td><td style="padding:7px">' + (x.unvan || '').slice(0, 50) + '</td><td style="padding:7px">' + (x.vkn || '') + '</td><td style="padding:7px">' + (x.status || '') + '</td><td style="padding:7px">' + tur + '</td></tr>'; });
             uyumBox += '</tbody></table></div>';
           } else {
             uyumBox += '<div style="color:#6ee7b7;margin-bottom:18px">✓ Uyumsoft\'taki tüm gelen faturalar deftere girilmiş.</div>';
