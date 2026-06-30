@@ -379,62 +379,6 @@ main{padding:0;min-width:0;overflow-x:hidden}
   color:var(--txt-dim);font-size:13px;
 }
 
-/* ════════ FAB + AKTİVİTE PANEL ════════ */
-.fab{
-  position:fixed;bottom:22px;left:calc(var(--sidebar-w) + 18px);z-index:200;
-  display:flex;align-items:center;gap:9px;
-  background:linear-gradient(135deg,rgba(20,30,55,.95),rgba(15,24,48,.95));
-  border:1px solid var(--br-2);border-radius:30px;
-  padding:9px 16px;cursor:pointer;
-  box-shadow:0 4px 20px rgba(0,0,0,.5);
-  transition:all .2s;backdrop-filter:blur(10px);
-}
-.fab:hover{border-color:var(--gold);box-shadow:0 6px 24px rgba(212,175,55,.2);transform:translateY(-1px)}
-.fab i{font-size:16px;color:var(--gold-2)}
-.fab span{font-size:11.5px;font-weight:700;color:var(--txt-soft)}
-.fab .fab-dot{
-  width:7px;height:7px;border-radius:50%;background:#ef4444;
-  box-shadow:0 0 7px #ef4444;animation:pulse 2s infinite;
-}
-
-.act-panel{
-  position:fixed;left:var(--sidebar-w);bottom:0;width:360px;
-  background:linear-gradient(180deg,rgba(13,21,42,.98),rgba(10,16,32,.98));
-  border:1px solid var(--br-2);border-top-left-radius:0;border-top-right-radius:14px;
-  box-shadow:0 -8px 40px rgba(0,0,0,.55);
-  transform:translateY(100%);transition:transform .3s cubic-bezier(.22,.68,0,1.1);
-  z-index:199;backdrop-filter:blur(14px);max-height:60vh;display:flex;flex-direction:column;
-}
-.act-panel.open{transform:translateY(0)}
-.act-panel-h{
-  padding:14px 16px;border-bottom:1px solid var(--br);
-  display:flex;align-items:center;gap:10px;
-}
-.act-panel-h h4{font-size:13px;font-weight:700;color:#fff;flex:1}
-.act-panel-close{
-  width:26px;height:26px;border-radius:6px;background:rgba(255,255,255,.06);
-  border:none;cursor:pointer;color:var(--txt-dim);display:flex;align-items:center;justify-content:center;
-  font-size:14px;transition:all .15s;
-}
-.act-panel-close:hover{background:rgba(239,68,68,.15);color:#fca5a5}
-.act-body{overflow-y:auto;flex:1;padding:8px}
-.act{
-  display:flex;gap:10px;padding:9px 10px;border-radius:8px;
-  transition:background .12s;
-}
-.act:hover{background:rgba(255,255,255,.03)}
-.act-ic{
-  width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;
-  font-size:13px;flex-shrink:0;
-}
-.act-ic.ok{background:rgba(16,185,129,.15);color:#6ee7b7}
-.act-ic.info{background:rgba(59,130,246,.15);color:#93c5fd}
-.act-ic.warn{background:rgba(245,158,11,.15);color:#fde68a}
-.act-ic.gold{background:rgba(212,175,55,.15);color:var(--gold-2)}
-.act-c h5{font-size:11.5px;color:#fff;font-weight:600;margin-bottom:2px}
-.act-c p{font-size:10.5px;color:var(--txt-dim);line-height:1.45}
-.act-time{font-size:9.5px;color:var(--txt-dim);white-space:nowrap;margin-left:auto;padding-top:1px}
-
 /* Modal */
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.78);display:none;align-items:center;justify-content:center;z-index:1000;padding:20px}
 .modal.show{display:flex}
@@ -464,8 +408,6 @@ kbd{background:#020617;border:1px solid #475569;color:var(--gold-2);padding:2px 
 @media(max-width:900px){
   body{grid-template-columns:1fr}
   aside{display:none}
-  .fab{left:18px}
-  .act-panel{left:0;width:100%}
 }
 </style>
 </head>
@@ -815,23 +757,6 @@ kbd{background:#020617;border:1px solid #475569;color:var(--gold-2);padding:2px 
 </div><!-- /body -->
 </main>
 
-<!-- ════════ FAB: Son Gelişmeler ════════ -->
-<div class="fab" id="fab" onclick="App.fabToggle()">
-  <i class="bi bi-clock-history"></i>
-  <span>Son Gelişmeler</span>
-  <div class="fab-dot" id="fabDot"></div>
-</div>
-
-<!-- Aktivite Slide Panel -->
-<div class="act-panel" id="actPanel">
-  <div class="act-panel-h">
-    <i class="bi bi-clock-history" style="color:var(--gold-2)"></i>
-    <h4>Son Gelişmeler</h4>
-    <button class="act-panel-close" onclick="App.fabClose()"><i class="bi bi-x-lg"></i></button>
-  </div>
-  <div class="act-body" id="actList"></div>
-</div>
-
 <!-- MODALLAR -->
 <div class="modal" id="m-py">
   <div class="modal-box">
@@ -876,16 +801,6 @@ const MUKELLEFLER = [
   {ad:'Sinan Atalay',        harf:'S', sektor:'E-ticaret (Kuyum)',     tip:'İşletme', durum:'aktif',           durumKls:'ok'},
   {ad:'Dilek Öztürk',        harf:'D', sektor:'Kozmetik E-ticaret',   tip:'İşletme', durum:'aktif',           durumKls:'ok'},
   {ad:'Yakup Çoruh',         harf:'Y', sektor:'Emlak / Araç',         tip:'İşletme', durum:'aktif',           durumKls:'ok'},
-];
-
-const AKTIVITELER = [
-  {ic:'bi-check2-circle',    iccls:'ok',   h:'Çağrı Ertürk Haziran 2026 · 7/7 Tamam',       p:'İGDAŞ · Enerjisa · FUJIFILM SK · Vodafone+ÖİV · TSD',  t:'1 sa önce'},
-  {ic:'bi-lightning-fill',   iccls:'gold', h:'KOMUT MERKEZİ v100 — Sonsuz Sürüm Devrede',   p:'15 mükellef · 18 tedarikçi auto-match · ÖİV otomatik',  t:'2 sa önce'},
-  {ic:'bi-stars',            iccls:'warn', h:'Sabit Kıymet 2 aşamalı flow çözüldü',          p:'turKod 13 · alt 253 · giderSabitKıymet nested DTO',     t:'3 sa önce'},
-  {ic:'bi-check2-circle',    iccls:'ok',   h:'Altuğ Erden · Z Raporu 3200 kaydedildi',       p:'01.06.2026 · ₺5.160 (KK ₺2.800 + Nakit ₺2.360)',       t:'5 sa önce'},
-  {ic:'bi-shop',             iccls:'info', h:'Sinan Yılmaz Trendyol/Hepsi Otomasyon',        p:'Söz verilen tarih: 25.07.2026',                         t:'yakında'},
-  {ic:'bi-file-earmark-text',iccls:'gold', h:'78 Vergi Levhası JSON\'a çıkarıldı',           p:'vergi_levhalari.json (Üsküdar, Mecidiyeköy, Beşiktaş)', t:'2 gün önce'},
-  {ic:'bi-check2-circle',    iccls:'ok',   h:'Gider API formülü çözüldü',                    p:'donemsellik:false + kismiTevkifatOrani kaldırıldı',     t:'2 gün önce'},
 ];
 
 // ════════ FİRMA KÜNYELERİ VERİSİ ════════
@@ -1045,7 +960,6 @@ function toggleEski(){
 const App = {
   PYTHON: 'C:\\Users\\omery\\AppData\\Local\\Programs\\Python\\Python314\\pythonw.exe',
   PANELLER: 'C:\\Users\\omery\\OneDrive\\Desktop\\📂 PANELLER',
-  fabAcik: false,
 
   init(){
     const d=new Date();
@@ -1055,7 +969,6 @@ const App = {
     document.getElementById('tarih2').textContent=dd;
 
     this.tabloMukellef();
-    this.aktiviteListe();
     this.beyanTakvimi(d);
     KK.init();
   },
@@ -1073,16 +986,6 @@ const App = {
         <td><span class="type-badge ${tipKls[m.tip]||'smm'}">${m.tip}</span></td>
         <td><span class="pill ${m.durumKls}">${m.durum}</span></td>
       </tr>`).join('');
-  },
-
-  aktiviteListe(){
-    const el=document.getElementById('actList');
-    el.innerHTML=AKTIVITELER.map(a=>`
-      <div class="act">
-        <div class="act-ic ${a.iccls}"><i class="bi ${a.ic}"></i></div>
-        <div class="act-c"><h5>${a.h}</h5><p>${a.p}</p></div>
-        <div class="act-time">${a.t}</div>
-      </div>`).join('');
   },
 
   beyanTakvimi(bugun){
@@ -1135,20 +1038,6 @@ const App = {
     }
   },
 
-  fabToggle(){
-    this.fabAcik=!this.fabAcik;
-    document.getElementById('actPanel').classList.toggle('open',this.fabAcik);
-    document.getElementById('fab').style.opacity=this.fabAcik?'0':'1';
-    document.getElementById('fab').style.pointerEvents=this.fabAcik?'none':'';
-  },
-
-  fabClose(){
-    this.fabAcik=false;
-    document.getElementById('actPanel').classList.remove('open');
-    document.getElementById('fab').style.opacity='1';
-    document.getElementById('fab').style.pointerEvents='';
-  },
-
   pyAc(rel, ad){
     const r=(rel||'').toLowerCase();
     let key='';
@@ -1185,12 +1074,6 @@ const App = {
 };
 
 document.addEventListener('DOMContentLoaded',()=>App.init());
-// Dışarı tıklayınca aktivite panelini kapat
-document.addEventListener('click',e=>{
-  if(App.fabAcik && !document.getElementById('actPanel').contains(e.target) && !document.getElementById('fab').contains(e.target)){
-    App.fabClose();
-  }
-});
 </script>
 
 </body>
