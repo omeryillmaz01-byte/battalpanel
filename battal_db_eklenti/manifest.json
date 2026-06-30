@@ -1,14 +1,19 @@
 {
   "manifest_version": 3,
-  "name": "BATTAL · Defter Beyan Gider Kontrol",
-  "version": "1.1",
-  "description": "Defter Beyan sayfasina otomatik Gider Kontrol butonu ekler. Mukerrer, KDV, stopaj kontrolu yapar. Salt-okuma, guvenli.",
+  "name": "BATTAL · Defter Beyan + Uyumsoft Kontrol",
+  "version": "2.0",
+  "description": "Defter Beyan'da gider kontrolu, Uyumsoft'ta gelen fatura cekme ve iki sistem arasinda capraz eslestirme (eksik fatura tespiti). Salt-okuma, guvenli.",
+  "permissions": ["storage"],
   "host_permissions": [
-    "https://*.defterbeyan.gov.tr/*"
+    "https://*.defterbeyan.gov.tr/*",
+    "https://*.uyum.com.tr/*"
   ],
   "content_scripts": [
     {
-      "matches": ["https://portal.defterbeyan.gov.tr/*"],
+      "matches": [
+        "https://portal.defterbeyan.gov.tr/*",
+        "https://edonusum.uyum.com.tr/*"
+      ],
       "js": ["content.js"],
       "run_at": "document_idle"
     }
