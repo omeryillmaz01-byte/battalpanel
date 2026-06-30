@@ -105,10 +105,14 @@
         const u = store && store.uyumGelen;
         if (u && u.list && u.list.length) {
           const dbNos = new Set(all.map(r => norm(r.belgeSiraNo)).filter(Boolean));
-          const eksik = u.list.filter(x => { const n = norm(x.no); return n && !dbNos.has(n); });
+          const yil = String(new Date().getFullYear());
+          const yilOf = x => { const m = (x.tarih || '').match(/\d{4}/g); return m ? m[m.length - 1] : ''; };
+          const buYil = u.list.filter(x => yilOf(x) === yil);
+          const eksik = buYil.filter(x => { const n = norm(x.no); return n && !dbNos.has(n); });
           const yas = Math.round((Date.now() - u.ts) / 60000);
-          uyumBox = '<div style="margin:18px 0 8px"><b style="font-size:15px;color:#fcd34d">🔗 Uyumsoft Çapraz Kontrol</b> <span style="font-size:11px;color:#9aa6c0">(' + u.list.length + ' gelen fatura · ' + yas + ' dk önce alındı)</span></div>';
-          uyumBox += '<div style="margin-bottom:10px">' + chip('Uyumsoft Toplam', u.list.length, '#1f2937') + chip('Deftere Girilmiş', u.list.length - eksik.length, '#1e3a2f') + chip('EKSİK (girilmemiş)', eksik.length, eksik.length ? '#5b1a1a' : '#1e3a2f') + '</div>';
+          uyumBox = '<div style="margin:18px 0 8px"><b style="font-size:15px;color:#fcd34d">🔗 Uyumsoft Çapraz Kontrol · ' + yil + '</b> <span style="font-size:11px;color:#9aa6c0">(' + u.list.length + ' gelen fatura alındı · ' + buYil.length + ' tanesi ' + yil + ' · ' + yas + ' dk önce)</span></div>';
+          uyumBox += '<div style="margin-bottom:10px">' + chip(yil + ' Gelen', buYil.length, '#1f2937') + chip('Deftere Girilmiş', buYil.length - eksik.length, '#1e3a2f') + chip('EKSİK (girilmemiş)', eksik.length, eksik.length ? '#5b1a1a' : '#1e3a2f') + '</div>';
+          uyumBox += '<div style="margin-bottom:10px;padding:8px 12px;background:rgba(252,211,77,.08);border:1px solid rgba(252,211,77,.25);border-radius:8px;color:#fcd34d;font-size:11.5px">⚠️ Not: Aşağıdaki bazı kayıtlar (Migros, ŞOK, Getir, marketler) şahsi/indirilemez harcama olabilir — deftere girilmemesi normaldir. İşletmeyle ilgili olanları (mal alışı, tedarikçi, gider) sen seç.</div>';
           if (eksik.length) {
             uyumBox += '<div style="overflow:auto;border:1px solid #5b1a1a;border-radius:8px;margin-bottom:18px"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#2a1414;text-align:left">' + ['Fatura No', 'Tarih', 'Gönderen', 'VKN/TC', 'Durum'].map(x => '<th style="padding:8px">' + x + '</th>').join('') + '</tr></thead><tbody>';
             eksik.forEach(x => { uyumBox += '<tr style="border-top:1px solid #3a1a1a"><td style="padding:7px;color:#fca5a5;font-weight:700">' + (x.no || '') + '</td><td style="padding:7px">' + (x.tarih || '').slice(0, 10) + '</td><td style="padding:7px">' + (x.unvan || '').slice(0, 50) + '</td><td style="padding:7px">' + (x.vkn || '') + '</td><td style="padding:7px">' + (x.status || '') + '</td></tr>'; });
