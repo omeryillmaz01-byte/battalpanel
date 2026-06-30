@@ -305,6 +305,80 @@ main{padding:0;min-width:0;overflow-x:hidden}
 .sys-name{flex:1;font-size:11.5px;color:var(--txt-soft)}
 .sys-val{font-size:10.5px;color:var(--txt-dim);font-variant-numeric:tabular-nums}
 
+/* ════════ FİRMA KÜNYELERİ ════════ */
+.kunye-toolbar{
+  display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;
+}
+.kunye-search{
+  flex:1;min-width:220px;
+  background:var(--card);border:1px solid var(--br);border-radius:9px;
+  padding:9px 13px 9px 36px;color:var(--txt);font-family:inherit;font-size:13px;
+  outline:none;transition:border .15s;position:relative;
+}
+.kunye-search:focus{border-color:rgba(212,175,55,.4)}
+.kunye-search-wrap{position:relative;flex:1;min-width:220px}
+.kunye-search-wrap i{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--txt-dim);font-size:14px;pointer-events:none}
+.kunye-filter{
+  display:flex;gap:5px;flex-wrap:wrap;
+}
+.kf-btn{
+  padding:7px 13px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;
+  background:var(--card);border:1px solid var(--br);color:var(--txt-dim);transition:all .15s;
+}
+.kf-btn:hover{border-color:rgba(212,175,55,.3);color:var(--txt-soft)}
+.kf-btn.active{background:rgba(212,175,55,.15);border-color:rgba(212,175,55,.4);color:var(--gold-2)}
+.kunye-count{font-size:11px;color:var(--txt-dim);white-space:nowrap;align-self:center}
+
+.kunye-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px;
+}
+.kk{
+  background:var(--card);border:1px solid var(--br);border-radius:11px;
+  padding:14px;transition:all .18s;cursor:default;
+  position:relative;overflow:hidden;
+}
+.kk::before{
+  content:"";position:absolute;left:0;top:0;width:3px;height:100%;
+  background:var(--kk-color,var(--gold));opacity:.7;
+}
+.kk:hover{background:var(--card-h);border-color:rgba(212,175,55,.2)}
+.kk-head{display:flex;align-items:flex-start;gap:10px;margin-bottom:9px}
+.kk-av{
+  width:36px;height:36px;border-radius:8px;flex-shrink:0;
+  background:var(--kk-bg,rgba(212,175,55,.12));
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px;font-weight:800;color:var(--kk-color,var(--gold-2));
+}
+.kk-title{flex:1;min-width:0}
+.kk-unvan{font-size:12px;font-weight:700;color:#fff;line-height:1.35;margin-bottom:2px}
+.kk-vkn{font-size:10px;color:var(--txt-dim);font-family:'Consolas',monospace;letter-spacing:.4px}
+.kk-body{font-size:11px;color:var(--txt-dim);line-height:1.65}
+.kk-body b{color:var(--txt-soft)}
+.kk-body .row{display:flex;gap:6px;align-items:flex-start;margin-bottom:2px}
+.kk-body .row i{margin-top:2px;flex-shrink:0;font-size:11px}
+.kk-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:9px}
+.kk-tag{
+  font-size:9.5px;padding:2px 7px;border-radius:5px;font-weight:600;
+  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);color:var(--txt-dim);
+}
+.kk-tag.ok{background:rgba(16,185,129,.12);border-color:rgba(16,185,129,.25);color:#6ee7b7}
+.kk-tag.warn{background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.25);color:#fde68a}
+.kk-tag.acc{background:rgba(59,130,246,.12);border-color:rgba(59,130,246,.25);color:#93c5fd}
+.kk-tag.pur{background:rgba(168,85,247,.12);border-color:rgba(168,85,247,.25);color:#d8b4fe}
+.kk-copy{
+  position:absolute;top:10px;right:10px;
+  width:24px;height:24px;border-radius:6px;border:none;cursor:pointer;
+  background:rgba(255,255,255,.05);color:var(--txt-dim);
+  display:flex;align-items:center;justify-content:center;font-size:12px;
+  opacity:0;transition:opacity .15s;
+}
+.kk:hover .kk-copy{opacity:1}
+.kk-copy:hover{background:rgba(212,175,55,.18);color:var(--gold-2)}
+.kk-none{
+  grid-column:1/-1;padding:40px;text-align:center;
+  color:var(--txt-dim);font-size:13px;
+}
+
 /* ════════ FAB + AKTİVİTE PANEL ════════ */
 .fab{
   position:fixed;bottom:22px;left:calc(var(--sidebar-w) + 18px);z-index:200;
@@ -422,6 +496,10 @@ kbd{background:#020617;border:1px solid #475569;color:var(--gold-2);padding:2px 
       </a>
       <a class="nav-item" href="#veri">
         <span class="ic"><i class="bi bi-folder2-open"></i></span>Veri Klasörleri
+      </a>
+      <a class="nav-item" href="#firmalar">
+        <span class="ic"><i class="bi bi-building"></i></span>Firma Künyeleri
+        <span class="nbadge">37</span>
       </a>
     </div>
 
@@ -705,6 +783,35 @@ kbd{background:#020617;border:1px solid #475569;color:var(--gold-2);padding:2px 
 </div>
 
 </div><!-- /two-col -->
+
+<!-- ════════ FİRMA KÜNYELERİ ════════ -->
+<section id="firmalar" class="section" style="margin-top:10px">
+  <div class="section-h">
+    <i class="bi bi-building" style="color:var(--gold-2);font-size:14px"></i>
+    <h3>Firma Künyeleri</h3>
+    <span class="sbadge">37 Firma</span>
+    <span class="line"></span>
+    <span class="more" id="kunyeToggle" onclick="KK.toggle()">Gizle <i class="bi bi-chevron-up"></i></span>
+  </div>
+  <div id="kunyeSection">
+    <div class="kunye-toolbar">
+      <div class="kunye-search-wrap">
+        <i class="bi bi-search"></i>
+        <input class="kunye-search" id="kunyeAra" placeholder="Firma adı, VKN, vergi dairesi, faaliyet..." oninput="KK.filtrele()">
+      </div>
+      <div class="kunye-filter" id="kunyeFiltre">
+        <button class="kf-btn active" data-f="tum"     onclick="KK.setFiltre('tum',this)">Tümü</button>
+        <button class="kf-btn"        data-f="sirket"  onclick="KK.setFiltre('sirket',this)">Şirket (VKN)</button>
+        <button class="kf-btn"        data-f="sahis"   onclick="KK.setFiltre('sahis',this)">Şahıs (TC)</button>
+        <button class="kf-btn"        data-f="sgk"     onclick="KK.setFiltre('sgk',this)">SGK'lı</button>
+        <button class="kf-btn"        data-f="uyumsoft"onclick="KK.setFiltre('uyumsoft',this)">Uyumsoft</button>
+      </div>
+      <span class="kunye-count" id="kunyeCount"></span>
+    </div>
+    <div class="kunye-grid" id="kunyeGrid"></div>
+  </div>
+</section>
+
 </div><!-- /body -->
 </main>
 
@@ -781,6 +888,141 @@ const AKTIVITELER = [
   {ic:'bi-check2-circle',    iccls:'ok',   h:'Gider API formülü çözüldü',                    p:'donemsellik:false + kismiTevkifatOrani kaldırıldı',     t:'2 gün önce'},
 ];
 
+// ════════ FİRMA KÜNYELERİ VERİSİ ════════
+const FIRMALAR = [
+  {klasor:'2AA_YAYINCILIK',unvan:'2AA GIDA KAHVECİLİK PAZ SAN VE TİC.LTD.ŞTİ.',vkn:'0011198756',vd:'SARIYER',faaliyet_kodu:'463702',faaliyet_adi:'KAHVE, KAKAO VE BAHARAT TOPTAN TİCARETİ',adres:'MİMAR SİNAN MAH. TEVFİK EFENDİ SK. NO: 13/1 EYÜPSULTAN/İSTANBUL',mersis:'0001119875600001',sermaye:'50.000,00 TL',kurulus:'27.09.2017',vergi_turu:'KURUMLAR VERGİSİ',uyumsoft_k:'aaGidaKahvecilik',sgk:false},
+  {klasor:'4_BIZ_BILISIM',unvan:'4 BİZ BİLİŞİM TEKN.SAN VE TİC LTD.ŞTİ.',vkn:'0010664713',vd:'BEŞİKTAŞ',faaliyet_kodu:'501014',faaliyet_adi:'DENİZ VE KIYI SULARINDA YAT İŞLETMECİLİĞİ',adres:'LEVAZIM MAH. KORU SK. KORUKENT SİTESİ S BLOK NO: 40/1 BEŞİKTAŞ/İSTANBUL',mersis:'0001066471300019',sermaye:'910.000,00 TL',kurulus:'21.10.2009',vergi_turu:'KURUMLAR VERGİSİ',uyumsoft_k:'4BizBilisim',sgk:true,sgk_adi:'BEŞİKTAŞ SGK'},
+  {klasor:'AKCA_AGIZ',unvan:'AKÇA AĞIZ VE DİŞ SAĞLIĞI HİZMETLERİ LİMİTED ŞİRKETİ',vkn:'0180814651',vd:'KOZYATAĞI',faaliyet_kodu:'862301',faaliyet_adi:'DİŞ HEKİMLİĞİ UYGULAMA FAALİYETLERİ',adres:'KÜÇÜKBAKKALKÖY MAH. RÜYA SK. NO: 12-18 ATAŞEHİR/İSTANBUL',mersis:'',sermaye:'',kurulus:'',vergi_turu:'KURUMLAR VERGİSİ',uyumsoft_k:'AkcaAgiz',sgk:false},
+  {klasor:'BESA_GIDA',unvan:'BESA GIDA VE TÜKETİM ÜRÜNLERİ SANAYİ TİC.LTD.ŞTİ.',vkn:'1660327399',vd:'BAŞAKŞEHİR',faaliyet_kodu:'463903',faaliyet_adi:'UZMANLAŞMAMIŞ GIDA, İÇECEK VE TÜTÜN TOPTAN TİCARETİ',adres:'ŞAHİNTEPE MAH. ŞEHİT POLİS FETHİ SEKİN CAD. İGTOT 10A BLOK NO: 1 R BAŞAKŞEHİR/İSTANBUL',mersis:'0166032739900017',sermaye:'500.000,00 TL',kurulus:'04.01.2006',vergi_turu:'KURUMLAR VERGİSİ',uyumsoft_k:'BesaGida1',sgk:true,sgk_adi:'BAŞAKŞEHİR SGK'},
+  {klasor:'BILPARK_BILISIM',unvan:'BİLPARK BİLİŞİM TEKN.SAN VE TİC.A.Ş.',vkn:'1750216728',vd:'ZİNCİRLİKUYU',faaliyet_kodu:'621000',faaliyet_adi:'BİLGİSAYAR PROGRAMLAMA FAALİYETLERİ',adres:'MECİDİYEKÖY MAH. KERVAN GEÇMEZ SK. ESER APT NO: 20 ŞİŞLİ/İSTANBUL',mersis:'0175021672800010',sermaye:'100.000,00 TL',kurulus:'14.12.2001',vergi_turu:'KURUMLAR VERGİSİ',uyumsoft_k:'BIlparkBIlIsIm',sgk:true,sgk_adi:'ŞİŞLİ SGK'},
+  {klasor:'BILPARK_YAZILIM',unvan:'BİLPARK YAZILIM TEKNOLOJİLERİ SANAYİ VE TİCARET A.Ş.',vkn:'1750918637',vd:'ZİNCİRLİKUYU',faaliyet_kodu:'621000',faaliyet_adi:'BİLGİSAYAR PROGRAMLAMA FAALİYETLERİ',adres:'MECİDİYEKÖY MAH. KERVAN GEÇMEZ SK. ESER APT NO: 20 ŞİŞLİ/İSTANBUL',mersis:'0175091863700001',sermaye:'50.000,00 TL',kurulus:'28.03.2022',vergi_turu:'KURUMLAR VERGİSİ',uyumsoft_k:'BilparkYazilim',sgk:true,sgk_adi:'ŞİŞLİ SGK'},
+  {klasor:'BODUR_TEKNIK',unvan:'BODUR TEKNİK ELEKTRİKLİ EV ALETLERİ LİMİTED ŞİRKETİ',vkn:'1781747897',vd:'ALEMDAR',faaliyet_kodu:'952201',faaliyet_adi:'ELEKTRİKLİ EV CİHAZLARININ ONARIMI',adres:'AKMEŞE ATATÜRK MAH. MENDERES CAD. NO: 116 İZMİT/KOCAELİ',mersis:'0178174789700001',sermaye:'50.000,00 TL',kurulus:'06.12.2023',vergi_turu:'KURUMLAR VERGİSİ',uyumsoft_k:'BodurTeknik',sgk:true,sgk_adi:'İZMİT SGK'},
+  {klasor:'BURAK_CET_ADI_ORT',unvan:'BURAK ŞADIKOĞLU (ADİ ORTAKLIK)',vkn:'',tc:'',vd:'',faaliyet_kodu:'',faaliyet_adi:'',adres:'',mersis:'',sermaye:'',kurulus:'',vergi_turu:'',uyumsoft_k:'BurakSadikoglu',sgk:false},
+  {klasor:'CET_ENERJI',unvan:'CET ENERJİ İNŞAAT TİCARET ANONİM ŞİRKETİ',vkn:'2061634964',vd:'KADIKÖY',faaliyet_kodu:'',faaliyet_adi:'',adres:'CAFERAĞA MAH. ŞAİR NEFİ SK. HUZUR PALAS APT NO: 48 KADIKÖY/İSTANBUL',mersis:'0206163496400001',sermaye:'5.000.000,00 TL',kurulus:'19.02.2026',vergi_turu:'KURUMLAR VERGİSİ',uyumsoft_k:'CetEnerji',sgk:false},
+  {klasor:'DECOR_PEOPLE',unvan:'DECOR PEOPLE TEKSTİL DIŞ TİC.LTD.ŞTİ.',vkn:'4540583673',vd:'MASLAK',faaliyet_kodu:'464101',faaliyet_adi:'EVDE KULLANILAN TEKSTİL MALZ. TOPTAN TİCARETİ',adres:'MASLAK MAH. AHİ EVRAN CAD. NAZMİ AKBACI C BLOK NO: 5 SARIYER/İSTANBUL',mersis:'0454058367300016',sermaye:'100.000,00 TL',kurulus:'10.04.2014',vergi_turu:'KURUMLAR VERGİSİ',uyumsoft_k:'DecorPeople',sgk:true,sgk_adi:'ŞİŞLİ SGK'},
+  {klasor:'DTB_YAZILIM',unvan:'DTB YAZILIM SANAYİ VE TİC.A.Ş.',vkn:'3130984401',vd:'KOZYATAĞI',faaliyet_kodu:'621000',faaliyet_adi:'BİLGİSAYAR PROGRAMLAMA FAALİYETLERİ',adres:'İÇERENKÖY MAH. TOPÇU İBRAHİM SK. QUICK TOWER NO: 8-10D ATAŞEHİR/İSTANBUL',mersis:'0313098440100001',sermaye:'100.000,00 TL',kurulus:'07.06.2018',vergi_turu:'KURUMLAR VERGİSİ',uyumsoft_k:'adminuser',sgk:true,sgk_adi:'ATAŞEHİR SGK'},
+  {klasor:'ERDA_GUMRUK',unvan:'ERDA GÜMRÜK MÜŞAVİRLİĞİ LTD.ŞTİ.',vkn:'3420258368',vd:'ÜMRANİYE',faaliyet_kodu:'522107',faaliyet_adi:'GÜMRÜK MÜŞAVİRLİĞİ',adres:'',mersis:'0343253556000012',sermaye:'10.000,00 TL',kurulus:'26.03.2004',vergi_turu:'KURUMLAR VERGİSİ',uyumsoft_k:'',sgk:false},
+  {klasor:'ERDEM_OZSEN',unvan:'ERDEM ÖZSEN (ŞAHIS)',vkn:'',tc:'45622625484',vd:'BEYKOZ',faaliyet_kodu:'622000',faaliyet_adi:'BİLGİSAYAR DANIŞMANLIĞI FAALİYETLERİ',adres:'GÖZTEPE MAH. BEGONYA CAD. GÖKSU EVLERİ C36 NO: 60 BEYKOZ/İSTANBUL',mersis:'',sermaye:'',kurulus:'',vergi_turu:'YILLIK GELİR VERGİSİ',uyumsoft_k:'ErdemOzsen',sgk:false},
+  {klasor:'ERLAMER',unvan:'ER-LAMER DERMATOLOJİ LAZER ESTETİK VE EPİLASYON MERKEZİ AŞ.',vkn:'3360350847',vd:'BEYOĞLU',faaliyet_kodu:'862202',faaliyet_adi:'UZMAN HEKİMLİK FAALİYETLERİ',adres:'HARBİYE MAH VALİKONAĞI CAD NO: 28 ŞİŞLİ/İSTANBUL',mersis:'0336035084700001',sermaye:'50.000,00 TL',kurulus:'06.09.2002',vergi_turu:'KURUMLAR VERGİSİ',uyumsoft_k:'Erlamer',sgk:true,sgk_adi:'ŞİŞLİ SGK'},
+  {klasor:'ESNI_BILISIM',unvan:'ESNİ BİLİŞİM GIDA TİCARET LİMİTED ŞTİ',vkn:'3801379747',vd:'TUNA',faaliyet_kodu:'463109',faaliyet_adi:'KURU YEMİŞ TOPTAN TİCARETİ',adres:'',mersis:'0380137974700001',sermaye:'500.000,00 TL',kurulus:'22.01.2026',vergi_turu:'KURUMLAR VERGİSİ',uyumsoft_k:'EsniBilisim',sgk:false},
+  {klasor:'GIZEM_GOKER_ADI_ORT',unvan:'GİZEM GÖKER (ADİ ORTAKLIK / ŞAHIS)',vkn:'',tc:'28244581116',vd:'KADIKÖY',faaliyet_kodu:'731101',faaliyet_adi:'REKLAM AJANSLARININ FAALİYETLERİ',adres:'CAFERAĞA MAH. DR. ESAT IŞIK CAD. EREN APT NO: 61 KADIKÖY/İSTANBUL',mersis:'',sermaye:'',kurulus:'',vergi_turu:'YILLIK GELİR VERGİSİ',uyumsoft_k:'GizemGoker',sgk:true,sgk_adi:'BEŞİKTAŞ SGK'},
+  {klasor:'HACIKERIMOGLU_GIDA',unvan:'HACIKERİMOĞLU GIDA SAN. TEM. MALZ. LTD.ŞTİ.',vkn:'4540085678',vd:'BAKIRKÖY',faaliyet_kodu:'471101',faaliyet_adi:'BAKKAL VE MARKETLERDE PERAKENDE TİCARET',adres:'KARTALTEPE MAH. HULUSİ DEMİRELLİ SK. FİDAN APT NO: 20 A BAKIRKÖY/İSTANBUL',mersis:'0454008567800018',sermaye:'100.000,00 TL',kurulus:'28.01.1997',vergi_turu:'KURUMLAR VERGİSİ',uyumsoft_k:'Hacıkerimoglu',sgk:false},
+  {klasor:'HULYA_HATUN_AKPINAR',unvan:'HÜLYA HATUN AKPINAR (ŞAHIS — ECZANE)',vkn:'',tc:'39886581884',vd:'ŞİŞLİ',faaliyet_kodu:'477301',faaliyet_adi:'ECZACILIK ÜRÜNLERİNİN PERAKENDE TİCARETİ',adres:'MERKEZ MH OKTAY CEBECİ SK NO: 27 ŞİŞLİ/İSTANBUL',mersis:'',sermaye:'',kurulus:'',vergi_turu:'YILLIK GELİR VERGİSİ',uyumsoft_k:'hulyaevin@gmail.com',sgk:true,sgk_adi:'ŞİŞLİ SGK'},
+  {klasor:'ISIK_PETROL',unvan:'IŞIK PETROL KÖMÜR LASTİK PARÇA DAYANIKLI TÜKETİM MALI LTD.ŞTİ.',vkn:'4670066942',vd:'SOMA',faaliyet_kodu:'473001',faaliyet_adi:'MOTORLU KARA TAŞITI YAKITININ PERAKENDE TİCARETİ',adres:'TURGUTALP MAH. BERGAMA CAD. NO: 5 SOMA/MANİSA',mersis:'0467006694200015',sermaye:'900.000,00 TL',kurulus:'18.08.1997',vergi_turu:'KURUMLAR VERGİSİ',uyumsoft_k:'IsikPetrol',sgk:false},
+  {klasor:'ISTANBUL_PLASTIK',unvan:'İSTANBUL PLASTİK EST CER VE LAZ EPİL. MER. TİC.LTD.ŞTİ.',vkn:'4810214440',vd:'MECİDİYEKÖY',faaliyet_kodu:'862205',faaliyet_adi:'POLİKLİNİK VE TIP MERKEZLERİ HİZMETLERİ',adres:'VALİKONAĞI CD SARIOĞLU AP NO: 83 ŞİŞLİ/İSTANBUL',mersis:'0481021444000019',sermaye:'446.825,00 TL',kurulus:'14.05.2001',vergi_turu:'KURUMLAR VERGİSİ',uyumsoft_k:'Istanbul17',sgk:true,sgk_adi:'ŞİŞLİ SGK'},
+  {klasor:'KARIYERKURE',unvan:'KARİYERKÜRE EĞİTİM HİZMETLERİ TİCARET LİMİTED ŞİRKETİ',vkn:'5241597534',vd:'ÜSKÜDAR',faaliyet_kodu:'856900',faaliyet_adi:'EĞİTİMİ DESTEKLEYİCİ FAALİYETLER',adres:'MİMAR SİNAN MAH. ÇAVUŞDERE CAD. E BLOK NO: 41 ÜSKÜDAR/İSTANBUL',mersis:'0524159753400001',sermaye:'50.000,00 TL',kurulus:'24.10.2024',vergi_turu:'KURUMLAR VERGİSİ',uyumsoft_k:'Kariyerkure',sgk:false},
+  {klasor:'KARMAKENT',unvan:'KARMAKENT KOZMETİK ÜRÜNLER DIŞ TİCARET LİMİTED ŞİRKETİ',vkn:'5240582780',vd:'BEŞİKTAŞ',faaliyet_kodu:'461802',faaliyet_adi:'KOZMETİK VE BAKIM ÜRÜNLERİ TOPTAN SATIŞI',adres:'SİNANPAŞA MAH. SİNANPAŞA KÖPRÜSÜ SK. ÇELİK İŞ MERKEZİ NO: 10 BEŞİKTAŞ/İSTANBUL',mersis:'0524056278000012',sermaye:'10.000,00 TL',kurulus:'14.07.2010',vergi_turu:'KURUMLAR VERGİSİ',uyumsoft_k:'Karmakent1',sgk:true,sgk_adi:'BEŞİKTAŞ SGK'},
+  {klasor:'KIRPI_YAYINCILIK',unvan:'KİRPİ YAYINCILIK SAN VE TİC LTD.ŞTİ.',vkn:'5630621223',vd:'ATIŞALANI',faaliyet_kodu:'581101',faaliyet_adi:'KİTAP YAYIMI',adres:'ORUÇREİS MAH. TEKSTİLKENT CAD. TEKSTİLKENT A16 BLOK NO: 10 N ESENLER/İSTANBUL',mersis:'0563062122300011',sermaye:'10.000,00 TL',kurulus:'25.09.2009',vergi_turu:'KURUMLAR VERGİSİ',uyumsoft_k:'KirpiYayincilik',sgk:true,sgk_adi:'ESENLER SGK'},
+  {klasor:'KNA_BILISIM',unvan:'KNA BİLİŞİM TİC LTD.ŞTİ.',vkn:'5640969891',vd:'KÜÇÜKYALI',faaliyet_kodu:'621000',faaliyet_adi:'BİLGİSAYAR PROGRAMLAMA FAALİYETLERİ',adres:'İDEALTEPE MAH. DİK SK. NO: 13 MALTEPE/İSTANBUL',mersis:'0564096893100001',sermaye:'10.000,00 TL',kurulus:'06.04.2018',vergi_turu:'KURUMLAR VERGİSİ',uyumsoft_k:'',sgk:true,sgk_adi:'MALTEPE SGK'},
+  {klasor:'MARMARAGES_GUNES',unvan:'MARMARAGES GÜNEŞ ENERJİ SİSTEMLERİ SANAYİ VE TİCARET A.Ş.',vkn:'6121538815',vd:'BEYKOZ',faaliyet_kodu:'351100',faaliyet_adi:'ELEKTRİK ÜRETİMİ',adres:'KAVACIK MAH. EKİNCİLER CAD. ULU ER PLAZA NO: 2 BEYKOZ/İSTANBUL',mersis:'0612153881500001',sermaye:'50.000,00 TL',kurulus:'28.02.2022',vergi_turu:'KURUMLAR VERGİSİ',uyumsoft_k:'Marmarages',sgk:true,sgk_adi:'BEYKOZ SGK'},
+  {klasor:'MD_DERMATOLOJI',unvan:'MD DERMATOLOJİ SAĞLIK HİZM.SAN. VE TİC.LTD.ŞTİ.',vkn:'6090279953',vd:'GÖZTEPE',faaliyet_kodu:'862202',faaliyet_adi:'UZMAN HEKİMLİK FAALİYETLERİ',adres:'FENERYOLU MAH. BAĞDAT CAD. BÜYÜKHANLI PLAZA NO: 91 KADIKÖY/İSTANBUL',mersis:'0609027995300011',sermaye:'599.600,00 TL',kurulus:'07.11.2003',vergi_turu:'KURUMLAR VERGİSİ',uyumsoft_k:'gokhan@gokhangokler.com',sgk:true,sgk_adi:'KADIKÖY SGK'},
+  {klasor:'NEN_SIGORTA',unvan:'NEN SİGORTA BROKERLİĞİ LİMİTED ŞİRKETİ',vkn:'6311510004',vd:'BAKIRKÖY',faaliyet_kodu:'662202',faaliyet_adi:'SİGORTA BROKERLARININ FAALİYETLERİ',adres:'YEŞİLKÖY MAH. YEŞİL ZEYTİN SK. NO: 3 BAKIRKÖY/İSTANBUL',mersis:'0631151000400001',sermaye:'300.000,00 TL',kurulus:'24.03.2021',vergi_turu:'KURUMLAR VERGİSİ',uyumsoft_k:'',sgk:true,sgk_adi:'BAKIRKÖY SGK'},
+  {klasor:'NES_GUZELLIK',unvan:'NES GÜZELLİK SALONU TİCARET A.Ş.',vkn:'6312080765',vd:'BEŞİKTAŞ',faaliyet_kodu:'962201',faaliyet_adi:'GÜZELLİK SALONLARININ FAALİYETLERİ',adres:'ETİLER MAH. AYAZMA YOLU SK. NO: 1 A BEŞİKTAŞ/İSTANBUL',mersis:'0631208076500001',sermaye:'250.000,00 TL',kurulus:'22.01.2026',vergi_turu:'KURUMLAR VERGİSİ',uyumsoft_k:'',sgk:false},
+  {klasor:'OGUTMEN_SAGLIK',unvan:'ÖĞÜTMEN SAĞLIK HİZ.TİC.LTD.ŞTİ.',vkn:'6520036676',vd:'KOZYATAĞI',faaliyet_kodu:'862202',faaliyet_adi:'UZMAN HEKİMLİK FAALİYETLERİ',adres:'BARBAROS MAH. ÇİĞDEM SK. E1 BLOK NO: 4 B ATAŞEHİR/İSTANBUL',mersis:'0652003667600012',sermaye:'45.000,00 TL',kurulus:'13.12.1996',vergi_turu:'KURUMLAR VERGİSİ',uyumsoft_k:'OgutmenSaglik',sgk:true,sgk_adi:'ATAŞEHİR SGK'},
+  {klasor:'OSNAK_NAKLIYAT',unvan:'OSNAK ULUS.NAKLİYAT VE TİC A.Ş.',vkn:'6480061339',vd:'HALKALI',faaliyet_kodu:'522107',faaliyet_adi:'OTOPARK VE GARAJ İŞLETMECİLİĞİ',adres:'İNÖNÜ MH. PROF. MUAMMER AKSOY CD. SEFAKÖY NO: 102 KÜÇÜKÇEKMECE/İSTANBUL',mersis:'0648006133900011',sermaye:'80.000,00 TL',kurulus:'28.11.1990',vergi_turu:'KURUMLAR VERGİSİ',uyumsoft_k:'OsnakUluslararasi',sgk:true,sgk_adi:'KÜÇÜKÇEKMECE SGK'},
+  {klasor:'SAMBAZ_SUKUSU',unvan:'SAMBAZ ŞÜKUŞU (ŞAHIS)',vkn:'',tc:'48751724738',vd:'AVCILAR',faaliyet_kodu:'474001',faaliyet_adi:'BİLGİSAYAR VE YAZILIMLARIN PERAKENDE TİCARETİ',adres:'CİHANGİR MAH. KARGACI SK. NO: 17 AVCILAR/İSTANBUL',mersis:'',sermaye:'',kurulus:'',vergi_turu:'YILLIK GELİR VERGİSİ',uyumsoft_k:'SAMBAZ@SUKUSU',sgk:false},
+  {klasor:'SCF_BILISIM',unvan:'SCF BİLİŞİM DAN.VE TİC.LTD.ŞTİ.',vkn:'7570431963',vd:'KOZYATAĞI',faaliyet_kodu:'622000',faaliyet_adi:'BİLGİSAYAR DANIŞMANLIĞI FAALİYETLERİ',adres:'ATATÜRK MAH. ERTUĞRUL GAZİ SK. METROPOL İSTANBUL A BLOK NO: 2 E ATAŞEHİR/İSTANBUL',mersis:'0757043196300016',sermaye:'100.000,00 TL',kurulus:'24.10.2013',vergi_turu:'KURUMLAR VERGİSİ',uyumsoft_k:'ScfBilisim',sgk:true,sgk_adi:'ATAŞEHİR SGK'},
+  {klasor:'SINAN_YILMAZ',unvan:'YILMAZ TEDARİK VR GIDA ÜRÜNLERİ SANAYİ TİCARET LİMİTED ŞİRKETİ',vkn:'',tc:'21080654488',vd:'KÜÇÜKYALI',faaliyet_kodu:'523102',faaliyet_adi:'KARA YOLU YÜK NAKLİYAT KOMİSYONCULUĞU',adres:'İDEALTEPE MAH. ANNELER SK. FURKAN APT NO: 5/1 MALTEPE/İSTANBUL',mersis:'',sermaye:'',kurulus:'',vergi_turu:'YILLIK GELİR VERGİSİ',uyumsoft_k:'SinanYilmaz1',sgk:false},
+  {klasor:'SSC_GUVENLIK',unvan:'SSC ÖZEL GÜVENLİK HİZMETLERİ LİMİTED ŞİRKETİ',vkn:'7811132490',vd:'ÜSKÜDAR',faaliyet_kodu:'800101',faaliyet_adi:'ÖZEL GÜVENLİK FAALİYETLERİ',adres:'ALTUNİZADE MAH. ATIFBEY SK. DERYA SİTESİ B NO: 26 B ÜSKÜDAR/İSTANBUL',mersis:'0781113249000001',sermaye:'50.000,00 TL',kurulus:'26.05.2025',vergi_turu:'KURUMLAR VERGİSİ',uyumsoft_k:'SscOzelGuvenlik',sgk:false},
+  {klasor:'STS_SAGLIK',unvan:'STS SAĞLIK TEKNİK SERVİS HİZ.PAZ.LTD.ŞTİ.',vkn:'7810195970',vd:'KADIKÖY',faaliyet_kodu:'464601',faaliyet_adi:'CERRAHİ, TIBBİ VE ORTOPEDİK ALET VE CİHAZLARIN TOPTAN TİCARETİ',adres:'CAFERAĞA MAH. ŞAİR NEFİ SK. HUZUR PALAS APT NO: 48 KADIKÖY/İSTANBUL',mersis:'0781019597000018',sermaye:'48.887.000,00 TL',kurulus:'28.12.1998',vergi_turu:'KURUMLAR VERGİSİ',uyumsoft_k:'',sgk:true,sgk_adi:'KADIKÖY SGK'},
+  {klasor:'SVI',unvan:'SVİ DIŞ TİC.VE SAN LTD.ŞTİ.',vkn:'7880398112',vd:'KAĞITHANE',faaliyet_kodu:'469004',faaliyet_adi:'UZMANLAŞMAMIŞ TOPTAN TİCARET',adres:'KUŞTEPE MAH. MECİDİYEKÖY YOLU CAD. TRUMP TOWER NO: 12 ŞİŞLİ/İSTANBUL',mersis:'0788039811200018',sermaye:'600.000,00 TL',kurulus:'19.04.2005',vergi_turu:'KURUMLAR VERGİSİ',uyumsoft_k:'svidisticaret',sgk:true,sgk_adi:'BAĞCILAR SGK'},
+  {klasor:'TURBO_BILISIM',unvan:'TURBO BİLİŞİM TEKN.SAT DAĞ.PAZ.AŞ.',vkn:'8690453380',vd:'BEŞİKTAŞ',faaliyet_kodu:'622000',faaliyet_adi:'BİLGİSAYAR DANIŞMANLIĞI FAALİYETLERİ',adres:'LEVAZIM MAH. KORU SK. KORUKENT SİTESİ S BLOK NO: 40 BEŞİKTAŞ/İSTANBUL',mersis:'0869045338000017',sermaye:'50.000,00 TL',kurulus:'18.06.2013',vergi_turu:'KURUMLAR VERGİSİ',uyumsoft_k:'Turbo1',sgk:true,sgk_adi:'BAKIRKÖY SGK'},
+];
+
+// Sektör renkleri
+function kkRenk(f){
+  const kk=f.faaliyet_kodu||'';
+  if(/^86/.test(kk))return{color:'#6ee7b7',bg:'rgba(16,185,129,.15)'}; // Sağlık
+  if(/^62|^61|^58/.test(kk))return{color:'#93c5fd',bg:'rgba(59,130,246,.15)'}; // BT/Yazılım
+  if(/^47|^46|^45/.test(kk))return{color:'#fde68a',bg:'rgba(245,158,11,.15)'}; // Ticaret
+  if(/^66|^64/.test(kk))return{color:'#d8b4fe',bg:'rgba(168,85,247,.15)'}; // Finans/Sigorta
+  if(/^35|^47[3]/.test(kk))return{color:'#6ee7b7',bg:'rgba(16,185,129,.15)'}; // Enerji/Akaryakıt
+  if(/^80/.test(kk))return{color:'#fca5a5',bg:'rgba(239,68,68,.15)'}; // Güvenlik
+  if(/^96/.test(kk))return{color:'#f9a8d4',bg:'rgba(236,72,153,.15)'}; // Güzellik
+  return {color:'#e6c558',bg:'rgba(212,175,55,.15)'};
+}
+
+const KK = {
+  aktifFiltre:'tum',
+  gorunur:true,
+
+  toggle(){
+    this.gorunur=!this.gorunur;
+    const s=document.getElementById('kunyeSection');
+    const t=document.getElementById('kunyeToggle');
+    s.style.display=this.gorunur?'block':'none';
+    t.innerHTML=this.gorunur?'Gizle <i class="bi bi-chevron-up"></i>':'Göster <i class="bi bi-chevron-down"></i>';
+  },
+
+  setFiltre(f,btn){
+    this.aktifFiltre=f;
+    document.querySelectorAll('.kf-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    this.filtrele();
+  },
+
+  filtrele(){
+    const ara=(document.getElementById('kunyeAra').value||'').toLocaleLowerCase('tr');
+    const f=this.aktifFiltre;
+    const sonuc=FIRMALAR.filter(firm=>{
+      // arama
+      if(ara){
+        const hay=(firm.unvan+firm.vkn+(firm.tc||'')+firm.vd+firm.faaliyet_adi+firm.klasor).toLocaleLowerCase('tr');
+        if(!hay.includes(ara))return false;
+      }
+      // filtre
+      if(f==='sirket')  return !!firm.vkn;
+      if(f==='sahis')   return !firm.vkn;
+      if(f==='sgk')     return firm.sgk;
+      if(f==='uyumsoft')return !!firm.uyumsoft_k;
+      return true;
+    });
+    this.render(sonuc);
+  },
+
+  render(liste){
+    const g=document.getElementById('kunyeGrid');
+    document.getElementById('kunyeCount').textContent=liste.length+' firma';
+    if(!liste.length){
+      g.innerHTML='<div class="kk-none"><i class="bi bi-search" style="font-size:24px;margin-bottom:8px;display:block"></i>Arama sonucu bulunamadı</div>';
+      return;
+    }
+    g.innerHTML=liste.map(f=>{
+      const r=kkRenk(f);
+      const isSirket=!!f.vkn;
+      const harf=(f.unvan||f.klasor)[0].toLocaleUpperCase('tr');
+      const vknTc=f.vkn?f.vkn:(f.tc?'TC: '+f.tc:'—');
+      const adresk=(f.adres||'').length>60?f.adres.slice(0,60)+'…':f.adres;
+      const tags=[];
+      if(isSirket) tags.push('<span class="kk-tag acc">Şirket · VKN</span>');
+      else tags.push('<span class="kk-tag warn">Şahıs · TC</span>');
+      if(f.sgk) tags.push(`<span class="kk-tag ok">SGK · ${f.sgk_adi||''}</span>`);
+      if(f.uyumsoft_k) tags.push('<span class="kk-tag">Uyumsoft ✓</span>');
+      if(f.mersis) tags.push('<span class="kk-tag pur">MERSİS ✓</span>');
+      if(f.sermaye) tags.push(`<span class="kk-tag">₺ ${f.sermaye}</span>`);
+      return `<div class="kk" style="--kk-color:${r.color}">
+        <button class="kk-copy" title="VKN/TC kopyala" onclick="App.kopyala('${f.vkn||f.tc||''}')"><i class="bi bi-clipboard"></i></button>
+        <div class="kk-head">
+          <div class="kk-av" style="background:${r.bg};color:${r.color}">${harf}</div>
+          <div class="kk-title">
+            <div class="kk-unvan">${f.unvan}</div>
+            <div class="kk-vkn">${vknTc}${f.vd?' · '+f.vd:''}</div>
+          </div>
+        </div>
+        <div class="kk-body">
+          ${f.faaliyet_adi?`<div class="row"><i class="bi bi-briefcase"></i><span>${f.faaliyet_kodu} · ${f.faaliyet_adi}</span></div>`:''}
+          ${adresk?`<div class="row"><i class="bi bi-geo-alt"></i><span>${adresk}</span></div>`:''}
+          ${f.kurulus?`<div class="row"><i class="bi bi-calendar3"></i><span>Kuruluş: ${f.kurulus}</span></div>`:''}
+          ${f.uyumsoft_k?`<div class="row"><i class="bi bi-person-badge"></i><span>Uyumsoft: <b>${f.uyumsoft_k}</b></span></div>`:''}
+        </div>
+        <div class="kk-tags">${tags.join('')}</div>
+      </div>`;
+    }).join('');
+  },
+
+  init(){this.filtrele();}
+};
+
 // Beyan takvimi verisi
 const BEYANLAR = [
   {tarih:'30.06.2026', ad:'Turizm Payı Beyanı',    acik:'Mayıs dönemi · Son gün'},
@@ -815,6 +1057,7 @@ const App = {
     this.tabloMukellef();
     this.aktiviteListe();
     this.beyanTakvimi(d);
+    KK.init();
   },
 
   tabloMukellef(){
