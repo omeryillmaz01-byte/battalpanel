@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "BATTAL · Defter Beyan Gider Kontrol",
-  "version": "1.0",
+  "version": "1.1",
   "description": "Defter Beyan sayfasina otomatik Gider Kontrol butonu ekler. Mukerrer, KDV, stopaj kontrolu yapar. Salt-okuma, guvenli.",
   "host_permissions": [
     "https://*.defterbeyan.gov.tr/*"

@@ -83,7 +83,21 @@
       const b = Math.round(r.tutar * r.kdvOrani) / 100;
       return Math.abs(b - (r.kdv || 0)) > 0.05;
     });
-    const bos = all.filter(r => !r.aciklama || !r.aciklama.trim());
+    /* ÖİV tespiti: boş açıklamalı satır, aynı belge no'lu bir telefon/internet
+       faturasının ÖİV kısmıysa hata degil, ÖİV olarak isaretle */
+    const byBelge = {};
+    all.forEach(r => {
+      const k = (r.tcknVkn || '') + '|' + (r.belgeSiraNo || '');
+      (byBelge[k] = byBelge[k] || []).push(r);
+    });
+    const oivRe = /iletişim|iletisim|turknet|telefon|haberleşme|haberlesme|internet|gsm|turkcell|vodafone|türk ?telekom|turk ?telekom|ttnet|superonline/i;
+    const isOIV = r => {
+      if (r.aciklama && r.aciklama.trim()) return false;
+      const k = (r.tcknVkn || '') + '|' + (r.belgeSiraNo || '');
+      return (byBelge[k] || []).some(x => oivRe.test(x.aciklama || ''));
+    };
+    const oiv = all.filter(isOIV);
+    const bos = all.filter(r => (!r.aciklama || !r.aciklama.trim()) && !isOIV(r));
 
     const chip = (t, n, c) => '<span style="display:inline-block;background:' + c + ';padding:6px 12px;border-radius:20px;margin:0 8px 8px 0;font-weight:700">' + t + ': ' + n + '</span>';
     let h = '<div style="margin-bottom:12px">' +
@@ -93,10 +107,12 @@
       chip('Stopaj', '₺' + fmt(T.s), '#2f1e3a') +
       chip('Mukerrer', dup.length, dup.length ? '#5b1a1a' : '#1f2937') +
       chip('KDV Uyumsuz', kdvE.length, kdvE.length ? '#5b3a1a' : '#1f2937') +
+      chip('ÖİV', oiv.length, oiv.length ? '#3a341a' : '#1f2937') +
       chip('Bos Aciklama', bos.length, bos.length ? '#5b3a1a' : '#1f2937') +
       '</div>';
 
     const flag = r => {
+      if (isOIV(r)) return '<span style="color:#fcd34d;font-weight:700">ÖİV</span>';
       const a = [];
       if (dup.indexOf(r) >= 0) a.push('MUKERRER');
       if (kdvE.indexOf(r) >= 0) a.push('KDV?');
