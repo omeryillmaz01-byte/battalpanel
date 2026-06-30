@@ -722,8 +722,7 @@ const App = {
     // Restore last mükellef
     const son = localStorage.getItem('sonMukellef');
     if(son && MUKELLEFLER[son]){
-      // istersen otomatik aç:
-      // this.mukSec(son);
+      this.mukSec(son);
     }
   },
 
@@ -835,19 +834,22 @@ const App = {
 
   /* === Dönem dropdown === */
   donemDoldur(){
+    const bugun = new Date();
+    const buAy  = bugun.getMonth()+1;
+    const buYil = bugun.getFullYear();
     for(const id of ['g-ay','d-ay']){
       const sel = document.getElementById(id);
       AYLAR.forEach((a,i)=>{
         const o=document.createElement('option');o.value=i+1;o.textContent=a;sel.appendChild(o);
       });
-      sel.value=6; // varsayılan Haziran
+      sel.value=buAy;
     }
     for(const id of ['g-yil','d-yil']){
       const sel = document.getElementById(id);
-      [2026,2025,2024,2023].forEach(y=>{
+      [buYil,buYil-1,buYil-2,buYil-3].forEach(y=>{
         const o=document.createElement('option');o.value=y;o.textContent=y;sel.appendChild(o);
       });
-      sel.value=2026;
+      sel.value=buYil;
     }
     document.getElementById('g-ay').onchange=()=>this.gelirFilter();
     document.getElementById('g-yil').onchange=()=>this.gelirFilter();
@@ -913,7 +915,7 @@ const App = {
   /* === GELİR === */
   gelirIsle(rows){
     const cm = this.colMap(rows,'gelir');
-    if(!cm.headerIdx<0){alert('Header satırı bulunamadı');return;}
+    if(cm.headerIdx<0){alert('Header satırı bulunamadı');return;}
     const out=[];
     for(let i=cm.headerIdx+1;i<rows.length;i++){
       const r=rows[i];if(!r||r.every(c=>c==='')) continue;
@@ -951,7 +953,7 @@ const App = {
 
   gelirFilter(){
     if(!this.gelirData.length) return;
-    const ay = +document.getElementById('g-ay').value;
+    const ay  = +document.getElementById('g-ay').value;
     const yil = +document.getElementById('g-yil').value;
     const arr = this.gelirData.filter(r=>{
       if(r.iptal) return false;
