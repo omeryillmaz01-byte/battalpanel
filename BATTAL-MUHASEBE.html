@@ -130,10 +130,11 @@ main{padding:0;min-width:0;overflow-x:hidden}
 
 /* ════════ KOMUT ŞERİDİ ════════ */
 .komut-seridi{
-  display:grid;grid-template-columns:1fr 1fr 1fr auto;
+  display:grid;grid-template-columns:repeat(4,1fr);
   gap:0;background:linear-gradient(135deg,rgba(212,175,55,.07),rgba(212,175,55,.02));
   border:1px solid var(--br-2);border-radius:14px;overflow:hidden;margin-bottom:22px;
 }
+@media(max-width:760px){.komut-seridi{grid-template-columns:1fr 1fr}.ks-stat:nth-child(2){border-right:none}}
 .ks-stat{
   padding:16px 20px;display:flex;align-items:center;gap:13px;
   border-right:1px solid rgba(255,255,255,.06);position:relative;
@@ -506,34 +507,27 @@ kbd{background:#020617;border:1px solid #475569;color:var(--gold-2);padding:2px 
       <div>
         <div class="ks-val">15</div>
         <div class="ks-lbl">Aktif Mükellef</div>
-        <div class="ks-delta up"><i class="bi bi-arrow-up"></i>+2 bu ay</div>
       </div>
     </div>
     <div class="ks-stat">
       <div class="ks-ic ok"><i class="bi bi-check2-circle"></i></div>
       <div>
         <div class="ks-val">147</div>
-        <div class="ks-lbl">DB Kayıt (Haziran)</div>
-        <div class="ks-delta up"><i class="bi bi-arrow-up"></i>+89 kayıt</div>
+        <div class="ks-lbl">DB Kayıt · Haziran</div>
       </div>
     </div>
     <div class="ks-stat">
       <div class="ks-ic warn"><i class="bi bi-hourglass-split"></i></div>
       <div>
         <div class="ks-val" id="ksBeyan">—</div>
-        <div class="ks-lbl">Beyan Günü Kaldı</div>
-        <div class="ks-delta warn" id="ksBeyanAd">—</div>
+        <div class="ks-lbl" id="ksBeyanAd">Beyan Günü Kaldı</div>
       </div>
     </div>
-    <div class="ks-actions">
-      <a class="ks-btn" href="BATTAL_MUHASEBE_DB_PRO.html" target="_blank">
-        <i class="bi bi-lightning-fill"></i>Defter Beyan Pro
-      </a>
-      <div class="ks-btn acc" onclick="App.pyAc('beyanname-otomatik-kaydetme\\banka_pos_panel\\banka_panel.py','Banka POS')">
-        <i class="bi bi-bank2"></i>Banka / POS
-      </div>
-      <div class="ks-btn ok" onclick="App.pyAc('beyanname-otomatik-kaydetme\\panel.py','E-Beyanname PDF')">
-        <i class="bi bi-file-earmark-pdf"></i>E-Beyanname PDF
+    <div class="ks-stat">
+      <div class="ks-ic" style="background:rgba(168,85,247,.15);color:#c4b5fd"><i class="bi bi-building"></i></div>
+      <div>
+        <div class="ks-val">37</div>
+        <div class="ks-lbl">Firma Künyesi</div>
       </div>
     </div>
   </div>
@@ -689,23 +683,6 @@ kbd{background:#020617;border:1px solid #475569;color:var(--gold-2);padding:2px 
       <span class="line"></span>
     </div>
     <div class="beyan-card" id="beyanList"></div>
-  </section>
-
-  <!-- Sistem Durumu -->
-  <section class="section">
-    <div class="section-h">
-      <i class="bi bi-activity" style="color:var(--gold-2);font-size:14px"></i>
-      <h3>Sistem Durumu</h3>
-      <span class="line"></span>
-    </div>
-    <div class="sys-list">
-      <div class="sys"><span class="sys-dot ok"></span><span class="sys-name">Defter Beyan API</span><span class="sys-val">200 OK</span></div>
-      <div class="sys"><span class="sys-dot ok"></span><span class="sys-name">Z Raporu Otomasyonu</span><span class="sys-val">Aktif</span></div>
-      <div class="sys"><span class="sys-dot ok"></span><span class="sys-name">Uyumsoft Bağlantı</span><span class="sys-val">Stabil</span></div>
-      <div class="sys"><span class="sys-dot warn"></span><span class="sys-name">Muzaffer subeNo</span><span class="sys-val">Doğrulanmadı</span></div>
-      <div class="sys"><span class="sys-dot warn"></span><span class="sys-name">Selim Atalay Profili</span><span class="sys-val">Eksik</span></div>
-      <div class="sys"><span class="sys-dot ok"></span><span class="sys-name">Vergi Levhaları</span><span class="sys-val">78/78</span></div>
-    </div>
   </section>
 
   <!-- Sektör Dağılımı -->
