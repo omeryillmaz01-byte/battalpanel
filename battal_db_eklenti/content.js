@@ -114,8 +114,21 @@
           uyumBox += '<div style="margin-bottom:10px">' + chip(yil + ' Gelen', buYil.length, '#1f2937') + chip('Deftere Girilmiş', buYil.length - eksik.length, '#1e3a2f') + chip('EKSİK (girilmemiş)', eksik.length, eksik.length ? '#5b1a1a' : '#1e3a2f') + '</div>';
           uyumBox += '<div style="margin-bottom:10px;padding:8px 12px;background:rgba(252,211,77,.08);border:1px solid rgba(252,211,77,.25);border-radius:8px;color:#fcd34d;font-size:11.5px">⚠️ Not: Aşağıdaki bazı kayıtlar (Migros, ŞOK, Getir, marketler) şahsi/indirilemez harcama olabilir — deftere girilmemesi normaldir. İşletmeyle ilgili olanları (mal alışı, tedarikçi, gider) sen seç.</div>';
           if (eksik.length) {
-            uyumBox += '<div style="overflow:auto;border:1px solid #5b1a1a;border-radius:8px;margin-bottom:18px"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#2a1414;text-align:left">' + ['Fatura No', 'Tarih', 'Gönderen', 'VKN/TC', 'Durum'].map(x => '<th style="padding:8px">' + x + '</th>').join('') + '</tr></thead><tbody>';
-            eksik.forEach(x => { uyumBox += '<tr style="border-top:1px solid #3a1a1a"><td style="padding:7px;color:#fca5a5;font-weight:700">' + (x.no || '') + '</td><td style="padding:7px">' + (x.tarih || '').slice(0, 10) + '</td><td style="padding:7px">' + (x.unvan || '').slice(0, 50) + '</td><td style="padding:7px">' + (x.vkn || '') + '</td><td style="padding:7px">' + (x.status || '') + '</td></tr>'; });
+            const ayOf = x => { const p = (x.tarih || '').split('.'); return p[1] || '00'; };
+            const adlar = { '01': 'Oca', '02': 'Şub', '03': 'Mar', '04': 'Nis', '05': 'May', '06': 'Haz', '07': 'Tem', '08': 'Ağu', '09': 'Eyl', '10': 'Eki', '11': 'Kas', '12': 'Ara' };
+            const mevcutAylar = [...new Set(eksik.map(ayOf))].sort();
+            const buAy = ('0' + (new Date().getMonth() + 1)).slice(-2);
+            const aktifAy = mevcutAylar.indexOf(buAy) >= 0 ? buAy : 'tum';
+            let btns = '<div id="__eksikAy" style="margin-bottom:10px;display:flex;flex-wrap:wrap;gap:6px">';
+            btns += '<button class="ayb" data-ay="tum" style="padding:6px 12px;border-radius:8px;border:1px solid #3a3550;background:' + (aktifAy === 'tum' ? '#d4af37' : 'transparent') + ';color:' + (aktifAy === 'tum' ? '#0b1224' : '#e8edf5') + ';font-weight:700;cursor:pointer">Tümü (' + eksik.length + ')</button>';
+            mevcutAylar.forEach(a => {
+              const say = eksik.filter(x => ayOf(x) === a).length;
+              btns += '<button class="ayb" data-ay="' + a + '" style="padding:6px 12px;border-radius:8px;border:1px solid #3a3550;background:' + (aktifAy === a ? '#d4af37' : 'transparent') + ';color:' + (aktifAy === a ? '#0b1224' : '#e8edf5') + ';font-weight:700;cursor:pointer">' + (adlar[a] || a) + ' (' + say + ')</button>';
+            });
+            btns += '</div>';
+            uyumBox += btns;
+            uyumBox += '<div style="overflow:auto;border:1px solid #5b1a1a;border-radius:8px;margin-bottom:18px"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#2a1414;text-align:left">' + ['Fatura No', 'Tarih', 'Gönderen', 'VKN/TC', 'Durum'].map(x => '<th style="padding:8px">' + x + '</th>').join('') + '</tr></thead><tbody id="__eksikBody">';
+            eksik.forEach(x => { const a = ayOf(x); const gizli = (aktifAy !== 'tum' && a !== aktifAy); uyumBox += '<tr class="eksikRow" data-ay="' + a + '" style="border-top:1px solid #3a1a1a;' + (gizli ? 'display:none' : '') + '"><td style="padding:7px;color:#fca5a5;font-weight:700">' + (x.no || '') + '</td><td style="padding:7px">' + (x.tarih || '').slice(0, 10) + '</td><td style="padding:7px">' + (x.unvan || '').slice(0, 50) + '</td><td style="padding:7px">' + (x.vkn || '') + '</td><td style="padding:7px">' + (x.status || '') + '</td></tr>'; });
             uyumBox += '</tbody></table></div>';
           } else {
             uyumBox += '<div style="color:#6ee7b7;margin-bottom:18px">✓ Uyumsoft\'taki tüm gelen faturalar deftere girilmiş.</div>';
@@ -153,6 +166,21 @@
       });
       h += '</tbody></table></div>';
       bar.innerHTML = h;
+
+      /* Ay filtre butonlarini bagla */
+      const ayBar = document.getElementById('__eksikAy');
+      if (ayBar) {
+        ayBar.querySelectorAll('.ayb').forEach(b => {
+          b.onclick = () => {
+            const sec = b.getAttribute('data-ay');
+            ayBar.querySelectorAll('.ayb').forEach(x => { x.style.background = 'transparent'; x.style.color = '#e8edf5'; });
+            b.style.background = '#d4af37'; b.style.color = '#0b1224';
+            document.querySelectorAll('#__eksikBody .eksikRow').forEach(tr => {
+              tr.style.display = (sec === 'tum' || tr.getAttribute('data-ay') === sec) ? '' : 'none';
+            });
+          };
+        });
+      }
     }
 
     butonEkle('📊 Gider Kontrol', calistir);
