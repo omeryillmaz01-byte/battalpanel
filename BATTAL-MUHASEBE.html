@@ -169,6 +169,32 @@ main{padding:0;min-width:0;overflow-x:hidden}
 .ks-btn.ok{background:rgba(16,185,129,.12);border-color:rgba(16,185,129,.25);color:#6ee7b7}
 .ks-btn.ok:hover{background:rgba(16,185,129,.22)}
 
+/* ════════ DEFTER BEYAN KOMUTA BARI ════════ */
+.db-bar{
+  display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+  background:linear-gradient(135deg,rgba(175,0,3,.12),rgba(212,175,55,.05));
+  border:1px solid var(--br-2);border-radius:14px;padding:16px 20px;margin-bottom:22px;
+}
+.db-bar-info{display:flex;align-items:center;gap:13px;flex:1;min-width:220px}
+.db-bar-ic{
+  width:44px;height:44px;border-radius:11px;background:linear-gradient(135deg,#af0003,#7a0002);
+  display:flex;align-items:center;justify-content:center;font-size:21px;color:#fff;flex-shrink:0;
+}
+.db-bar-info h4{font-size:14px;color:#fff;font-weight:700}
+.db-bar-info p{font-size:11px;color:var(--txt-dim);margin-top:2px}
+.db-bar-actions{display:flex;gap:9px;flex-wrap:wrap}
+.db-btn{
+  display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border-radius:9px;
+  font-size:12.5px;font-weight:700;cursor:pointer;text-decoration:none;white-space:nowrap;transition:all .15s;border:1px solid transparent;
+}
+.db-btn.primary{background:linear-gradient(135deg,#af0003,#7a0002);color:#fff;box-shadow:0 4px 14px rgba(175,0,3,.35)}
+.db-btn.primary:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(175,0,3,.5)}
+.db-btn.gold{background:rgba(212,175,55,.14);border-color:rgba(212,175,55,.35);color:var(--gold-2);cursor:grab}
+.db-btn.gold:hover{background:rgba(212,175,55,.24)}
+.db-btn.gold:active{cursor:grabbing}
+.db-btn.ghost{background:rgba(255,255,255,.05);border-color:var(--br);color:var(--txt-dim)}
+.db-btn.ghost:hover{color:var(--txt-soft);background:rgba(255,255,255,.09)}
+
 /* Section */
 .section{margin-bottom:24px}
 .section-h{display:flex;align-items:center;gap:10px;margin-bottom:12px}
@@ -530,6 +556,28 @@ kbd{background:#020617;border:1px solid #475569;color:var(--gold-2);padding:2px 
         <div class="ks-lbl">Firma Künyesi</div>
       </div>
     </div>
+  </div>
+</section>
+
+<!-- ════════ DEFTER BEYAN KOMUTA BARI ════════ -->
+<section class="db-bar">
+  <div class="db-bar-info">
+    <div class="db-bar-ic"><i class="bi bi-bank2"></i></div>
+    <div>
+      <h4>Defter Beyan Komuta</h4>
+      <p>Portalı aç · giderleri tek tıkla çek &amp; kontrol et (mükerrer · KDV · stopaj)</p>
+    </div>
+  </div>
+  <div class="db-bar-actions">
+    <a class="db-btn primary" href="https://portal.defterbeyan.gov.tr/mukellef/genel-bilgileri" target="_blank" rel="noopener">
+      <i class="bi bi-box-arrow-up-right"></i> Defter Beyan'ı Aç
+    </a>
+    <a class="db-btn gold" id="giderKontrolBm" href="#" draggable="true" title="Bir kez yer imi çubuğuna sürükle — sonra Defter Beyan'dayken tıkla, tablo açılır">
+      <i class="bi bi-clipboard-data"></i> 📊 Gider Kontrol
+    </a>
+    <a class="db-btn ghost" href="DB_GIDER_KONTROL.html" target="_blank" rel="noopener">
+      <i class="bi bi-question-circle"></i> Nasıl?
+    </a>
   </div>
 </section>
 
@@ -1047,6 +1095,12 @@ const App = {
 };
 
 document.addEventListener('DOMContentLoaded',()=>App.init());
+</script>
+
+<!-- Gider Kontrol bookmarklet kaynağı (Defter Beyan sayfasında çalışır) -->
+<script type="text/plain" id="bmGiderKontrol">javascript:(async()=>{const B='https://backend-p.defterbeyan.gov.tr/rs';let TK='';for(const S of[sessionStorage,localStorage]){try{for(let i=0;i<S.length;i++){const v=S.getItem(S.key(i));if(v&&/^ey[\w-]+\.[\w-]+\./.test(v)){TK=v;break}}}catch(e){}if(TK)break}const H={'Content-Type':'application/json; charset=utf-8'};if(TK)H.Token=TK;const yil=new Date().getFullYear();let ov=document.getElementById('__gk');if(ov)ov.remove();ov=document.createElement('div');ov.id='__gk';ov.style.cssText='position:fixed;inset:0;z-index:2147483647;background:rgba(8,12,24,.97);color:#e8edf5;font:13px Segoe UI,system-ui,sans-serif;overflow:auto;padding:20px';ov.innerHTML='<div style="max-width:1280px;margin:0 auto"><div style="display:flex;align-items:center;gap:12px;margin-bottom:14px"><b style="font-size:18px;color:#d4af37">📊 Defter Beyan · Gider Kontrol</b><button id="__gkx" style="margin-left:auto;background:#af0003;color:#fff;border:0;padding:8px 16px;border-radius:8px;cursor:pointer;font-weight:700">✕ Kapat</button></div><div id="__gkb">Yükleniyor…</div></div>';document.body.appendChild(ov);document.getElementById('__gkx').onclick=()=>ov.remove();const bar=document.getElementById('__gkb');async function pull(bas,bit){let page=1,all=[],size=1/0,T={};while(all.length<size){const r=await fetch(B+'/giderliste/search',{method:'POST',headers:H,credentials:'include',body:JSON.stringify({attributes:{baslangicTarihi:bas,bitisTarihi:bit},pagingContext:{page:page,limit:200,orderContextMap:{'date(kayit_tarihi)':'DESC'}}})});const j=await r.json();const rc=j.resultContainer||{};const l=rc.resultList||[];size=rc.size||l.length;T={g:rc.toplamGider,k:rc.toplamKdv,s:rc.toplamStopajTutari};all=all.concat(l);bar.textContent='Çekiliyor… '+all.length+'/'+size;if(!l.length)break;page++;if(page>100)break}return{all:all,T:T}}let R;try{R=await pull(yil+'-01-01 00:00:00',yil+'-12-31 23:59:59')}catch(e){bar.innerHTML='<span style="color:#fca5a5">Hata: '+e.message+'</span>';return}const all=R.all,T=R.T;const f=n=>(+n||0).toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2});const seen={},dup=[];all.forEach(r=>{const k=(r.tcknVkn||'')+'|'+(r.belgeSiraNo||'')+'|'+r.tutar;if(seen[k])dup.push(r);else seen[k]=1});const kdvE=all.filter(r=>{if(r.kdvsizIslem)return false;const b=Math.round(r.tutar*r.kdvOrani)/100;return Math.abs(b-(r.kdv||0))>0.05});const bos=all.filter(r=>!r.aciklama||!r.aciklama.trim());const chip=(t,n,c)=>'<span style="display:inline-block;background:'+c+';padding:6px 12px;border-radius:20px;margin:0 8px 8px 0;font-weight:700">'+t+': '+n+'</span>';let h='<div style="margin-bottom:12px">'+chip('Kayıt',all.length,'#1f2937')+chip('Toplam Gider','&#8378;'+f(T.g),'#1e3a2f')+chip('İnd. KDV','&#8378;'+f(T.k),'#1e2f3a')+chip('Stopaj','&#8378;'+f(T.s),'#2f1e3a')+chip('Mükerrer',dup.length,dup.length?'#5b1a1a':'#1f2937')+chip('KDV Uyumsuz',kdvE.length,kdvE.length?'#5b3a1a':'#1f2937')+chip('Boş Açıklama',bos.length,bos.length?'#5b3a1a':'#1f2937')+'</div>';const flag=r=>{const a=[];if(dup.indexOf(r)>=0)a.push('MÜKERRER');if(kdvE.indexOf(r)>=0)a.push('KDV?');if(bos.indexOf(r)>=0)a.push('AÇIKLAMA?');return a.length?'<span style="color:#fca5a5;font-weight:700">'+a.join(' ')+'</span>':'<span style="color:#6ee7b7">&#10003;</span>'};h+='<div style="overflow:auto;border:1px solid #2a3550;border-radius:8px"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#141c2e;text-align:left">'+['Belge Tarihi','Belge No','VKN/TC','Açıklama','Matrah','KDV%','KDV','Stopaj','Kontrol'].map(x=>'<th style="padding:8px">'+x+'</th>').join('')+'</tr></thead><tbody>';all.forEach(r=>{h+='<tr style="border-top:1px solid #1f2840"><td style="padding:7px">'+(r.belgeTarihi||'').slice(0,10)+'</td><td style="padding:7px">'+(r.belgeSiraNo||'')+'</td><td style="padding:7px">'+(r.tcknVkn||'')+'</td><td style="padding:7px">'+((r.aciklama||'').slice(0,60))+'</td><td style="padding:7px;text-align:right">'+f(r.tutar)+'</td><td style="padding:7px;text-align:right">'+(r.kdvOrani||0)+'</td><td style="padding:7px;text-align:right">'+f(r.kdv)+'</td><td style="padding:7px;text-align:right">'+f(r.stopajTutari)+'</td><td style="padding:7px">'+flag(r)+'</td></tr>'});h+='</tbody></table></div>';bar.innerHTML=h})();</script>
+<script>
+(function(){var bm=document.getElementById('bmGiderKontrol').textContent.trim();var a=document.getElementById('giderKontrolBm');if(a){a.href=bm;a.addEventListener('click',function(e){e.preventDefault();alert('Bu butonu BİR KEZ tarayıcının yer imi çubuğuna sürükle. Sonra Defter Beyan açıkken o yer imine tıkla — gider kontrol tablosu açılır. (Tarayıcı güvenliği gereği panelden direkt çalışamaz.)');});}})();
 </script>
 
 </body>
