@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Müşavir Pro — Fatura Kontrol & Hazırlık Merkezi</title>
+<style>
+:root{
+  --emerald:#10b981;--emerald-d:#059669;--emerald-l:#34d399;
+  --navy1:#0f172a;--navy2:#1e3a8a;--teal:#0f766e;
+  --card:rgba(255,255,255,.06);--line:rgba(255,255,255,.12);--txt:#e2e8f0;--mut:#94a3b8;
+  --ok:#10b981;--warn:#f59e0b;--err:#ef4444;
+}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;font-family:'Segoe UI',system-ui,sans-serif;color:var(--txt);
+  background:linear-gradient(135deg,var(--navy1),var(--navy2),var(--teal));background-attachment:fixed;padding:20px}
+.wrap{max-width:1400px;margin:0 auto}
+h1{font-size:23px;margin:0 0 2px;background:linear-gradient(90deg,var(--emerald-l),var(--emerald));-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{color:var(--mut);font-size:13px;margin-bottom:18px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:16px;backdrop-filter:blur(8px);box-shadow:0 8px 30px rgba(0,0,0,.3)}
+.card h2{font-size:14px;margin:0 0 12px;color:var(--emerald-l)}
+label{display:block;font-size:12px;color:var(--mut);margin:8px 0 4px}
+select,input,textarea{width:100%;background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:10px;color:var(--txt);padding:9px 12px;font-size:13px;font-family:inherit}
+textarea{min-height:110px;resize:vertical;font-family:'Consolas',monospace;font-size:12px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.btn{background:linear-gradient(135deg,var(--emerald),var(--emerald-d));color:#fff;border:none;border-radius:10px;padding:11px 20px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(16,185,129,.4);transition:.15s}
+.btn:hover{transform:translateY(-2px)}
+.btn.sec{background:rgba(255,255,255,.08);box-shadow:none}
+table{width:100%;border-collapse:collapse;font-size:11px;margin-top:8px}
+th,td{padding:6px 8px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+th{color:var(--emerald-l);font-size:11px;position:sticky;top:0;background:#0d1426}
+.tbl-wrap{max-height:460px;overflow:auto;border:1px solid var(--line);border-radius:10px}
+.tag{display:inline-block;border-radius:6px;padding:1px 7px;font-size:10px;font-weight:700}
+.t-mal{background:rgba(16,185,129,.18);color:var(--emerald-l)}
+.t-gider{background:rgba(59,130,246,.18);color:#93c5fd}
+.t-kom{background:rgba(168,85,247,.18);color:#d8b4fe}
+.t-iade{background:rgba(239,68,68,.18);color:#fca5a5}
+.t-ok{color:var(--ok);font-weight:700}
+.t-warn{color:var(--warn);font-weight:700}
+.t-err{color:var(--err);font-weight:700}
+.kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:14px}
+.kpibox{background:rgba(0,0,0,.2);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.kpibox .n{font-size:22px;font-weight:800;color:var(--emerald-l)}
+.kpibox .l{font-size:11px;color:var(--mut)}
+.uyari-list{font-size:12px;line-height:1.8}
+.uyari-list .u{color:#fca5a5}
+.pill{display:inline-block;background:rgba(16,185,129,.15);border:1px solid var(--emerald-d);color:var(--emerald-l);border-radius:20px;padding:2px 10px;font-size:11px;margin:2px}
+.hint{font-size:11px;color:var(--mut);margin-top:4px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🔍 Fatura Kontrol & Hazırlık Merkezi</h1>
+  <div class="sub">Uyumsoft → sınıflandır (Mal Alışı / İndirilecek Gider / Komisyon / İade) → <b>ilmek ilmek kontrol</b> (tutar · KDV · sıra no · tarih · VKN) → <b>HAZIR BEKLET</b> (Defter Beyan'a göndermez, önce sen onaylarsın)</div>
+
+  <div class="card">
+    <h2>1️⃣ Mükellef & Veri</h2>
+    <div class="grid3">
+      <div><label>Mükellef</label><select id="muk"></select></div>
+      <div><label>Dönem Başlangıç</label><input id="d1" value="01.06.2026"></div>
+      <div><label>Dönem Bitiş</label><input id="d2" value="30.06.2026"></div>
+    </div>
+    <label>Uyumsoft Fatura Verisi — her satır: <b>BelgeNo ; Tarih ; VKN ; Satıcı Ünvanı ; Matrah ; KDVOranı ; KDV ; GenelToplam ; [iade?]</b></label>
+    <textarea id="data" placeholder="M012026000623829 ; 21.06.2026 ; 9470457468 ; Yemek Sepeti A.Ş. ; 90,00 ; 20 ; 18,00 ; 108,00
+HAN2026000001984 ; 17.06.2026 ; 4560455695 ; Han Tüketim Ürünleri Ltd. ; 948,60 ; 20 ; 189,72 ; 1138,32
+... (noktalı virgül veya tab ayraçlı; iade ise sonuna 'iade' yaz)"></textarea>
+    <div class="row" style="margin-top:10px">
+      <button class="btn" onclick="tara()">🔍 Tara & Kontrol Et (HAZIR BEKLET)</button>
+      <button class="btn sec" onclick="ornek()">Örnek veri</button>
+    </div>
+    <div class="hint">⚠️ Bu modül <b>Defter Beyan'a GÖNDERMEZ</b> — sadece sınıflandırır + kontrol eder + hazır bekletir. Sen onaylayınca API Toplu Gönderici ile yollarız.</div>
+  </div>
+
+  <div class="card" id="sonucCard" style="display:none">
+    <h2>2️⃣ Kontrol Sonucu — <span id="mukAd"></span></h2>
+    <div class="kpi" id="kpi"></div>
+    <div id="uyariBox" style="display:none">
+      <h2 style="color:var(--warn)">⚠️ Dikkat Gerektirenler</h2>
+      <div class="uyari-list" id="uyari"></div>
+    </div>
+    <div class="tbl-wrap">
+      <table id="tbl"><thead><tr>
+        <th>#</th><th>Belge No</th><th>Tarih</th><th>Satıcı</th><th>VKN/TCKN</th>
+        <th>Matrah</th><th>KDV%</th><th>KDV</th><th>Toplam</th><th>Sınıf</th><th>Kontrol</th>
+      </tr></thead><tbody></tbody></table>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <button class="btn sec" onclick="kopyalaApi()">📋 Sınıflandırılmış veriyi API formatında kopyala</button>
+    </div>
+    <div class="hint" id="apiHint"></div>
+  </div>
+</div>
+
+<script>
+const MUKELLEFLER={
+  '0960155134':{ad:'Sinan Atalay',sektor:'İnternet/E-ticaret',malAlis:true},
+  '3460330305':{ad:'Altuğ Erden',sektor:'Çay/Kahve/Baharat',malAlis:true},
+  '2640193570':{ad:'Muzaffer Çubukçuoğlu',sektor:'Çay/Kahve/Baharat',malAlis:true},
+  '0250587861':{ad:'Kadir Akıllı',sektor:'Kuru Yemiş',malAlis:true},
+  '7680418539':{ad:'Dilek Öztürk',sektor:'Kozmetik E-ticaret',malAlis:true},
+  '7850427089':{ad:'Devran Süer',sektor:'Avukat',malAlis:false},
+  '1500360006':{ad:'Emir Battal',sektor:'Avukat',malAlis:false},
+  '6630177279':{ad:'Müge Özarmağan',sektor:'Avukat',malAlis:false},
+  '3750072366':{ad:'Cihan Güneş Ertürk',sektor:'Uzman Hekim',malAlis:false},
+  '1500127919':{ad:'İskender Battal',sektor:'Uzman Hekim',malAlis:false},
+  '1500459508':{ad:'Mert Tufan Battal',sektor:'Diş Hekimi',malAlis:false},
+  '8520482776':{ad:'Aylin Topçu Erdinç',sektor:'Psikolog',malAlis:false},
+  '1500138444':{ad:'Taner Battal',sektor:'Mali Müşavir',malAlis:false},
+  '3750384725':{ad:'Çağrı Ertürk',sektor:'Fotoğrafçı',malAlis:false},
+  '2610511823':{ad:'Yakup Çoruh',sektor:'Emlak/Araç',malAlis:false}
+};
+const sel=document.getElementById('muk');
+Object.entries(MUKELLEFLER).forEach(([v,m])=>{const o=document.createElement('option');o.value=v;o.textContent=m.ad+' · '+m.sektor;sel.appendChild(o);});
+sel.value='3460330305';
+
+// ── Akıllı sınıflandırma kuralları ──
+const RULES=[
+  {p:/elektrik tüketim|kwh|enerji bedeli|enerjisa|boğaziçi elektrik|bedaş|ayedaş|elektrik perakende sat/i,k:'Gider',a:'Elektrik'},
+  {p:/doğalgaz|igdaş|gazdaş|başkentgaz/i,k:'Gider',a:'Doğalgaz'},
+  {p:/\bsu\b|iski|aski|izsu/i,k:'Gider',a:'Su'},
+  {p:/turkcell|vodafone|türk ?telekom|ttnet|superonline/i,k:'Gider',a:'Telefon (ÖİV dikkat!)'},
+  {p:/kargo|aras|mng|yurtiçi|ptt|sürat|hepsijet|sendeo/i,k:'Gider',a:'Kargo'},
+  {p:/yemek ?sepeti|getir|trendyol|hepsiburada|tyg turkey|dsm grup|d-market|n11|çiçek ?sepeti|amazon|migros komisyon/i,k:'Komisyon',a:'Komisyon/Pos'},
+  {p:/google ireland|meta platforms|facebook ireland|reklam/i,k:'Gider',a:'İnternet Reklam'},
+  {p:/smmm|mali müşavir|yeminli mali|muhasebe/i,k:'Gider',a:'Muhasebe'},
+  {p:/kira/i,k:'Gider',a:'Kira'}
+];
+function sinifla(unvan,mukVkn){
+  const m=MUKELLEFLER[mukVkn];
+  const u=(unvan||'').toLocaleLowerCase('tr');
+  for(const r of RULES){ if(r.p.test(u)) return {sinif:r.k,alt:r.a}; }
+  if(m&&m.malAlis){
+    if(/gıda|baharat|çay|kahve|kuru ?yemiş|tarım|toptan|bakliyat|tüketim|ürün|gida|et |süt|aktar|kozmetik|parfüm|tekstil/i.test(u))
+      return {sinif:'Mal Alışı',alt:'Mal Alışı'};
+    return {sinif:'Mal Alışı',alt:'Mal Alışı (kontrol et)',supheli:true};
+  }
+  return {sinif:'Gider',alt:'Diğer Hizmet'};
+}
+
+const num=s=>{if(typeof s==='number')return s;if(!s)return 0;return parseFloat(String(s).replace(/[^\d.,]/g,'').replace(/\./g,'').replace(',','.'))||0;};
+function vknGecerli(v){v=String(v||'').replace(/\D/g,'');return v.length===10||v.length===11;}
+
+function parse(){
+  const lines=document.getElementById('data').value.split(/\n/).map(l=>l.trim()).filter(Boolean);
+  return lines.map(l=>{
+    const p=l.split(/\s*[;\t]\s*/);
+    return {belgeNo:p[0]||'',tarih:p[1]||'',vkn:(p[2]||'').replace(/\D/g,''),unvan:p[3]||'',
+      matrah:num(p[4]),oran:num(p[5]),kdv:num(p[6]),toplam:num(p[7]),
+      iade:/iade/i.test(l)};
+  });
+}
+
+let SONUC=[];
+function tara(){
+  const mukVkn=sel.value, m=MUKELLEFLER[mukVkn];
+  const d1=document.getElementById('d1').value, d2=document.getElementById('d2').value;
+  const rows=parse();
+  if(!rows.length){alert('Veri yok / format hatalı');return;}
+  const belgeSet={};
+  SONUC=rows.map((r,i)=>{
+    const uyarilar=[];
+    // Tarih
+    if(!/^\d{2}\.\d{2}\.\d{4}$/.test(r.tarih)) uyarilar.push('Tarih formatı (DD.MM.YYYY)');
+    else { const inP=tarihIn(r.tarih,d1,d2); if(!inP) uyarilar.push('Tarih dönem dışı'); }
+    // Belge No
+    if(!r.belgeNo) uyarilar.push('Belge No boş');
+    else { belgeSet[r.belgeNo]=(belgeSet[r.belgeNo]||0)+1; }
+    // VKN
+    if(!vknGecerli(r.vkn)) uyarilar.push('VKN/TCKN hane (10/11)');
+    // Satıcı
+    if(!r.unvan) uyarilar.push('Satıcı ünvanı boş');
+    // Matrah
+    if(!(r.matrah>0)) uyarilar.push('Matrah ≤ 0');
+    // KDV oran geçerli
+    if(![0,1,8,10,18,20].includes(r.oran)) uyarilar.push('KDV oranı geçersiz ('+r.oran+')');
+    // KDV = matrah×oran
+    const beklenenKdv=Math.round(r.matrah*r.oran/100*100)/100;
+    if(r.oran>0 && Math.abs(beklenenKdv-r.kdv)>Math.max(0.5,r.matrah*0.005))
+      uyarilar.push('KDV tutmuyor (beklenen '+beklenenKdv.toFixed(2)+')');
+    // Toplam = matrah + kdv
+    if(r.toplam>0 && Math.abs((r.matrah+r.kdv)-r.toplam)>Math.max(1,r.matrah*0.02))
+      uyarilar.push('Genel toplam ≠ matrah+KDV (ÖİV/iskonto?)');
+    // Sınıf
+    let s=sinifla(r.unvan,mukVkn);
+    if(r.iade) s={sinif:'İade',alt:'Satıştan İade',supheli:true};
+    if(s.supheli) uyarilar.push('Sınıf şüpheli — kontrol et');
+    return {...r,...s,uyarilar};
+  });
+  // Mükerrer belge no
+  SONUC.forEach(r=>{ if(r.belgeNo && belgeSet[r.belgeNo]>1) r.uyarilar.push('MÜKERRER belge no'); });
+  ciz(m);
+}
+function tarihIn(t,d1,d2){
+  const p=x=>{const a=x.split('.');return new Date(+a[2],+a[1]-1,+a[0]);};
+  const d=p(t);return d>=p(d1)&&d<=p(d2);
+}
+function tagClass(s){return s==='Mal Alışı'?'t-mal':s==='Komisyon'?'t-kom':s==='İade'?'t-iade':'t-gider';}
+
+function ciz(m){
+  document.getElementById('sonucCard').style.display='block';
+  document.getElementById('mukAd').textContent=m.ad+' ('+m.sektor+')';
+  const tb=document.querySelector('#tbl tbody');tb.innerHTML='';
+  let mal=0,gid=0,kom=0,iade=0,uyariTop=0,tplMatrah=0,tplKdv=0;
+  SONUC.forEach((r,i)=>{
+    if(r.sinif==='Mal Alışı')mal++;else if(r.sinif==='Komisyon')kom++;else if(r.sinif==='İade')iade++;else gid++;
+    tplMatrah+=r.matrah;tplKdv+=r.kdv;
+    const durum=r.uyarilar.length?('<span class="t-warn">⚠️ '+r.uyarilar.length+'</span>'):'<span class="t-ok">✅</span>';
+    if(r.uyarilar.length)uyariTop++;
+    tb.innerHTML+=`<tr title="${r.uyarilar.join(' · ')||'Tüm kontroller geçti'}">
+      <td>${i+1}</td><td>${r.belgeNo}</td><td>${r.tarih}</td><td>${(r.unvan||'').slice(0,28)}</td><td>${r.vkn}</td>
+      <td style="text-align:right">${r.matrah.toLocaleString('tr-TR',{minimumFractionDigits:2})}</td>
+      <td style="text-align:center">${r.oran}</td>
+      <td style="text-align:right">${r.kdv.toLocaleString('tr-TR',{minimumFractionDigits:2})}</td>
+      <td style="text-align:right">${(r.toplam||r.matrah+r.kdv).toLocaleString('tr-TR',{minimumFractionDigits:2})}</td>
+      <td><span class="tag ${tagClass(r.sinif)}">${r.alt}</span></td>
+      <td>${durum}</td></tr>`;
+  });
+  document.getElementById('kpi').innerHTML=`
+    <div class="kpibox"><div class="n">${SONUC.length}</div><div class="l">Toplam Fatura</div></div>
+    <div class="kpibox"><div class="n">${mal}</div><div class="l">Mal Alışı</div></div>
+    <div class="kpibox"><div class="n">${gid}</div><div class="l">İndirilecek Gider</div></div>
+    <div class="kpibox"><div class="n">${kom}</div><div class="l">Komisyon</div></div>
+    <div class="kpibox"><div class="n">${iade}</div><div class="l">İade</div></div>
+    <div class="kpibox"><div class="n" style="color:${uyariTop?'var(--warn)':'var(--ok)'}">${uyariTop}</div><div class="l">Dikkat Gereken</div></div>
+    <div class="kpibox"><div class="n" style="font-size:16px">${tplMatrah.toLocaleString('tr-TR',{minimumFractionDigits:2})}</div><div class="l">Toplam Matrah</div></div>
+    <div class="kpibox"><div class="n" style="font-size:16px">${tplKdv.toLocaleString('tr-TR',{minimumFractionDigits:2})}</div><div class="l">Toplam KDV</div></div>`;
+  // Uyarı listesi
+  const us=SONUC.map((r,i)=>r.uyarilar.length?{i:i+1,b:r.belgeNo,u:r.uyarilar}:null).filter(Boolean);
+  const ub=document.getElementById('uyariBox');
+  if(us.length){ub.style.display='block';document.getElementById('uyari').innerHTML=us.map(x=>`<div class="u">#${x.i} <b>${x.b}</b> → ${x.u.join(' · ')}</div>`).join('');}
+  else{ub.style.display='block';document.getElementById('uyari').innerHTML='<div style="color:var(--ok)">✅ Tüm faturalar tüm kontrolleri geçti — gönderime hazır.</div>';}
+  document.getElementById('apiHint').textContent='Hazır beklemede ('+SONUC.length+' fatura sınıflandırıldı, '+uyariTop+' uyarı). Onaylayınca API Gönderici ile yollanır.';
+}
+function kopyalaApi(){
+  const arr=SONUC.map(r=>[r.belgeNo,r.vkn,r.matrah,r.oran,r.sinif]);
+  navigator.clipboard.writeText(JSON.stringify(arr)).then(()=>{const e=event.target;const t=e.textContent;e.textContent='✅ Kopyalandı';setTimeout(()=>e.textContent=t,1500);});
+}
+function ornek(){
+  document.getElementById('data').value=
+`M012026000623829 ; 21.06.2026 ; 9470457468 ; Yemek Sepeti A.Ş. ; 90,00 ; 20 ; 18,00 ; 108,00
+HAN2026000001984 ; 17.06.2026 ; 4560455695 ; Han Tüketim Ürünleri Ltd. ; 948,60 ; 20 ; 189,72 ; 1138,32
+AS02026001029862 ; 18.06.2026 ; 4810577635 ; Enerjisa Elektrik Perakende A.Ş. ; 1365,44 ; 20 ; 273,09 ; 1638,53
+GCF2026001151262 ; 21.06.2026 ; 8831046007 ; TYG Turkey Elektronik Ticaret A.Ş. ; 233,57 ; 20 ; 46,71 ; 280,28
+D022026000815101 ; 21.06.2026 ; 3940482658 ; Getir Perakende Lojistik A.Ş. ; 518,74 ; 20 ; 103,75 ; 622,49`;
+  document.getElementById('muk').value='3460330305';
+}
+</script>
+</body>
+</html>

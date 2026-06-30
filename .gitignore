@@ -1,0 +1,17 @@
+beyanname-otomatik-kaydetme/chrome_profil/
+*.pyc
+__pycache__/
+*.db
+*.sqlite
+.env
+.claude/
+TRENDYO/.claude/
+
+# Kişisel veri dosyaları
+*.xlsx
+*.xls
+*.csv
+beyanname-otomatik-kaydetme/indirilemeyenler_log.csv
+beyanname-otomatik-kaydetme/mevcut_pdf_duzeltme_taramasi.csv
+beyanname-otomatik-kaydetme/eksik_kontrol_raporu.csv
+beyanname-otomatik-kaydetme/eksik_kontrol_secili_raporu.csv

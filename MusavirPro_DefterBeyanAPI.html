@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Müşavir Pro — Defter Beyan API Toplu Gönderici</title>
+<style>
+:root{
+  --emerald:#10b981; --emerald-d:#059669; --emerald-l:#34d399;
+  --navy1:#0f172a; --navy2:#1e3a8a; --teal:#0f766e;
+  --card:rgba(255,255,255,.06); --line:rgba(255,255,255,.12); --txt:#e2e8f0; --mut:#94a3b8;
+}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;font-family:'Segoe UI',system-ui,sans-serif;color:var(--txt);
+  background:linear-gradient(135deg,var(--navy1),var(--navy2),var(--teal));background-attachment:fixed;padding:24px}
+.wrap{max-width:1100px;margin:0 auto}
+h1{font-size:24px;margin:0 0 4px;background:linear-gradient(90deg,var(--emerald-l),var(--emerald));-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{color:var(--mut);font-size:13px;margin-bottom:20px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px;margin-bottom:18px;backdrop-filter:blur(8px);box-shadow:0 8px 30px rgba(0,0,0,.3)}
+.card h2{font-size:15px;margin:0 0 14px;color:var(--emerald-l);display:flex;align-items:center;gap:8px}
+label{display:block;font-size:12px;color:var(--mut);margin:10px 0 4px}
+select,input,textarea{width:100%;background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:10px;color:var(--txt);
+  padding:9px 12px;font-size:13px;font-family:inherit}
+textarea{min-height:120px;resize:vertical;font-family:'Consolas',monospace;font-size:12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.btn{background:linear-gradient(135deg,var(--emerald),var(--emerald-d));color:#fff;border:none;border-radius:10px;
+  padding:12px 22px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(16,185,129,.4);transition:.15s}
+.btn:hover{transform:translateY(-2px);box-shadow:0 7px 20px rgba(16,185,129,.55)}
+.btn.sec{background:rgba(255,255,255,.08);box-shadow:none}
+.out{background:#0b1220;border:1px solid var(--emerald-d);border-radius:10px;padding:14px;font-family:'Consolas',monospace;
+  font-size:11px;color:#9ae6b4;white-space:pre-wrap;word-break:break-all;max-height:280px;overflow:auto;margin-top:12px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.pill{display:inline-block;background:rgba(16,185,129,.15);border:1px solid var(--emerald-d);color:var(--emerald-l);
+  border-radius:20px;padding:3px 12px;font-size:11px;margin:2px}
+.step{font-size:12px;color:var(--mut);line-height:1.7}
+.step b{color:var(--emerald-l)}
+.warn{background:rgba(251,191,36,.12);border:1px solid #f59e0b;border-radius:10px;padding:10px 14px;font-size:12px;color:#fde68a;margin-top:10px}
+.ok{background:rgba(16,185,129,.12);border:1px solid var(--emerald-d);border-radius:10px;padding:10px 14px;font-size:12px;color:#9ae6b4;margin-top:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>⚡ Defter Beyan API — Toplu Gönderici</h1>
+  <div class="sub">25.06.2026 gecesi çözüldü · Taner'in 104 e-SMM'i 1 dakikada atıldı · Formsuz, sürükle-bırak yok, "tek tek" yok</div>
+
+  <div class="card">
+    <h2>1️⃣ Mükellef & Parametreler</h2>
+    <div class="grid">
+      <div>
+        <label>Mükellef</label>
+        <select id="muk" onchange="mukSec()"></select>
+      </div>
+      <div>
+        <label>Belge Türü Kodu</label>
+        <select id="belgeTuru">
+          <option value="10">10 — e-Serbest Meslek Makbuzu</option>
+        </select>
+      </div>
+      <div>
+        <label>Gelir Kayıt Türü Kodu</label>
+        <input id="gkt" value="2" title="2 = Hizmet Satışı">
+      </div>
+      <div>
+        <label>Gelir Alt Tür Kodu</label>
+        <input id="gkat" value="22936" title="22936 = MUHASEBE GELİRİ (herkeste çalışır)">
+      </div>
+      <div>
+        <label>NACE / Faaliyet Kodu</label>
+        <input id="nace" value="692001">
+      </div>
+      <div>
+        <label>KDV Oranı (%)</label>
+        <input id="kdvOran" value="20" type="number">
+      </div>
+      <div>
+        <label>Stopaj</label>
+        <select id="stopaj">
+          <option value="var">Var (%20 — 022)</option>
+          <option value="yok">Yok</option>
+        </select>
+      </div>
+      <div>
+        <label>Stopaj Oranı (%)</label>
+        <input id="stopajOran" value="20" type="number">
+      </div>
+    </div>
+    <div id="mukInfo" class="step" style="margin-top:10px"></div>
+  </div>
+
+  <div class="card">
+    <h2>2️⃣ Makbuz Verisi</h2>
+    <label>Her satır: <b>BelgeNo , TCKN/VKN , Matrah</b> &nbsp;(virgülle) — veya Uyumsoft'tan kopyalanan <code>[["TNR...","vkn",tutar],...]</code> dizisi</label>
+    <textarea id="data" placeholder='TNR2026000000610,6341164320,3500
+TNR2026000000609,13675494166,5000
+... veya [["TNR...","6341164320",3500],...]'></textarea>
+    <div class="row" style="margin-top:6px">
+      <span class="pill" id="cnt">0 makbuz</span>
+      <span class="pill" id="sum">Matrah: 0</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>3️⃣ Script Üret</h2>
+    <div class="row">
+      <button class="btn" onclick="uret()">⚙️ API Scriptini Üret</button>
+      <button class="btn sec" onclick="kopyala()">📋 Kopyala</button>
+    </div>
+    <div class="warn">⚠️ Toplu atmadan önce o döneme ait <b>eski/karışık kayıtları sil</b> (mükerrer riski). Sonra: Defter Beyan'da o mükellefe geç → <b>F12 konsol</b> → üretilen scripti yapıştır → ~1 dakikada biter.</div>
+    <div class="out" id="out">Script burada görünecek…</div>
+    <div class="ok" style="margin-top:12px">
+      <b>Kullanım:</b> Defter Beyan → ilgili mükellef aktif → <b>Gelir Ekle</b> sayfası → <b>F12</b> ile konsolu aç → bu scripti yapıştır + Enter → <code>✅ TNR... </code> akar → <b>🎉 BİTTİ — Kaydedilen: N</b>.
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>📌 Doğrulanmış Kodlar (Taner ile test edildi)</h2>
+    <div class="step">
+      <span class="pill">Token header'ı: sessionStorage.Token</span>
+      <span class="pill">tcknVkn (tckanVkn DEĞİL)</span>
+      <span class="pill">MUHASEBE GELİRİ = 22936</span>
+      <span class="pill">e-SMM = 10</span>
+      <span class="pill">Hizmet Satışı = 2</span>
+      <span class="pill">Normal = 1</span>
+      <span class="pill">Stopaj = 022 · Tevkifat = 1100</span><br>
+      <b>20/20 kuralı:</b> KDV%=Stopaj%=20 olduğunda matrah = ödenecek tutar.
+    </div>
+  </div>
+</div>
+
+<script>
+const MUKELLEFLER = {
+  '8520482776':{ad:'Aylin Topçu Erdinç',nace:'869300',sektor:'Psikolog',gkat:'',stopaj:'yok',not:'DANIŞMANLIK BEDELİ alt tür kodu Temmuz\'da öğrenilecek. Çoğu nihai tüketici → bazıları TCKN\'siz.'},
+  '1500138444':{ad:'Taner Battal',nace:'692001',sektor:'Mali Müşavir',gkat:'22936',stopaj:'var',not:'✅ ÇÖZÜLDÜ — MUHASEBE GELİRİ (22936), %20 stopajlı, 104 makbuz test edildi.'},
+  '1500360006':{ad:'Emir Battal',nace:'691003',sektor:'Avukat',gkat:'',stopaj:'var',not:'Avukatlık geliri alt tür kodu Temmuz\'da öğrenilecek.'},
+  '6630177279':{ad:'Müge Özarmağan',nace:'691003',sektor:'Avukat',gkat:'',stopaj:'var',not:'Avukatlık geliri.'},
+  '7850427089':{ad:'Devran Süer',nace:'691003',sektor:'Avukat',gkat:'',stopaj:'var',not:'Avukatlık geliri.'},
+  '3750072366':{ad:'Cihan Güneş Ertürk',nace:'862202',sektor:'Uzman Hekim',gkat:'',stopaj:'yok',not:'Sağlık hizmeti alt tür kodu Temmuz\'da öğrenilecek.'},
+  '1500127919':{ad:'İskender Battal',nace:'862202',sektor:'Uzman Hekim',gkat:'',stopaj:'yok',not:'Sağlık hizmeti.'},
+  '1500459508':{ad:'Mert Tufan Battal',nace:'862303',sektor:'Diş Hekimi',gkat:'',stopaj:'yok',not:'Sağlık hizmeti.'},
+  '3750384725':{ad:'Çağrı Ertürk',nace:'742027',sektor:'Fotoğrafçı',gkat:'',stopaj:'yok',not:'Hizmet satışı.'},
+  '2610511823':{ad:'Yakup Çoruh',nace:'683101',sektor:'Emlak/Araç',gkat:'',stopaj:'yok',not:'Komisyon.'}
+};
+const sel=document.getElementById('muk');
+Object.entries(MUKELLEFLER).forEach(([vkn,m])=>{const o=document.createElement('option');o.value=vkn;o.textContent=m.ad+' · '+m.sektor;sel.appendChild(o);});
+sel.value='1500138444';
+
+function mukSec(){
+  const m=MUKELLEFLER[sel.value];
+  document.getElementById('nace').value=m.nace;
+  document.getElementById('gkat').value=m.gkat||'22936';
+  document.getElementById('stopaj').value=m.stopaj;
+  document.getElementById('mukInfo').innerHTML='<b>'+m.ad+'</b> ('+m.sektor+') — '+m.not;
+}
+mukSec();
+
+function parseData(){
+  let txt=document.getElementById('data').value.trim();
+  if(!txt) return [];
+  let rows=[];
+  if(txt.startsWith('[')){
+    try{ const a=JSON.parse(txt); a.forEach(r=>{ if(Array.isArray(r)&&r.length>=3) rows.push([String(r[0]).trim(),String(r[1]).trim(),Number(r[2])]); }); }catch(e){}
+  } else {
+    txt.split(/\n/).forEach(l=>{ l=l.trim(); if(!l) return; const p=l.split(/[,;\t]+/).map(x=>x.trim()); if(p.length>=3) rows.push([p[0],p[1].replace(/\D/g,''),Number(String(p[2]).replace(/[^\d.,]/g,'').replace(/\./g,'').replace(',','.'))]); });
+  }
+  return rows.filter(r=>r[0]&&r[1]&&r[2]>0);
+}
+function guncelle(){
+  const rows=parseData();
+  document.getElementById('cnt').textContent=rows.length+' makbuz';
+  const s=rows.reduce((a,r)=>a+r[2],0);
+  document.getElementById('sum').textContent='Matrah: '+s.toLocaleString('tr-TR');
+}
+document.getElementById('data').addEventListener('input',guncelle);
+
+function uret(){
+  const rows=parseData();
+  if(!rows.length){ document.getElementById('out').textContent='❌ Makbuz verisi yok / format hatalı. Her satır: BelgeNo,TCKN,Matrah'; return; }
+  const belgeTuru=document.getElementById('belgeTuru').value;
+  const gkt=document.getElementById('gkt').value.trim();
+  const gkat=document.getElementById('gkat').value.trim();
+  const nace=document.getElementById('nace').value.trim();
+  const kdvOran=Number(document.getElementById('kdvOran').value);
+  const stopajVar=document.getElementById('stopaj').value==='var';
+  const stopajOran=Number(document.getElementById('stopajOran').value);
+  const today='2026-06-17 00:00:00'; // not: gerekirse scriptte tarih per-makbuz override edilebilir
+
+  const dataStr=JSON.stringify(rows);
+  const stopajBlock = stopajVar
+    ? `stopajKodu:"022",stopajTutari:r2(mat*${stopajOran/100}),tevkifatUygulanmayanKodu:"1100"`
+    : `tevkifatUygulanmayanKodu:"1100"`;
+
+  const script=`(async()=>{
+const T=sessionStorage.getItem('Token');
+const H={'Content-Type':'application/json; charset=utf-8','Token':T};
+const B='https://backend-p.defterbeyan.gov.tr/rs';
+const DATA=${dataStr};
+const r2=v=>Math.round(v*100)/100;
+async function islem(d){const[bno,vkn,mat]=d;try{
+const lj=await(await fetch(B+'/adresdefteri/findbytckn/'+vkn,{method:'POST',headers:H,body:'{}',credentials:'include'})).json();
+const rc=lj.resultContainer;if(!rc||!rc.vergiDairesiKodu)return{bno,s:'❌',m:'VD yok'};
+const kdv=r2(mat*${kdvOran/100});
+const P={gelirBelgeTuruKodu:"${belgeTuru}",versiyon:11,kayitTarihi:"${today}",belgeTarihi:"${today}",nihaiTuketici:false,belgeSiraNo:bno,tcknVkn:vkn,ad:rc.ad,soyad:rc.soyad,vergiDairesiKodu:rc.vergiDairesiKodu,subeNo:rc.subeNo,adresiGuncelleme:false,krediKartiTutari:0,belgeTutari:mat,kayitlar:[{deleted:false,satisTuruKodu:"1",gelirKayitTuruKodu:"${gkt}",gelirKayitAltTuruKodu:"${gkat}",aciklama:((rc.soyad||'')+' '+(rc.ad||'')).trim().toLocaleUpperCase('tr')+' - MUHASEBE GELİRİ',tutar:mat,naceKodu:"${nace}",isKdvDahil:false,kdv:kdv,kdvOrani:${kdvOran},${stopajBlock}}]};
+const cr=await fetch(B+'/gelir/create',{method:'POST',headers:H,body:JSON.stringify(P),credentials:'include'});const cj=await cr.json();
+if(cr.status===200&&cj.resultContainer&&!cj.errorMessage)return{bno,s:'✅'};
+return{bno,s:'❌',m:(cj.errorMessage||cj.statusMessage||cr.status).toString().slice(0,50)};
+}catch(e){return{bno,s:'❌',m:e.message};}}
+console.log('⚡ '+DATA.length+' makbuz API ile gönderiliyor...');
+let ok=0,er=0;const fails=[];const BATCH=5;
+for(let i=0;i<DATA.length;i+=BATCH){const res=await Promise.all(DATA.slice(i,i+BATCH).map(islem));res.forEach(r=>{if(r.s==='✅')ok++;else{er++;fails.push(r.bno+' '+r.m);}console.log(r.s+' '+r.bno+(r.m?' '+r.m:''));});}
+console.log('🎉🎉 BİTTİ — Kaydedilen:'+ok+' Hata:'+er+' / '+DATA.length);
+if(fails.length)console.log('HATALILAR:',fails.join(' | '));
+})();`;
+
+  document.getElementById('out').textContent=script;
+  window.__SCRIPT=script;
+  guncelle();
+}
+function kopyala(){
+  if(!window.__SCRIPT){ uret(); }
+  navigator.clipboard.writeText(window.__SCRIPT||document.getElementById('out').textContent)
+    .then(()=>{ const b=event.target; const t=b.textContent; b.textContent='✅ Kopyalandı!'; setTimeout(()=>b.textContent=t,1500); });
+}
+</script>
+</body>
+</html>

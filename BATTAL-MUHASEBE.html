@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<title>BATTAL MUHASEBE · Yönetim Paneli</title>
+<style>
+:root{
+  --bg-1:#0b1224; --bg-2:#0f1830; --bg-3:#13203f;
+  --gold:#d4af37; --gold-2:#e6c558; --gold-3:#b8941f;
+  --acc:#3b82f6; --acc-2:#60a5fa;
+  --ok:#10b981; --warn:#f59e0b; --err:#ef4444; --pur:#a855f7;
+  --txt:#e8edf5; --txt-dim:#8895b3; --txt-soft:#cdd6e8;
+  --card:rgba(255,255,255,.04); --card-h:rgba(255,255,255,.075);
+  --br:rgba(255,255,255,.08); --br-2:rgba(212,175,55,.25);
+  --sidebar-w:240px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:'Segoe UI','Inter',-apple-system,system-ui,sans-serif;
+  background:
+    radial-gradient(1400px 900px at 0% 0%,#1e3a8a18 0%,transparent 60%),
+    radial-gradient(1000px 700px at 100% 100%,#d4af3712 0%,transparent 55%),
+    linear-gradient(160deg,var(--bg-1),var(--bg-2));
+  background-attachment:fixed;color:var(--txt);min-height:100vh;line-height:1.55;
+  display:grid;grid-template-columns:var(--sidebar-w) 1fr;
+}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-track{background:rgba(0,0,0,.2)}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:5px}
+::-webkit-scrollbar-thumb:hover{background:rgba(212,175,55,.35)}
+
+/* ════════ SIDEBAR ════════ */
+aside{
+  background:linear-gradient(180deg,rgba(11,18,36,.95),rgba(15,24,48,.95));
+  border-right:1px solid var(--br);min-height:100vh;
+  display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto;
+}
+.brand{
+  padding:22px 20px 18px;border-bottom:1px solid var(--br);
+  display:flex;align-items:center;gap:12px;
+}
+.brand-mark{
+  width:44px;height:44px;border-radius:11px;
+  background:linear-gradient(135deg,var(--gold),var(--gold-3));
+  display:flex;align-items:center;justify-content:center;font-size:22px;
+  box-shadow:0 6px 18px rgba(212,175,55,.4);
+}
+.brand-text h1{
+  font-size:14px;font-weight:800;letter-spacing:.6px;
+  background:linear-gradient(90deg,#fff,#e6c558);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.brand-text p{font-size:9.5px;color:var(--txt-dim);letter-spacing:1.2px;text-transform:uppercase;margin-top:2px}
+
+nav{padding:14px 12px;flex:1}
+.nav-section{margin-bottom:18px}
+.nav-section-t{
+  font-size:10px;color:var(--txt-dim);letter-spacing:1.2px;
+  text-transform:uppercase;font-weight:700;padding:0 10px 8px;
+}
+.nav-item{
+  display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:8px;
+  color:var(--txt-soft);font-size:12.5px;font-weight:500;cursor:pointer;
+  transition:all .15s;text-decoration:none;
+}
+.nav-item:hover{background:rgba(255,255,255,.05);color:#fff}
+.nav-item.active{background:linear-gradient(90deg,rgba(212,175,55,.18),rgba(212,175,55,.05));color:var(--gold-2);font-weight:600}
+.nav-item .ic{font-size:15px;width:18px;text-align:center}
+.nav-item .badge{margin-left:auto;font-size:9px;padding:2px 7px;border-radius:10px;background:var(--gold);color:#0b1224;font-weight:700}
+.nav-item .badge.warn{background:var(--warn);color:#0b1224}
+
+.sidebar-footer{
+  padding:14px;border-top:1px solid var(--br);
+  font-size:10.5px;color:var(--txt-dim);text-align:center;
+}
+.sidebar-footer b{color:var(--gold-2)}
+
+/* ════════ MAIN ════════ */
+main{padding:0;min-width:0}
+
+.topbar{
+  background:rgba(11,18,36,.7);backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--br);padding:16px 28px;
+  display:flex;align-items:center;gap:18px;position:sticky;top:0;z-index:50;
+}
+.topbar h2{font-size:18px;font-weight:700;color:#fff;letter-spacing:.2px}
+.topbar .sub{font-size:11.5px;color:var(--txt-dim);margin-top:1px}
+.topbar .spc{flex:1}
+.topbar .chip{
+  display:inline-flex;align-items:center;gap:6px;padding:7px 13px;
+  background:rgba(255,255,255,.04);border:1px solid var(--br);border-radius:8px;
+  font-size:11.5px;color:var(--txt-soft);
+}
+.topbar .chip b{color:var(--gold-2);font-weight:700}
+.topbar .chip.live{background:rgba(16,185,129,.10);border-color:rgba(16,185,129,.3);color:#6ee7b7}
+.topbar .chip.live .dot{width:6px;height:6px;border-radius:50%;background:#10b981;box-shadow:0 0 8px #10b981;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+.body{padding:24px 28px 60px}
+
+/* KPI bar */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(195px,1fr));gap:14px;margin-bottom:22px}
+.kpi{
+  background:linear-gradient(135deg,var(--card),rgba(255,255,255,.02));
+  border:1px solid var(--br);border-radius:13px;padding:17px 18px;
+  position:relative;overflow:hidden;transition:all .2s;
+}
+.kpi:hover{border-color:var(--br-2);transform:translateY(-2px);box-shadow:0 12px 30px rgba(0,0,0,.3)}
+.kpi::before{
+  content:'';position:absolute;top:0;left:0;width:3px;height:100%;
+  background:var(--gold);opacity:.7;
+}
+.kpi.acc::before{background:var(--acc)}
+.kpi.ok::before{background:var(--ok)}
+.kpi.warn::before{background:var(--warn)}
+.kpi.pur::before{background:var(--pur)}
+.kpi-h{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
+.kpi-l{font-size:10.5px;color:var(--txt-dim);letter-spacing:1px;text-transform:uppercase;font-weight:600}
+.kpi-ic{font-size:18px;opacity:.7}
+.kpi-v{font-size:26px;font-weight:800;color:#fff;letter-spacing:-.5px;line-height:1.1}
+.kpi-s{font-size:11px;color:var(--txt-dim);margin-top:5px;display:flex;align-items:center;gap:6px}
+.kpi-s .delta{padding:1.5px 7px;border-radius:10px;font-weight:700;font-size:9.5px}
+.kpi-s .delta.up{background:rgba(16,185,129,.18);color:#6ee7b7}
+.kpi-s .delta.down{background:rgba(239,68,68,.18);color:#fca5a5}
+.kpi-s .delta.flat{background:rgba(212,175,55,.15);color:var(--gold-2)}
+
+/* Spark mini chart */
+.kpi-spark{position:absolute;bottom:0;right:0;width:90px;height:36px;opacity:.55}
+
+/* Section */
+.section{margin-bottom:26px}
+.section-h{
+  display:flex;align-items:center;gap:12px;margin-bottom:14px;
+}
+.section-h h3{font-size:14px;font-weight:700;color:#fff;letter-spacing:.3px}
+.section-h .badge{font-size:9.5px;padding:3px 8px;border-radius:14px;background:rgba(212,175,55,.18);color:var(--gold-2);font-weight:700;letter-spacing:.5px;text-transform:uppercase}
+.section-h .line{flex:1;height:1px;background:linear-gradient(90deg,var(--br),transparent)}
+.section-h .more{font-size:11px;color:var(--txt-dim);cursor:pointer}
+.section-h .more:hover{color:var(--gold-2)}
+
+/* 2-col layout */
+.two-col{display:grid;grid-template-columns:2fr 1fr;gap:18px}
+@media (max-width:1100px){.two-col{grid-template-columns:1fr}}
+
+/* ════════ 3 BÜYÜK ANA MODÜL ════════ */
+.big3-grid{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:18px;
+  margin-bottom:12px;
+}
+@media(max-width:1100px){.big3-grid{grid-template-columns:1fr}}
+.big3{
+  position:relative;cursor:pointer;border-radius:16px;padding:24px 22px 22px;
+  background:linear-gradient(160deg,rgba(255,255,255,.05),rgba(255,255,255,.015));
+  border:2px solid var(--br);transition:all .25s;overflow:hidden;
+  display:flex;flex-direction:column;min-height:240px;
+}
+.big3::before{
+  content:"";position:absolute;top:0;right:-30%;width:60%;height:100%;
+  background:radial-gradient(circle at 70% 50%,var(--big3-glow,#7c3aed33) 0%,transparent 65%);
+  pointer-events:none;
+}
+.big3:hover{transform:translateY(-3px);border-color:var(--big3-color,#7c3aed);box-shadow:0 12px 32px var(--big3-glow,#7c3aed30)}
+.big3-ic{
+  width:60px;height:60px;border-radius:14px;display:flex;align-items:center;justify-content:center;
+  font-size:30px;margin-bottom:14px;
+  background:linear-gradient(135deg,var(--big3-color,#7c3aed),var(--big3-color2,#5b21b6));
+  box-shadow:0 8px 20px var(--big3-glow,#7c3aed40);
+}
+.big3 h3{font-size:16px;font-weight:800;color:#fff;letter-spacing:.3px;margin-bottom:8px}
+.big3 p{font-size:12.5px;color:var(--txt-soft);line-height:1.55;margin-bottom:16px;flex:1}
+.big3-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.big3-tags span{
+  font-size:10px;padding:3px 9px;border-radius:6px;
+  background:rgba(255,255,255,.06);color:var(--txt-soft);font-weight:500;
+}
+.big3-btn{
+  align-self:flex-start;padding:8px 18px;border-radius:8px;
+  background:var(--big3-color,#7c3aed);color:#fff;font-weight:700;font-size:12px;
+  letter-spacing:.5px;
+}
+.big3.banka{--big3-color:#3b82f6;--big3-color2:#1e40af;--big3-glow:#3b82f640}
+.big3.beyan{--big3-color:#10b981;--big3-color2:#047857;--big3-glow:#10b98140}
+.big3.db{--big3-color:#7c3aed;--big3-color2:#5b21b6;--big3-glow:#7c3aed40}
+.big3.dbpro{--big3-color:#f59e0b;--big3-color2:#b45309;--big3-glow:#f59e0b40}
+
+/* Panel cards row (eski grid, gizli araçlar için kullanılıyor) */
+.tools-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.tool{
+  background:var(--card);border:1px solid var(--br);border-radius:11px;padding:14px;
+  cursor:pointer;text-decoration:none;color:inherit;transition:all .2s;
+  display:flex;gap:11px;align-items:flex-start;
+}
+.tool:hover{background:var(--card-h);border-color:var(--br-2);transform:translateY(-1px)}
+.tool .ic{
+  width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;
+  font-size:18px;background:rgba(212,175,55,.12);flex-shrink:0;
+}
+.tool.html .ic{background:rgba(212,175,55,.12)}
+.tool.py .ic{background:rgba(59,130,246,.15);color:#93c5fd}
+.tool.folder .ic{background:rgba(168,85,247,.12);color:#d8b4fe}
+.tool h4{font-size:12.5px;color:#fff;font-weight:600;margin-bottom:2px}
+.tool p{font-size:10.5px;color:var(--txt-dim);line-height:1.5}
+.tool.featured{border-color:rgba(212,175,55,.45);background:linear-gradient(135deg,rgba(212,175,55,.08),rgba(212,175,55,.02))}
+
+/* Mükellef portfolio */
+.mukellef-tbl{
+  background:var(--card);border:1px solid var(--br);border-radius:11px;overflow:hidden;
+}
+.mukellef-tbl table{width:100%;border-collapse:collapse;font-size:12px}
+.mukellef-tbl th{
+  padding:11px 14px;text-align:left;background:rgba(0,0,0,.2);color:var(--txt-dim);
+  font-size:10px;letter-spacing:.6px;text-transform:uppercase;font-weight:700;
+  border-bottom:1px solid var(--br);
+}
+.mukellef-tbl td{padding:10px 14px;border-bottom:1px solid rgba(255,255,255,.03);color:var(--txt-soft)}
+.mukellef-tbl tr:hover td{background:rgba(255,255,255,.025)}
+.mukellef-tbl tr:last-child td{border-bottom:none}
+.mukellef-tbl .ad{color:#fff;font-weight:600;font-size:12.5px}
+.mukellef-tbl .emoji{font-size:16px;margin-right:6px}
+.mukellef-tbl .pill{
+  padding:2.5px 9px;border-radius:11px;font-size:9.5px;font-weight:700;
+  letter-spacing:.4px;text-transform:uppercase;
+}
+.pill.ok{background:rgba(16,185,129,.18);color:#6ee7b7}
+.pill.warn{background:rgba(245,158,11,.18);color:#fde68a}
+.pill.info{background:rgba(59,130,246,.18);color:#93c5fd}
+.pill.gray{background:rgba(255,255,255,.06);color:var(--txt-dim)}
+
+/* Activity */
+.act-list{background:var(--card);border:1px solid var(--br);border-radius:11px;padding:8px}
+.act{padding:11px 14px;display:flex;gap:12px;align-items:flex-start;border-bottom:1px solid rgba(255,255,255,.03)}
+.act:last-child{border-bottom:none}
+.act-ic{
+  width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;
+  font-size:14px;flex-shrink:0;
+}
+.act-ic.ok{background:rgba(16,185,129,.18);color:#6ee7b7}
+.act-ic.info{background:rgba(59,130,246,.18);color:#93c5fd}
+.act-ic.warn{background:rgba(245,158,11,.18);color:#fde68a}
+.act-ic.gold{background:rgba(212,175,55,.18);color:var(--gold-2)}
+.act-c{flex:1;min-width:0}
+.act-c h5{font-size:12px;color:#fff;font-weight:600;margin-bottom:2px}
+.act-c p{font-size:11px;color:var(--txt-dim);line-height:1.5}
+.act-time{font-size:10px;color:var(--txt-dim);white-space:nowrap;margin-left:auto}
+
+/* System status */
+.sys-list{background:var(--card);border:1px solid var(--br);border-radius:11px;padding:14px}
+.sys{display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.03)}
+.sys:last-child{border-bottom:none}
+.sys .dot{width:8px;height:8px;border-radius:50%}
+.sys .dot.ok{background:#10b981;box-shadow:0 0 8px #10b98180}
+.sys .dot.warn{background:#f59e0b;box-shadow:0 0 8px #f59e0b80}
+.sys .dot.err{background:#ef4444;box-shadow:0 0 8px #ef444480}
+.sys .name{flex:1;font-size:12px;color:var(--txt-soft)}
+.sys .val{font-size:11px;color:var(--txt-dim);font-variant-numeric:tabular-nums}
+
+/* Modal */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.78);display:none;align-items:center;justify-content:center;z-index:1000;padding:20px}
+.modal.show{display:flex}
+.modal-box{
+  background:linear-gradient(160deg,var(--bg-2),var(--bg-3));
+  border:1px solid var(--br-2);border-radius:14px;padding:24px;
+  max-width:520px;width:100%;box-shadow:0 18px 50px rgba(0,0,0,.6);
+}
+.modal-box h2{font-size:17px;margin-bottom:10px;color:#fff;display:flex;align-items:center;gap:8px}
+.modal-box p{color:var(--txt-soft);font-size:12.5px;margin-bottom:11px;line-height:1.6}
+.modal-box code{
+  background:#020617;color:#fde68a;padding:9px 12px;border-radius:7px;
+  font-size:11px;font-family:'JetBrains Mono','Consolas',monospace;
+  display:block;word-break:break-all;line-height:1.6;margin:8px 0;border:1px solid var(--br);
+}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:14px}
+.btn{
+  border:none;cursor:pointer;font-family:inherit;font-weight:700;font-size:12px;
+  padding:9px 16px;border-radius:8px;transition:all .18s;color:#0b1224;
+  background:linear-gradient(135deg,var(--gold),var(--gold-3));
+  box-shadow:0 4px 12px rgba(212,175,55,.35);
+}
+.btn:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(212,175,55,.5)}
+.btn.sec{background:rgba(255,255,255,.06);box-shadow:none;color:var(--txt);border:1px solid var(--br)}
+kbd{background:#020617;border:1px solid #475569;color:var(--gold-2);padding:2px 7px;border-radius:4px;font-size:11px;font-family:monospace;font-weight:600}
+
+@media (max-width:900px){
+  body{grid-template-columns:1fr}
+  aside{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- ════════════ SIDEBAR ════════════ -->
+<aside>
+  <div class="brand">
+    <div class="brand-mark">🦁</div>
+    <div class="brand-text">
+      <h1>BATTAL MUHASEBE</h1>
+      <p>Yönetim Paneli · v10.0</p>
+    </div>
+  </div>
+
+  <nav>
+    <div class="nav-section">
+      <div class="nav-section-t">Ana Modüller</div>
+      <a class="nav-item active" href="#anasayfa"><span class="ic">📊</span>Anasayfa</a>
+      <a class="nav-item" href="#mukellef"><span class="ic">👥</span>Mükellef Portföyü<span class="badge">15</span></a>
+      <a class="nav-item" href="#araclar"><span class="ic">🛠️</span>Araçlar & Modüller</a>
+      <a class="nav-item" href="#aktivite"><span class="ic">📋</span>Aktivite Akışı</a>
+      <a class="nav-item" href="#veri"><span class="ic">📁</span>Veri Klasörleri</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-t">Hızlı Erişim</div>
+      <a class="nav-item" href="BATTAL_Z_BOOKMARKLET.html" target="_blank"><span class="ic">🔖</span>Z Raporu Bookmarklet<span class="badge">YENİ</span></a>
+      <a class="nav-item" href="BATTAL_MUHASEBE_DB_PRO.html" target="_blank"><span class="ic">🛒</span>Defter Beyan Pro</a>
+      <a class="nav-item" href="MusavirPro_FaturaKontrol.html" target="_blank"><span class="ic">🔍</span>Fatura Kontrol</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-t">Sistem</div>
+      <a class="nav-item" href="MusavirPro_DefterBeyanAPI.html" target="_blank"><span class="ic">🔌</span>API Test Aracı</a>
+      <a class="nav-item" onclick="App.klasor('C:\\Users\\omery\\OneDrive\\Desktop\\📂 PANELLER\\🗄️ ESKI_KISAYOLLAR','Arşiv')"><span class="ic">🗄️</span>Arşiv</a>
+    </div>
+  </nav>
+
+  <div class="sidebar-footer">
+    <b>Emircan Süleymanoğlu</b><br>
+    <span id="tarih2"></span>
+  </div>
+</aside>
+
+<!-- ════════════ MAIN ════════════ -->
+<main>
+
+<div class="topbar">
+  <div>
+    <h2>Yönetici Özeti</h2>
+    <div class="sub">Genel performans, mükellef portföyü, sistem durumu</div>
+  </div>
+  <div class="spc"></div>
+  <div class="chip live"><span class="dot"></span>Sistem Aktif</div>
+  <div class="chip" id="topTarih">📅 29.06.2026 · Pazartesi</div>
+  <div class="chip">⏱️ <span id="dbHaftaSon">14.07.2026'a kadar</span></div>
+</div>
+
+<div class="body">
+
+<!-- ════════ KPI BARI ════════ -->
+<section id="anasayfa" class="section">
+  <div class="kpi-grid">
+
+    <div class="kpi">
+      <div class="kpi-h"><div class="kpi-l">Aktif Mükellef</div><div class="kpi-ic">👥</div></div>
+      <div class="kpi-v">15</div>
+      <div class="kpi-s"><span class="delta up">+2</span>geçen aya göre</div>
+      <svg class="kpi-spark" viewBox="0 0 90 36" preserveAspectRatio="none"><polyline fill="none" stroke="#d4af37" stroke-width="1.5" points="0,28 12,24 24,26 36,20 48,18 60,14 72,10 90,8"/></svg>
+    </div>
+
+    <div class="kpi ok">
+      <div class="kpi-h"><div class="kpi-l">Defter Beyan Kayıt</div><div class="kpi-ic">✅</div></div>
+      <div class="kpi-v">147</div>
+      <div class="kpi-s"><span class="delta up">+89</span>bu ay (Haziran)</div>
+      <svg class="kpi-spark" viewBox="0 0 90 36" preserveAspectRatio="none"><polyline fill="none" stroke="#10b981" stroke-width="1.5" points="0,32 12,28 24,22 36,24 48,16 60,12 72,8 90,4"/></svg>
+    </div>
+
+    <div class="kpi acc">
+      <div class="kpi-h"><div class="kpi-l">Aylık Ciro Toplam</div><div class="kpi-ic">💰</div></div>
+      <div class="kpi-v">₺1.24M</div>
+      <div class="kpi-s"><span class="delta up">+12%</span>geçen aya göre</div>
+      <svg class="kpi-spark" viewBox="0 0 90 36" preserveAspectRatio="none"><polyline fill="none" stroke="#3b82f6" stroke-width="1.5" points="0,30 12,26 24,28 36,22 48,18 60,16 72,12 90,6"/></svg>
+    </div>
+
+    <div class="kpi pur">
+      <div class="kpi-h"><div class="kpi-l">Vergi Levhası</div><div class="kpi-ic">📄</div></div>
+      <div class="kpi-v">78</div>
+      <div class="kpi-s"><span class="delta flat">JSON</span>arşiv hazır</div>
+    </div>
+
+    <div class="kpi warn">
+      <div class="kpi-h"><div class="kpi-l">Bekleyen İş</div><div class="kpi-ic">⏳</div></div>
+      <div class="kpi-v">5</div>
+      <div class="kpi-s"><span class="delta down">3 gün</span>14 Temmuz son tarih</div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ════════ İKİLİ KOLON: MÜKELLEF + AKTİVİTE ════════ -->
+<div class="two-col">
+
+<!-- SOL: Mükellef Portföyü -->
+<div>
+  <section id="mukellef" class="section">
+    <div class="section-h">
+      <h3>Mükellef Portföyü</h3>
+      <span class="badge">15 Aktif</span>
+      <span class="line"></span>
+      <span class="more">Tümünü Gör →</span>
+    </div>
+    <div class="mukellef-tbl">
+      <table>
+        <thead><tr>
+          <th>Mükellef</th><th>Sektör</th><th>Tip</th><th>Durum</th>
+        </tr></thead>
+        <tbody id="mukellefTbl"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Araçlar (Sade · 3 Ana Modül) -->
+  <section id="araclar" class="section">
+    <div class="section-h">
+      <h3>Ana Modüller</h3>
+      <span class="badge" style="background:#10b981;color:#0b1224">3 Modül · Sade</span>
+      <span class="line"></span>
+      <span class="more" onclick="document.getElementById('eskiAraclar').style.display=document.getElementById('eskiAraclar').style.display==='none'?'block':'none'" style="cursor:pointer">Tüm araçları göster ↓</span>
+    </div>
+
+    <!-- 3 BÜYÜK ANA KART -->
+    <div class="big3-grid">
+
+      <div class="big3 banka" onclick="App.pyAc('beyanname-otomatik-kaydetme\\banka_pos_panel\\banka_panel.py','Banka / POS Merkezi')">
+        <div class="big3-ic">🏦</div>
+        <h3>BANKA / POS MERKEZİ</h3>
+        <p>Banka ekstresi & POS slip oku · Mikro uyumlu Excel üret</p>
+        <div class="big3-tags">
+          <span>Ekstre Okuma</span>
+          <span>POS</span>
+          <span>Mikro Excel</span>
+        </div>
+        <div class="big3-btn">▶ AÇ</div>
+      </div>
+
+      <div class="big3 beyan" onclick="App.pyAc('beyanname-otomatik-kaydetme\\panel.py','E-Beyanname PDF Merkezi')">
+        <div class="big3-ic">📋</div>
+        <h3>E-BEYANNAME PDF MERKEZİ</h3>
+        <p>KDV1 · KDV2 · Muhtasar · SGK otomatik PDF indir · arşivle</p>
+        <div class="big3-tags">
+          <span>KDV / Muh / SGK</span>
+          <span>Otomatik PDF</span>
+          <span>Mükellef Arşivi</span>
+        </div>
+        <div class="big3-btn">▶ AÇ</div>
+      </div>
+
+      <div class="big3 dbpro" onclick="window.open('BATTAL_MUHASEBE_DB_PRO.html','_blank')">
+        <div class="big3-ic">⚡</div>
+        <h3>DEFTER BEYAN PRO</h3>
+        <p>15 mükellef · tek panel · tek tıkla defter beyan · Uyumsoft Excel kontrol</p>
+        <div class="big3-tags">
+          <span>SMM / İşletme</span>
+          <span>Tek Tık DB</span>
+          <span>Token</span>
+        </div>
+        <div class="big3-btn">▶ AÇ</div>
+      </div>
+
+    </div>
+
+    <!-- ESKİ TÜM ARAÇLAR (varsayılan gizli) -->
+    <div id="eskiAraclar" style="display:none;margin-top:24px">
+      <div class="section-h" style="margin-bottom:12px">
+        <h3 style="font-size:13px;color:var(--txt-dim)">Tüm Eski Araçlar (geriye uyumluluk)</h3>
+        <span class="line"></span>
+      </div>
+      <div class="tools-grid">
+        <a class="tool html featured" href="BATTAL_Z_BOOKMARKLET.html" target="_blank">
+          <div class="ic">🔖</div><div><h4>Z Raporu Bookmarklet</h4><p>F12'siz tek tık DB</p></div>
+        </a>
+        <a class="tool html" href="MUSAVIR_PRO_PANEL.html" target="_blank">
+          <div class="ic">💼</div><div><h4>Müşavir Pro</h4><p>HTML mükellef paneli</p></div>
+        </a>
+        <a class="tool html" href="MusavirPro_FaturaKontrol.html" target="_blank">
+          <div class="ic">🔍</div><div><h4>Fatura Kontrol</h4><p>Uyumsoft ↔ DB karşılaştır</p></div>
+        </a>
+        <a class="tool html" href="MusavirPro_DefterBeyanAPI.html" target="_blank">
+          <div class="ic">🔌</div><div><h4>API Test Aracı</h4><p>Endpoint & token testi</p></div>
+        </a>
+        <div class="tool py" onclick="App.pyAc('UYUMSOFT\\panel.py','Uyumsoft Komut Merkezi')">
+          <div class="ic">📥</div><div><h4>Uyumsoft (eski)</h4><p>Fatura/makbuz çekme</p></div>
+        </div>
+        <div class="tool py" onclick="App.pyAc('z_raporu\\z_raporu_panel.py','Z Raporu Python')">
+          <div class="ic">📊</div><div><h4>Z Raporu (eski)</h4><p>Mevcut Python paneli</p></div>
+        </div>
+        <div class="tool py" onclick="App.pyAc('KOMUT_MERKEZI\\komut_merkezi.py','Komut Merkezi')">
+          <div class="ic">🏠</div><div><h4>Codex Komut Merkezi</h4><p>Tüm Python panelleri</p></div>
+        </div>
+        <div class="tool py" onclick="App.pyAc('DB_AKTARIM_MERKEZI\\db_aktarim_merkezi.py','DB Aktarım Merkezi')">
+          <div class="ic">🚀</div><div><h4>DB Aktarım Merkezi</h4><p>Z Raporu/Trendyol/Hepsiburada toplama (Python)</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Veri Klasörleri -->
+  <section id="veri" class="section">
+    <div class="section-h">
+      <h3>Veri Klasörleri</h3>
+      <span class="badge">7 Klasör</span>
+      <span class="line"></span>
+    </div>
+    <div class="tools-grid">
+      <div class="tool folder" onclick="App.klasor('C:\\Users\\omery\\OneDrive\\Desktop\\📂 PANELLER\\IS_VERILERI','IS_VERILERI')"><div class="ic">📂</div><div><h4>IS_VERILERI</h4><p>Vergi levhaları + JSON</p></div></div>
+      <div class="tool folder" onclick="App.klasor('C:\\Users\\omery\\OneDrive\\Desktop\\📂 PANELLER\\🟡 Z_RAPORU','Z_RAPORU Excel')"><div class="ic">🟡</div><div><h4>Z Raporu Excel'leri</h4><p>Aylık veriler</p></div></div>
+      <div class="tool folder" onclick="App.klasor('C:\\Users\\omery\\OneDrive\\Desktop\\📂 PANELLER\\HAZIRAN_DB_EXCEL','Haziran DB Excel')"><div class="ic">📅</div><div><h4>Haziran DB Listeleri</h4><p>Aylık Excel</p></div></div>
+      <div class="tool folder" onclick="App.klasor('C:\\Users\\omery\\OneDrive\\Desktop\\📂 PANELLER\\HESAP_PLANLARI','Hesap Planları')"><div class="ic">📒</div><div><h4>Hesap Planları</h4><p>Mükellef bazlı</p></div></div>
+      <div class="tool folder" onclick="App.klasor('C:\\Users\\omery\\OneDrive\\Desktop\\📂 PANELLER\\🟡 KISISEL_GELISIM','Kişisel Gelişim')"><div class="ic">🌱</div><div><h4>Kişisel Gelişim</h4><p>Notlar, kaynaklar</p></div></div>
+      <div class="tool folder" onclick="App.klasor('C:\\Users\\omery\\OneDrive\\Desktop\\📂 PANELLER','PANELLER')"><div class="ic">🗂️</div><div><h4>PANELLER</h4><p>Ana çalışma klasörü</p></div></div>
+      <div class="tool folder" onclick="App.klasor('C:\\Users\\omery\\OneDrive\\Desktop\\📂 PANELLER\\🗄️ ESKI_KISAYOLLAR','Arşiv')"><div class="ic">🗄️</div><div><h4>Arşiv</h4><p>Eski kısayollar (güvenli)</p></div></div>
+    </div>
+  </section>
+</div>
+
+<!-- SAĞ: Aktivite + Sistem Durumu -->
+<div>
+  <section id="aktivite" class="section">
+    <div class="section-h">
+      <h3>Son Aktivite Akışı</h3>
+      <span class="line"></span>
+    </div>
+    <div class="act-list" id="actList"></div>
+  </section>
+
+  <section class="section">
+    <div class="section-h">
+      <h3>Sistem Durumu</h3>
+      <span class="line"></span>
+    </div>
+    <div class="sys-list">
+      <div class="sys"><span class="dot ok"></span><span class="name">Defter Beyan API</span><span class="val">200 OK</span></div>
+      <div class="sys"><span class="dot ok"></span><span class="name">Z Raporu Otomasyonu</span><span class="val">Aktif</span></div>
+      <div class="sys"><span class="dot ok"></span><span class="name">Uyumsoft Bağlantı</span><span class="val">Stabil</span></div>
+      <div class="sys"><span class="dot warn"></span><span class="name">Muzaffer subeNo</span><span class="val">Doğrulanmadı</span></div>
+      <div class="sys"><span class="dot warn"></span><span class="name">Selim Atalay Profili</span><span class="val">Eksik</span></div>
+      <div class="sys"><span class="dot ok"></span><span class="name">Vergi Levhaları</span><span class="val">78/78</span></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-h">
+      <h3>Sektör Dağılımı</h3>
+      <span class="line"></span>
+    </div>
+    <div class="sys-list">
+      <div class="sys"><span class="dot ok"></span><span class="name">Serbest Meslek (SMM)</span><span class="val">6 mükellef</span></div>
+      <div class="sys"><span class="dot" style="background:#3b82f6"></span><span class="name">Perakende / Mal Satışı</span><span class="val">4 mükellef</span></div>
+      <div class="sys"><span class="dot" style="background:#a855f7"></span><span class="name">İşletme Defteri</span><span class="val">3 mükellef</span></div>
+      <div class="sys"><span class="dot" style="background:#d4af37"></span><span class="name">Bilanço Esası</span><span class="val">2 mükellef</span></div>
+    </div>
+  </section>
+</div>
+
+</div><!-- /two-col -->
+
+</div><!-- /body -->
+</main>
+
+<!-- MODALLAR -->
+<div class="modal" id="m-py">
+  <div class="modal-box">
+    <h2>🐍 <span id="m-py-name"></span></h2>
+    <p>Python modülünü başlatmak için <kbd>Win+R</kbd> aç → <b>klibbordaki komutu yapıştır</b> → <kbd>Enter</kbd></p>
+    <code id="m-py-cmd"></code>
+    <p style="font-size:11px;color:var(--txt-dim)">📋 Komut otomatik klibborda kopyalandı.</p>
+    <div class="modal-actions">
+      <button class="btn sec" onclick="App.kapat('m-py')">Tamam</button>
+      <button class="btn" onclick="App.kopyala(document.getElementById('m-py-cmd').textContent)">📋 Tekrar Kopyala</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="m-klasor">
+  <div class="modal-box">
+    <h2>📂 <span id="m-klasor-name"></span></h2>
+    <p>Klasörü açmak için <kbd>Win+E</kbd> aç → adres çubuğuna <b>yolu yapıştır</b> → <kbd>Enter</kbd></p>
+    <code id="m-klasor-path"></code>
+    <p style="font-size:11px;color:var(--txt-dim)">📋 Yol otomatik klibborda kopyalandı.</p>
+    <div class="modal-actions">
+      <button class="btn sec" onclick="App.kapat('m-klasor')">Tamam</button>
+      <button class="btn" onclick="App.kopyala(document.getElementById('m-klasor-path').textContent)">📋 Tekrar Kopyala</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const MUKELLEFLER = [
+  {ad:'Aylin Topçu',emoji:'⚕️',sektor:'Sağlık · SMM',tip:'SMM',durum:'aktif',durumKls:'ok'},
+  {ad:'Taner Battal',emoji:'⚖️',sektor:'Hukuk · SMM',tip:'SMM',durum:'aktif',durumKls:'ok'},
+  {ad:'Emir Battal',emoji:'👔',sektor:'Danışmanlık · SMM',tip:'SMM',durum:'aktif',durumKls:'ok'},
+  {ad:'Müge Özarmağan',emoji:'💼',sektor:'Danışmanlık · SMM',tip:'SMM',durum:'aktif',durumKls:'ok'},
+  {ad:'Mert Tufan Battal',emoji:'📐',sektor:'Mimarlık · SMM',tip:'SMM',durum:'aktif',durumKls:'ok'},
+  {ad:'Cihan Güneş Ertürk',emoji:'📸',sektor:'Fotoğrafçılık · SMM',tip:'SMM',durum:'aktif',durumKls:'ok'},
+  {ad:'Devran Süer',emoji:'🩺',sektor:'Sağlık · SMM',tip:'SMM',durum:'aktif',durumKls:'ok'},
+  {ad:'Çağrı Ertürk',emoji:'📸',sektor:'Etkinlik Fotoğraf',tip:'İşletme',durum:'aktif',durumKls:'ok'},
+  {ad:'Altuğ Erden',emoji:'☕',sektor:'Çay/Kahve Perakende',tip:'İşletme',durum:'Z Raporu hazır',durumKls:'info'},
+  {ad:'Muzaffer Murat',emoji:'☕',sektor:'Çay/Kahve Perakende',tip:'İşletme',durum:'subeNo doğrula',durumKls:'warn'},
+  {ad:'Selim Atalay',emoji:'💎',sektor:'Kuyumcu/Gümüşçü',tip:'İşletme',durum:'Profil eksik',durumKls:'warn'},
+  {ad:'Yakup Çoruh',emoji:'🏢',sektor:'Genel İşletme',tip:'İşletme',durum:'aktif',durumKls:'ok'},
+  {ad:'Sinan Yılmaz',emoji:'🛍️',sektor:'Trendyol/Hepsiburada',tip:'Bilanço',durum:'Otomasyon planı',durumKls:'info'},
+  {ad:'Dilek Öztürk',emoji:'🏥',sektor:'Sağlık · Bilanço',tip:'Bilanço',durum:'Mikro/Logo planı',durumKls:'info'},
+  {ad:'İskender M. Nuri Battal',emoji:'🏢',sektor:'Genel',tip:'İşletme',durum:'Manuel',durumKls:'gray'},
+];
+
+const AKTIVITELER = [
+  {ic:'✅',iccls:'ok',h:'Altuğ Erden · Z Raporu 3200 kaydedildi',p:'01.06.2026 · ₺5.160 (KK ₺2.800 + Nakit ₺2.360)',t:'şimdi'},
+  {ic:'🔖',iccls:'gold',h:'Bookmarklet sistemi devreye alındı',p:'F12 yok · Defter Beyan içi modal · 3 firma',t:'15 dk önce'},
+  {ic:'📂',iccls:'info',h:'Masaüstü düzenlendi',p:'6 dağınık kısayol arşive taşındı · Dashboard kuruldu',t:'30 dk önce'},
+  {ic:'✅',iccls:'ok',h:'Z Raporu API kodları çözüldü',p:'gelirBelgeTuruKodu:"2" + subeNo:-13 + altTürü:"2"',t:'1 saat önce'},
+  {ic:'📄',iccls:'gold',h:'78 vergi levhası JSON\'a çıkarıldı',p:'vergi_levhalari.json (Üsküdar, Mecidiyeköy, Beşiktaş...)',t:'2 gün önce'},
+  {ic:'✅',iccls:'ok',h:'Gider API formülü çözüldü',p:'donemsellik:false + kismiTevkifatOrani kaldırıldı',t:'2 gün önce'},
+  {ic:'⏳',iccls:'warn',h:'Sinan Yılmaz Trendyol/Hepsi otomasyon',p:'Söz verilen tarih: 25.07.2026',t:'yakında'},
+];
+
+const App = {
+  PYTHON: 'C:\\Users\\omery\\AppData\\Local\\Programs\\Python\\Python314\\pythonw.exe',
+  PANELLER: 'C:\\Users\\omery\\OneDrive\\Desktop\\📂 PANELLER',
+
+  init(){
+    const d=new Date();
+    const dd=('0'+d.getDate()).slice(-2)+'.'+('0'+(d.getMonth()+1)).slice(-2)+'.'+d.getFullYear();
+    const gun=['Pazar','Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi'][d.getDay()];
+    document.getElementById('topTarih').innerHTML='📅 '+dd+' · '+gun;
+    document.getElementById('tarih2').textContent=dd;
+
+    this.tabloMukellef();
+    this.aktiviteListe();
+  },
+
+  tabloMukellef(){
+    const tb=document.getElementById('mukellefTbl');
+    tb.innerHTML=MUKELLEFLER.map(m=>`
+      <tr>
+        <td><span class="ad"><span class="emoji">${m.emoji}</span>${m.ad}</span></td>
+        <td>${m.sektor}</td>
+        <td><span class="pill gray">${m.tip}</span></td>
+        <td><span class="pill ${m.durumKls}">${m.durum}</span></td>
+      </tr>`).join('');
+  },
+
+  aktiviteListe(){
+    const el=document.getElementById('actList');
+    el.innerHTML=AKTIVITELER.map(a=>`
+      <div class="act">
+        <div class="act-ic ${a.iccls}">${a.ic}</div>
+        <div class="act-c"><h5>${a.h}</h5><p>${a.p}</p></div>
+        <div class="act-time">${a.t}</div>
+      </div>`).join('');
+  },
+
+  pyAc(rel, ad){
+    const r = (rel||'').toLowerCase();
+    let key='';
+    if(r.includes('banka_panel')||r.includes('banka_pos')) key='banka';
+    else if(r.includes('db_aktarim')) key='dbaktarim';
+    else if(r.includes('fatura')) key='fatura';
+    else if(r.includes('uyumsoft')) key='uyumsoft';
+    else if(r.includes('z_raporu')||r.includes('zraporu')) key='zraporu';
+    else if(r.includes('komut_merkezi')) key='komut';
+    else if(r.includes('beyanname')||r.includes('panel.py')) key='beyanname';
+    if(key){ location.href='battal://'+key; return; }   // protokolle DOĞRUDAN aç
+    // protokol eşleşmezse eski yöntem (komutu kopyala + Win+R)
+    const cmd = `"${this.PYTHON}" "${this.PANELLER}\\${rel}"`;
+    this.kopyala(cmd);
+    document.getElementById('m-py-name').textContent = ad;
+    document.getElementById('m-py-cmd').textContent = cmd;
+    document.getElementById('m-py').classList.add('show');
+  },
+
+  klasor(yol, ad){
+    this.kopyala(yol);
+    document.getElementById('m-klasor-name').textContent = ad;
+    document.getElementById('m-klasor-path').textContent = yol;
+    document.getElementById('m-klasor').classList.add('show');
+  },
+
+  kopyala(t){
+    navigator.clipboard.writeText(t).catch(()=>{
+      const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);
+      ta.select();document.execCommand('copy');document.body.removeChild(ta);
+    });
+  },
+
+  kapat(id){document.getElementById(id).classList.remove('show');}
+};
+
+document.addEventListener('DOMContentLoaded',()=>App.init());
+</script>
+
+</body>
+</html>

@@ -1,0 +1,6 @@
+BATTAL MUHASEBE - OFIS KURULUM
+
+1) Bu klasorun TAMAMINI USB'ye kopyala, ofis PC'sine yapistir.
+2) BATTAL-MUHASEBE.html'e cift tikla.
+3) Web panelleri direkt calisir.
+4) Banka/Beyanname-Oto araclari Python gerektirir.
