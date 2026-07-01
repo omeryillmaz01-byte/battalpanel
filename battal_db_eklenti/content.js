@@ -157,6 +157,7 @@
 
       /* Uyumsoft capraz kontrol (eklenti hafizasindan) */
       let uyumBox = '';
+      let aktifAy = 'tum';  /* secili ay — hem EKSIK hem Deftere Kayitli tablosunu filtreler */
       try {
         const store = await chrome.storage.local.get('uyumGelen');
         const u = store && store.uyumGelen;
@@ -175,7 +176,7 @@
             const adlar = { '01': 'Oca', '02': 'Şub', '03': 'Mar', '04': 'Nis', '05': 'May', '06': 'Haz', '07': 'Tem', '08': 'Ağu', '09': 'Eyl', '10': 'Eki', '11': 'Kas', '12': 'Ara' };
             const mevcutAylar = [...new Set(eksik.map(ayOf))].sort();
             const buAy = ('0' + (new Date().getMonth() + 1)).slice(-2);
-            const aktifAy = mevcutAylar.indexOf(buAy) >= 0 ? buAy : 'tum';
+            aktifAy = mevcutAylar.indexOf(buAy) >= 0 ? buAy : 'tum';
             let btns = '<div id="__eksikAy" style="margin-bottom:10px;display:flex;flex-wrap:wrap;gap:6px">';
             btns += '<button class="ayb" data-ay="tum" style="padding:6px 12px;border-radius:8px;border:1px solid #3a3550;background:' + (aktifAy === 'tum' ? '#d4af37' : 'transparent') + ';color:' + (aktifAy === 'tum' ? '#0b1224' : '#e8edf5') + ';font-weight:700;cursor:pointer">Tümü (' + eksik.length + ')</button>';
             mevcutAylar.forEach(a => {
@@ -223,10 +224,12 @@
         return a.length ? '<span style="color:#fca5a5;font-weight:700">' + a.join(' ') + '</span>' : '<span style="color:#6ee7b7">✓</span>';
       };
       const cols = ['Belge Tarihi', 'Belge No', 'VKN/TC', 'Açıklama', 'Matrah', 'KDV%', 'KDV', 'Stopaj', 'Kontrol'];
-      h += '<div style="margin:10px 0 6px"><b style="font-size:14px">📒 Deftere Kayıtlı Giderler</b></div>';
+      h += '<div style="margin:10px 0 6px"><b style="font-size:14px">📒 Deftere Kayıtlı Giderler</b>' + (aktifAy !== 'tum' ? ' <span style="font-size:11px;color:#9aa6c0">(yukarıdaki ay seçimine göre filtreli — "Tümü" ile hepsini gör)</span>' : '') + '</div>';
       h += '<div style="overflow:auto;border:1px solid #2a3550;border-radius:8px"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#141c2e;text-align:left">' + cols.map(x => '<th style="padding:8px">' + x + '</th>').join('') + '</tr></thead><tbody>';
+      const ayGid = r => { const t = (r.belgeTarihi || ''); if (/^\d{4}-\d{2}/.test(t)) return t.slice(5, 7); const p = t.split('.'); return p[1] || '00'; };
       all.forEach(r => {
-        h += '<tr style="border-top:1px solid #1f2840"><td style="padding:7px">' + (r.belgeTarihi || '').slice(0, 10) + '</td><td style="padding:7px">' + (r.belgeSiraNo || '') + '</td><td style="padding:7px">' + (r.tcknVkn || '') + '</td><td style="padding:7px">' + ((r.aciklama || '').slice(0, 60)) + '</td><td style="padding:7px;text-align:right">' + fmt(r.tutar) + '</td><td style="padding:7px;text-align:right">' + (r.kdvOrani || 0) + '</td><td style="padding:7px;text-align:right">' + fmt(r.kdv) + '</td><td style="padding:7px;text-align:right">' + fmt(r.stopajTutari) + '</td><td style="padding:7px">' + flag(r) + '</td></tr>';
+        const a = ayGid(r); const gizli = (aktifAy !== 'tum' && a !== aktifAy);
+        h += '<tr class="giderRow" data-ay="' + a + '" style="border-top:1px solid #1f2840;' + (gizli ? 'display:none' : '') + '"><td style="padding:7px">' + (r.belgeTarihi || '').slice(0, 10) + '</td><td style="padding:7px">' + (r.belgeSiraNo || '') + '</td><td style="padding:7px">' + (r.tcknVkn || '') + '</td><td style="padding:7px">' + ((r.aciklama || '').slice(0, 60)) + '</td><td style="padding:7px;text-align:right">' + fmt(r.tutar) + '</td><td style="padding:7px;text-align:right">' + (r.kdvOrani || 0) + '</td><td style="padding:7px;text-align:right">' + fmt(r.kdv) + '</td><td style="padding:7px;text-align:right">' + fmt(r.stopajTutari) + '</td><td style="padding:7px">' + flag(r) + '</td></tr>';
       });
       h += '</tbody></table></div>';
       bar.innerHTML = h;
@@ -240,6 +243,9 @@
             ayBar.querySelectorAll('.ayb').forEach(x => { x.style.background = 'transparent'; x.style.color = '#e8edf5'; });
             b.style.background = '#d4af37'; b.style.color = '#0b1224';
             document.querySelectorAll('#__eksikBody .eksikRow').forEach(tr => {
+              tr.style.display = (sec === 'tum' || tr.getAttribute('data-ay') === sec) ? '' : 'none';
+            });
+            document.querySelectorAll('.giderRow').forEach(tr => {
               tr.style.display = (sec === 'tum' || tr.getAttribute('data-ay') === sec) ? '' : 'none';
             });
           };
