@@ -80,11 +80,12 @@
           if (!rc) return { bno: d.bno, s: '❌', m: 'Tedarikçi sorgu boş' };
           const t = iso(d.tarih);
           const ad = ((rc.soyad || '') + ' ' + (rc.ad || '')).trim().toLocaleUpperCase('tr');
-          const kayitlar = [{ deleted: false, alisTuruKodu: '1', giderKayitTuruKodu: d.turKod || '4', giderKayitAltTuruKodu: String(d.altKod), aciklama: ad + ' - ' + d.altAd, tutar: d.matrah, gercekTutar: d.matrah, naceKodu: paket.nace, kdv: d.kdv, kdvOrani: d.oran, kdvsizIslem: false, donemsellik: false }];
+          const kayitlar = [{ deleted: false, alisTuruKodu: '1', giderKayitTuruKodu: d.turKod || '4', giderKayitAltTuruKodu: String(d.altKod), aciklama: ad + ' - ' + d.altAd, naceKodu: paket.nace, tutar: d.matrah, isKdvDahil: false, kdvsizIslem: false, kdv: d.kdv, kdvOrani: d.oran }];
           if (d.oiv > 0) {
-            kayitlar.push({ deleted: false, alisTuruKodu: '1', giderKayitTuruKodu: '5', giderKayitAltTuruKodu: '218', aciklama: ad + ' - ÖZEL İLETİŞİM VERGİSİ', tutar: d.oiv, gercekTutar: d.oiv, naceKodu: paket.nace, kdvsizIslem: true, donemsellik: false });
+            kayitlar.push({ deleted: false, alisTuruKodu: '1', giderKayitTuruKodu: '5', giderKayitAltTuruKodu: '218', aciklama: ad + ' - ÖZEL İLETİŞİM VERGİSİ', naceKodu: paket.nace, tutar: d.oiv, isKdvDahil: false, kdvsizIslem: true });
           }
-          const P = { giderBelgeTuruKodu: '9', versiyon: 11, kayitTarihi: t, belgeTarihi: t, belgeSiraNo: (d.bno || '').toString().trim().slice(0, 16), tcknVkn: d.vkn, ad: rc.ad, soyad: rc.soyad, vergiDairesiKodu: rc.vergiDairesiKodu, subeNo: rc.subeNo, adresiGuncelleme: false, kayitlar };
+          const P = { giderBelgeTuruKodu: '9', versiyon: 11, kayitTarihi: t, belgeTarihi: t, belgeSiraNo: (d.bno || '').toString().trim().slice(0, 16), tcknVkn: d.vkn, ad: rc.ad, soyad: rc.soyad, vergiDairesiKodu: rc.vergiDairesiKodu, adresiGuncelleme: false, kayitlar };
+          if (rc.subeNo) P.subeNo = rc.subeNo;
           const cr = await fetch(B + '/gider/create', { method: 'POST', headers: H, body: JSON.stringify(P), credentials: 'include' });
           const cj = await cr.json();
           if (cr.status === 200 && cj.resultContainer && !cj.errorMessage) return { bno: d.bno, s: '✅' };
