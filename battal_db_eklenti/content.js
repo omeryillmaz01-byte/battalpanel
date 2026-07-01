@@ -84,7 +84,7 @@
           if (d.oiv > 0) {
             kayitlar.push({ deleted: false, alisTuruKodu: '1', giderKayitTuruKodu: '5', giderKayitAltTuruKodu: '218', aciklama: ad + ' - ÖZEL İLETİŞİM VERGİSİ', tutar: d.oiv, gercekTutar: d.oiv, naceKodu: paket.nace, kdvsizIslem: true, donemsellik: false });
           }
-          const P = { giderBelgeTuruKodu: '9', versiyon: 11, kayitTarihi: t, belgeTarihi: t, belgeSiraNo: d.bno, tcknVkn: d.vkn, ad: rc.ad, soyad: rc.soyad, vergiDairesiKodu: rc.vergiDairesiKodu, subeNo: rc.subeNo, adresiGuncelleme: false, kayitlar };
+          const P = { giderBelgeTuruKodu: '9', versiyon: 11, kayitTarihi: t, belgeTarihi: t, belgeSiraNo: (d.bno || '').toString().trim().slice(0, 16), tcknVkn: d.vkn, ad: rc.ad, soyad: rc.soyad, vergiDairesiKodu: rc.vergiDairesiKodu, subeNo: rc.subeNo, adresiGuncelleme: false, kayitlar };
           const cr = await fetch(B + '/gider/create', { method: 'POST', headers: H, body: JSON.stringify(P), credentials: 'include' });
           const cj = await cr.json();
           if (cr.status === 200 && cj.resultContainer && !cj.errorMessage) return { bno: d.bno, s: '✅' };
