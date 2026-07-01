@@ -1088,11 +1088,26 @@ const App = {
       // Sınıflandırma
       let sinif='Diğer Hizmet', altKod=195, altAd='Diğer Hizmet Giderleri (GVK 40/1)', stopajGider=0, hasOIV=false;
       const txt = (r.unvan||'').toLocaleLowerCase('tr');
-      // Araç gideri tespiti — özel kısıtlamaya tabi (binek oto gider/KDV kısıtı), otomatik kod atanmaz, elle kontrol
-      // İstisna: aracIzinli:true olan mükelleflerde (Taner Battal, Cihan Güneş Ertürk, İskender Mehmet Nuri Battal) kısıtlama uygulanmaz
+      // Araç gideri tespiti — özel kısıtlamaya tabi (binek oto gider/KDV kısıtı)
+      // İstisna: aracIzinli:true olan mükelleflerde (Taner Battal, Cihan Güneş Ertürk, İskender Mehmet Nuri Battal)
+      // araç giderleri DOĞRU ALT KIRILIMA (Akaryakıt/Bakım-Onarım/Geçiş Ücreti) sınıflanır — gerçek Defter Beyan
+      // kodu henüz doğrulanmadığı için altKod=0 kalır (elle seçilir), yanlış kodla otomatik gönderilmez.
       const aracIzinli = !!(m && m.aracIzinli);
-      const aracRe = aracIzinli ? /(?!)x/ : /tüvturk|tuvturk|muayene istasyon|akaryakıt|akaryakit|petrol ofisi|opet|shell|aytemiz|kasko|trafik sigorta|oto ?lastik|oto ?yıkama|oto ?servis|oto ?kiralama|rent ?a ?car|otopark|otoyol|hgs|ogs/i;
-      if(aracRe.test(txt)){
+      const akaryakitRe = /akaryakıt|akaryakit|petrol ofisi|opet|shell|aytemiz|po petrol|benzin|motorin|lpg/i;
+      const bakimOnarimRe = /oto ?lastik|lastik|oto ?yıkama|oto ?servis|oto ?tamir|araç bakım|taşıt bakım|servis hizmet|bakım onarım/i;
+      const gecisRe = /hgs|ogs|otoyol|köprü geçiş|otopark|gişe/i;
+      const tuvturkRe = /tüvturk|tuvturk|muayene istasyon/i;
+      const digerAracRe = /kasko|trafik sigorta|rent ?a ?car|oto ?kiralama/i;
+      const aracRe = aracIzinli ? /(?!)x/ : new RegExp(akaryakitRe.source+'|'+bakimOnarimRe.source+'|'+gecisRe.source+'|'+tuvturkRe.source+'|'+digerAracRe.source,'i');
+      if(aracIzinli && akaryakitRe.test(txt)){
+        sinif='Taşıt Akaryakıt Giderleri'; altKod=0; altAd='Taşıt Akaryakıt Giderleri (GVK 40/1-40/5)';
+      } else if(aracIzinli && bakimOnarimRe.test(txt)){
+        sinif='Taşıt Bakım Onarım Giderleri'; altKod=0; altAd='Taşıt Bakım Onarım Giderleri (GVK 40/5)';
+      } else if(aracIzinli && gecisRe.test(txt)){
+        sinif='Otoyol ve Gişe Giderleri'; altKod=0; altAd='Otoyol ve Gişe Giderleri (OGS, HGS vb.) (GVK 40/4-5)';
+      } else if(aracIzinli && (tuvturkRe.test(txt) || digerAracRe.test(txt))){
+        sinif='Araç Gideri (tür belirle)'; altKod=0; altAd='Muayene/Kasko/Kiralama — Defter Beyan\'da uygun türü seç';
+      } else if(aracRe.test(txt)){
         sinif='🚗 ARAÇ (elle kontrol)'; altKod=0; altAd='Araç gideri — kısıtlamaya tabi, elle işlenmeli';
       } else {
         for(const rule of SINIF_KURALLAR){
