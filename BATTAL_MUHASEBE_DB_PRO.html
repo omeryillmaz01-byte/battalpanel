@@ -705,6 +705,22 @@ const SINIF_KURALLAR = [
 ];
 
 /* ════════════════════════════════════════════════════════════════════
+   TEDARİKÇİ ÖZEL EŞLEŞTİRME (VKN bazlı)
+   Genel regex kurallarının yanılabileceği durumlar için — kullanıcı
+   tarafından doğrulanmış gerçek bilgi, tahmin/varsayım DEĞİL.
+   Yeni tedarikçi eklemek için: "vkn": {sinif, altKod, altAd, turKod}
+   turKod: '1'=Mal Alışı, '4'=Normal İndirilecek Gider
+   ════════════════════════════════════════════════════════════════════ */
+const TEDARIKCI_OZEL = {
+  '3100018644': {sinif:'Mal Alışı', altKod:186, altAd:'Mal Alışı', turKod:'1'}, // CSK Farma Pazarlama — baharat/gıda tedarikçisi (Muzaffer)
+  '1500053692': {sinif:'Diğer Sarf Malzeme', altKod:0, altAd:'Diğer Sarf Malzeme Giderleri (GVK 40/1)', turKod:'4'}, // Bauhaus — yapı marketi, sarf malzeme (kod doğrulanmadı, elle seçilir)
+  '6120379680': {sinif:'Diğer Sarf Malzeme', altKod:0, altAd:'Diğer Sarf Malzeme Giderleri (GVK 40/1)', turKod:'4'} // MAPA Mobilya ve Aksesuar — dükkan ekipmanı, satılık mal DEĞİL (kod doğrulanmadı, elle seçilir)
+};
+// Fiziki/somut ürün ama satılık mal DEĞİL (dükkan ekipmanı, demirbaş) — bu kelimeler geçerse
+// Mal Alışı varsayılanına DÜŞMEZ, Sarf Malzeme'ye gider (gerçek kod bilinmediği için elle kontrol)
+const EKIPMAN_RE = /mobilya|aksesuar|ekipman|demirbaş|makine|cihaz|yazılım|donanım|bilgisayar|elektronik|masa|sandalye|dekorasyon|tabela/i;
+
+/* ════════════════════════════════════════════════════════════════════
    ANA UYGULAMA
    ════════════════════════════════════════════════════════════════════ */
 const AYLAR = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
@@ -1099,7 +1115,12 @@ const App = {
       const tuvturkRe = /tüvturk|tuvturk|muayene istasyon/i;
       const digerAracRe = /kasko|trafik sigorta|rent ?a ?car|oto ?kiralama/i;
       const aracRe = aracIzinli ? /(?!)x/ : new RegExp(akaryakitRe.source+'|'+bakimOnarimRe.source+'|'+gecisRe.source+'|'+tuvturkRe.source+'|'+digerAracRe.source,'i');
-      if(aracIzinli && akaryakitRe.test(txt)){
+      // VKN bazlı özel eşleştirme — kullanıcı onaylı gerçek bilgi (tahmin değil)
+      const ozel = TEDARIKCI_OZEL[r.vkn];
+      if(ozel){
+        sinif=ozel.sinif; altKod=ozel.altKod; altAd=ozel.altAd;
+        if(ozel.turKod==='1'){ r.malAlisRow=true; r.giderTuruKodu='1'; }
+      } else if(aracIzinli && akaryakitRe.test(txt)){
         sinif='Taşıt Akaryakıt Giderleri'; altKod=0; altAd='Taşıt Akaryakıt Giderleri (GVK 40/1-40/5)';
       } else if(aracIzinli && bakimOnarimRe.test(txt)){
         sinif='Taşıt Bakım Onarım Giderleri'; altKod=0; altAd='Taşıt Bakım Onarım Giderleri (GVK 40/5)';
@@ -1110,12 +1131,24 @@ const App = {
       } else if(aracRe.test(txt)){
         sinif='🚗 ARAÇ (elle kontrol)'; altKod=0; altAd='Araç gideri — kısıtlamaya tabi, elle işlenmeli';
       } else {
+        let eslesti=false;
         for(const rule of SINIF_KURALLAR){
           if(rule.p.test(txt)){
             sinif=rule.sinif; altKod=rule.altKod; altAd=rule.altAd;
             stopajGider=rule.stopaj||0; hasOIV=!!rule.oiv;
+            eslesti=true;
             break;
           }
+        }
+        // Hiçbir spesifik hizmet kuralına uymadı: mükellef mal alan bir perakendeci/toptancıysa
+        // (m.malAlis:true) varsayılan "Diğer Hizmet" değil "Mal Alışı"dır — çünkü bu mükellefe
+        // gelen faturaların çoğu hizmet değil, satacağı/kullanacağı maldır.
+        // İSTİSNA: fatura fiziki ama satılık mal değilse (mobilya/ekipman/demirbaş — EKIPMAN_RE),
+        // Mal Alışı değil Sarf Malzeme'ye düşer (gerçek kod bilinmediği için elle kontrol).
+        if(!eslesti && EKIPMAN_RE.test(txt)){
+          sinif='Diğer Sarf Malzeme'; altKod=0; altAd='Diğer Sarf Malzeme Giderleri (GVK 40/1)';
+        } else if(!eslesti && m && m.malAlis){
+          sinif='Mal Alışı'; altKod=186; altAd='Mal Alışı'; r.malAlisRow=true; r.giderTuruKodu='1';
         }
       }
       // Sabit kıymet kontrolü
