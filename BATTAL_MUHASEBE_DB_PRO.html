@@ -689,9 +689,9 @@ Object.assign(GIDER_KOD, KAYDEDILEN_KOD);
 const SINIF_KURALLAR = [
   {p:/i.?g.?d.?a.?ş|igdaş|gaz dağıt/i, sinif:'Doğalgaz', altKod:84, altAd:'Doğalgaz Giderleri (GVK 40/1)'},
   {p:/enerjisa|bedaş|ayedaş|boğaziçi elektrik|elektrik perakende|elektrik dağıt/i, sinif:'Elektrik', altKod:0, altAd:'Elektrik Giderleri (GVK 40/1)'},
-  {p:/iski|aski|su dağıt|su şebek/i, sinif:'Su', altKod:0, altAd:'Su Giderleri (GVK 40/1)'},
+  {p:/iski|aski|su dağıt|su şebek/i, sinif:'Su', altKod:83, altAd:'Su Giderleri (GVK 40/1)'},
   {p:/turkcell|vodafone|türk ?telekom|ttnet|superonline|millennium|net|telefon/i, sinif:'Telefon+ÖİV', altKod:87, altAd:'Telefon Giderleri (GVK 40/1)', oiv:true},
-  {p:/kargo|aras|mng|yurtiçi kargo|ptt kargo|sürat|hepsijet|sendeo|trendyol express/i, sinif:'Kargo', altKod:0, altAd:'Kargo Posta ve Kurye Giderleri (GVK 40/1)'},
+  {p:/kargo|aras|mng|yurtiçi kargo|ptt kargo|sürat|hepsijet|sendeo|trendyol express/i, sinif:'Kargo', altKod:193, altAd:'Kargo Posta ve Kurye Giderleri (GVK 40/1)'},
   {p:/google ireland|meta platforms|facebook|instagram reklam/i, sinif:'İnternet Reklam', altKod:0, altAd:'İnternet Reklam Hizmet Alım Giderleri (GVK 40/1)'},
   {p:/dsm grup|d-market|hepsiburada komisyon|trendyol komisyon|n11|amazon komisyon|gittigid|pttavm|çiçek ?sepeti|pos komis/i, sinif:'Komisyon/POS', altKod:0, altAd:'Komisyon ve Pos Giderleri (GVK 40/1)'},
   {p:/kira gideri|kiraladığı|gayrimenkul kira|işyeri kira/i, sinif:'Kira', altKod:0, altAd:'Kira Gideri (GVK 40/1)'},
@@ -702,7 +702,8 @@ const SINIF_KURALLAR = [
   {p:/temizlik|hijyen/i, sinif:'Ofis (Temizlik)', altKod:0, altAd:'Ofis Giderleri (Çay, Kahve, Şeker, Temizlik vb.) (GVK 40/1)'},
   // "gıda" kelimesi bilerek dahil edilmedi — malAlis mükelleflerde (Muzaffer gibi) toptan gıda/baharat
   // tedarikçileriyle karışıyordu (Mal Alışı olması gerekirken Yemek Harcaması'na düşüyordu).
-  {p:/yemek sepeti|getir\b|iş yemeği|personel yemeği/i, sinif:'Yemek', altKod:0, altAd:'Gıda ve Yemek Harcamaları (GVK 40/1-40/2)'},
+  {p:/yemek sepeti|getir\b|personel yemeği/i, sinif:'Yemek', altKod:90, altAd:'Gıda ve Yemek Harcamaları (GVK 40/1-40/2)'},
+  {p:/iş yemeği|ağırlama|temsil/i, sinif:'Temsil ve Ağırlama Gideri', altKod:97, altAd:'Temsil ve Ağırlama Gideri (İş yemeği vb.) (GVK 40/1)'},
   {p:/akaryakıt|benzin|motorin|opet|shell|petrol ofisi|po petrol|aytemiz/i, sinif:'Akaryakıt', altKod:0, altAd:'Taşıt Akaryakıt Giderleri (GVK 40/1-40/5)'}
 ];
 
@@ -714,14 +715,17 @@ const SINIF_KURALLAR = [
    turKod: '1'=Mal Alışı, '4'=Normal İndirilecek Gider
    ════════════════════════════════════════════════════════════════════ */
 // demirbasAdayi:true olan tedarikçilerde 12.000 TL (KDV hariç) eşiği uygulanır:
-//   matrah <= 12.000  → "Doğrudan Gider Yazılan Demirbaş (GVK 40/1)" (kod doğrulanmadı, elle seçilir)
+//   matrah <= 12.000  → "Doğrudan Gider Yazılan Demirbaş (GVK 40/1)" (kod 185, doğrulandı)
 //   matrah  > 12.000  → mevcut "SABİT KIYMET (>12.000)" / Amortisman akışına (kod 255) düşer
 const TEDARIKCI_OZEL = {
   '3100018644': {sinif:'Mal Alışı', altKod:186, altAd:'Mal Alışı', turKod:'1'}, // CSK Farma Pazarlama — baharat/gıda tedarikçisi (Muzaffer)
   '1500053692': {demirbasAdayi:true, altAdBase:'Bauhaus (yapı/inşaat malzemesi)'}, // Bauhaus
   '6120379680': {demirbasAdayi:true, altAdBase:'MAPA Mobilya ve Aksesuar'}, // MAPA — dükkan ekipmanı, satılık mal DEĞİL
-  '5820492073': {sinif:'Yemek', altKod:0, altAd:'Gıda ve Yemek Harcamaları (GVK 40/1-40/2)', turKod:'4'} // KÖFTECİ YUSUF — yemek/catering hizmeti, Mal Alışı DEĞİL (kullanıcı onayı)
+  '5820492073': {sinif:'Yemek', altKod:90, altAd:'Gıda ve Yemek Harcamaları (GVK 40/1-40/2)', turKod:'4'} // KÖFTECİ YUSUF — yemek/catering hizmeti, Mal Alışı DEĞİL (kullanıcı onayı)
 };
+// Kod 194 = "Dışarıdan Sağlanan Fayda ve Hizmetler" — kullanıcı test faturasında doğrulandı
+// ama henüz otomatik tetikleyici anahtar kelime/kural belirlenmedi. İleride ihtiyaç olursa
+// SINIF_KURALLAR veya TEDARIKCI_OZEL'e altKod:194 ile eklenebilir.
 // Fiziki/somut ürün ama satılık mal DEĞİL (dükkan ekipmanı, demirbaş) — bu kelimeler geçerse
 // Mal Alışı varsayılanına DÜŞMEZ, Sarf Malzeme'ye gider (gerçek kod bilinmediği için elle kontrol)
 const EKIPMAN_RE = /mobilya|aksesuar|ekipman|demirbaş|makine|cihaz|yazılım|donanım|bilgisayar|elektronik|masa|sandalye|dekorasyon|tabela/i;
@@ -1132,7 +1136,7 @@ const App = {
       } else if(ozel){
         if(ozel.demirbasAdayi){
           if(r.matrah<=12000){
-            sinif='Doğrudan Gider Yazılan Demirbaş'; altKod=0; altAd='Doğrudan Gider Yazılan Demirbaş (GVK 40/1) — '+ozel.altAdBase;
+            sinif='Doğrudan Gider Yazılan Demirbaş'; altKod=185; altAd='Doğrudan Gider Yazılan Demirbaş (GVK 40/1) — '+ozel.altAdBase;
           } else {
             sinif='SABİT KIYMET (>12.000)'; altKod=255; altAd='Amortisman Giderleri (GVK 40/7)'; demirbasZorunlu=true;
           }
