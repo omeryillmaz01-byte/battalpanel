@@ -1030,23 +1030,22 @@ const App = {
       const vkn = (g('vkn').match(/\b(\d{10,11})\b/)||[,''])[1];
       let unvan = g('unvan').replace(vkn,'').replace(/\s+/g,' ').trim();
       const odenecek = this.num(g('odenecek'));
-      // KDV oranları
+      // KDV oranları — HER ORANI AYRI SATIR OLARAK İŞLE (mixed-oran faturalarda veri kaybı/hayali ÖİV önlenir)
       const k0=this.num(g('kdv0m')), k1=this.num(g('kdv1m')), k8=this.num(g('kdv8m')), k10=this.num(g('kdv10m')), k18=this.num(g('kdv18m')), k20=this.num(g('kdv20m'));
       const v1=this.num(g('kdv1v')), v8=this.num(g('kdv8v')), v10=this.num(g('kdv10v')), v18=this.num(g('kdv18v')), v20=this.num(g('kdv20v'));
       const toplamKdv=this.num(g('topkdv'))||(v1+v8+v10+v18+v20);
       const haricToplam=this.num(g('haric'))||(k0+k1+k8+k10+k18+k20);
-      let matrah=haricToplam, kdv=toplamKdv, oran=0;
-      if(k20>0&&v20>0){oran=20;matrah=k20;kdv=v20}
-      else if(k10>0&&v10>0){oran=10;matrah=k10;kdv=v10}
-      else if(k18>0&&v18>0){oran=18;matrah=k18;kdv=v18}
-      else if(k8>0&&v8>0){oran=8;matrah=k8;kdv=v8}
-      else if(k1>0&&v1>0){oran=1;matrah=k1;kdv=v1}
-      else if(matrah>0&&kdv>0){oran=Math.round(kdv/matrah*100)}
-      // ÖİV tespiti: ödenecek > matrah+KDV → fark ÖİV
-      let oiv=0;
-      if(odenecek>matrah+kdv+1){oiv=this.r2(odenecek-matrah-kdv)}
       const iptal=/iptal|red|reddedildi/i.test(g('durum'));
-      out.push({belgeNo:bn,tarih:tar,vkn,unvan,matrah,kdv,oran,oiv,odenecek,iptal});
+      const oranlar=[{oran:20,matrah:k20,kdv:v20},{oran:10,matrah:k10,kdv:v10},{oran:18,matrah:k18,kdv:v18},{oran:8,matrah:k8,kdv:v8},{oran:1,matrah:k1,kdv:v1}].filter(x=>x.matrah>0);
+      if(!oranlar.length && haricToplam>0) oranlar.push({oran:toplamKdv>0?Math.round(toplamKdv/haricToplam*100):0,matrah:haricToplam,kdv:toplamKdv});
+      oranlar.forEach(x=>{
+        out.push({belgeNo:bn,tarih:tar,vkn,unvan,matrah:x.matrah,kdv:x.kdv,oran:x.oran,oiv:0,odenecek,iptal});
+      });
+      // ÖİV: ödenecek, TÜM oranların toplamından fazlaysa gerçek fark ÖİV'dir — ayrı satır
+      const oivFark = this.r2(odenecek - haricToplam - toplamKdv);
+      if(oivFark>1){
+        out.push({belgeNo:bn,tarih:tar,vkn,unvan,matrah:0,kdv:0,oran:0,oiv:oivFark,odenecek,iptal,isOivRow:true});
+      }
     }
     this.giderData = out;
     this.giderFilter();
@@ -1070,33 +1069,47 @@ const App = {
 
   giderSinifla(arr){
     const m = MUKELLEFLER[this.aktifVkn];
-    const say={};arr.forEach(r=>{if(r.belgeNo)say[r.belgeNo]=(say[r.belgeNo]||0)+1});
+    // Mükerrer: ayni belge + ayni matrah + ayni KDV + ayni oran ikinci kez varsa (mixed-oran/ÖİV satırlari farkli sayilir)
+    const mkey = r=>r.belgeNo+'|'+r.matrah+'|'+r.kdv+'|'+r.oran+'|'+(r.isOivRow?'oiv':'');
+    const say={};arr.forEach(r=>{const k=mkey(r);say[k]=(say[k]||0)+1});
     arr.forEach(r=>{
       const u=[];
-      if(say[r.belgeNo]>1)u.push('MÜKERRER');
+      if(say[mkey(r)]>1)u.push('MÜKERRER');
       if(!r.vkn||r.vkn.length<10)u.push('VKN?');
+      // ÖİV satırı: matrah=0 olması normal, ayrı kayıt olarak deftere yazılır
+      if(r.isOivRow){
+        r.sinif='Özel İletişim Vergisi'; r.altKod=218; r.altAd='Özel İletişim Vergisi'; r.stopajGider=0; r.hasOIV=false; r.sabitKiymet=false;
+        r.uyari=u; return;
+      }
       if(!(r.matrah>0))u.push('Matrah?');
       // Sınıflandırma
       let sinif='Diğer Hizmet', altKod=0, altAd='Diğer Hizmet Giderleri (GVK 40/1)', stopajGider=0, hasOIV=false;
       const txt = (r.unvan||'').toLocaleLowerCase('tr');
-      for(const rule of SINIF_KURALLAR){
-        if(rule.p.test(txt)){
-          sinif=rule.sinif; altKod=rule.altKod; altAd=rule.altAd;
-          stopajGider=rule.stopaj||0; hasOIV=!!rule.oiv;
-          break;
+      // Araç gideri tespiti — özel kısıtlamaya tabi (binek oto gider/KDV kısıtı), otomatik kod atanmaz, elle kontrol
+      const aracRe = /tüvturk|tuvturk|muayene istasyon|akaryakıt|akaryakit|petrol ofisi|opet|shell|aytemiz|kasko|trafik sigorta|oto ?lastik|oto ?yıkama|oto ?servis|oto ?kiralama|rent ?a ?car|otopark|otoyol|hgs|ogs/i;
+      if(aracRe.test(txt)){
+        sinif='🚗 ARAÇ (elle kontrol)'; altKod=0; altAd='Araç gideri — kısıtlamaya tabi, elle işlenmeli';
+      } else {
+        for(const rule of SINIF_KURALLAR){
+          if(rule.p.test(txt)){
+            sinif=rule.sinif; altKod=rule.altKod; altAd=rule.altAd;
+            stopajGider=rule.stopaj||0; hasOIV=!!rule.oiv;
+            break;
+          }
         }
       }
       // Sabit kıymet kontrolü
       let sabitKiymet=false;
-      if(r.matrah>12000 && m && m.hizmet){
+      if(!aracRe.test(txt) && r.matrah>12000 && m && m.hizmet){
         sabitKiymet=true; sinif='SABİT KIYMET (>12.000)'; altKod=255; altAd='Amortisman Giderleri (GVK 40/7)';
-      } else if(m && m.hizmet && /fujifilm|sarf|malzeme/i.test(txt) && r.matrah<=12000){
+      } else if(!aracRe.test(txt) && m && m.hizmet && /fujifilm|sarf|malzeme/i.test(txt) && r.matrah<=12000){
         sinif='Sarf Malzeme'; altKod=0; altAd='Diğer Sarf Malzeme Giderleri (GVK 40/1)';
-      } else if(m && m.malAlis && /(?:gıda|ürün|toptan|baharat|çay|kahve|tedarik|aktar|kozmetik|tekstil|kuru ?yemiş|fındık|fıstık)/i.test(txt)){
-        sinif='Mal Alışı'; altKod=0; altAd='Mal Alışı';
+      } else if(!aracRe.test(txt) && m && m.malAlis && /(?:gıda|ürün|toptan|baharat|çay|kahve|tedarik|aktar|kozmetik|tekstil|kuru ?yemiş|fındık|fıstık)/i.test(txt)){
+        sinif='Mal Alışı'; altKod=0; altAd='Mal Alışı'; r.malAlisRow=true;
       }
       r.sinif=sinif; r.altKod=altKod; r.altAd=altAd; r.stopajGider=stopajGider; r.hasOIV=hasOIV; r.sabitKiymet=sabitKiymet;
-      if(altKod===0 && !sabitKiymet)u.push('Kod henüz yok — Defter Beyan\'da Gider Ekle\'de dropdown\'dan seç');
+      if(altKod===0 && !sabitKiymet && !r.malAlisRow && sinif!=='🚗 ARAÇ (elle kontrol)')u.push('Kod henüz yok — Defter Beyan\'da Gider Ekle\'de dropdown\'dan seç');
+      if(sinif==='🚗 ARAÇ (elle kontrol)')u.push('🚗 ARAÇ — otomatik gönderilmez, elle kontrol et');
       r.uyari=u;
     });
   },
