@@ -1068,15 +1068,18 @@ const App = {
       const toplamKdv=this.num(g('topkdv'))||(v1+v8+v10+v18+v20);
       const haricToplam=this.num(g('haric'))||(k0+k1+k8+k10+k18+k20);
       const iptal=/iptal|red|reddedildi/i.test(g('durum'));
+      // İADE faturası: normal alış gibi işlenmemeli — iade/return olarak ayrı kaydedilir.
+      // Fatura Tipi "İade" ise (veya durum/ünvanda "iade" geçiyorsa) işaretle, otomatik gönderme.
+      const iade=/iade/i.test(g('faturaTipi'))||/iade/i.test(g('durum'));
       const oranlar=[{oran:20,matrah:k20,kdv:v20},{oran:10,matrah:k10,kdv:v10},{oran:18,matrah:k18,kdv:v18},{oran:8,matrah:k8,kdv:v8},{oran:1,matrah:k1,kdv:v1}].filter(x=>x.matrah>0);
       if(!oranlar.length && haricToplam>0) oranlar.push({oran:toplamKdv>0?Math.round(toplamKdv/haricToplam*100):0,matrah:haricToplam,kdv:toplamKdv});
       oranlar.forEach(x=>{
-        out.push({belgeNo:bn,tarih:tar,vkn,unvan,matrah:x.matrah,kdv:x.kdv,oran:x.oran,oiv:0,odenecek,iptal});
+        out.push({belgeNo:bn,tarih:tar,vkn,unvan,matrah:x.matrah,kdv:x.kdv,oran:x.oran,oiv:0,odenecek,iptal,iade});
       });
       // ÖİV: ödenecek, TÜM oranların toplamından fazlaysa gerçek fark ÖİV'dir — ayrı satır
       const oivFark = this.r2(odenecek - haricToplam - toplamKdv);
       if(oivFark>1){
-        out.push({belgeNo:bn,tarih:tar,vkn,unvan,matrah:0,kdv:0,oran:0,oiv:oivFark,odenecek,iptal,isOivRow:true});
+        out.push({belgeNo:bn,tarih:tar,vkn,unvan,matrah:0,kdv:0,oran:0,oiv:oivFark,odenecek,iptal,iade,isOivRow:true});
       }
     }
     this.giderData = out;
@@ -1108,6 +1111,7 @@ const App = {
       const u=[];
       if(say[mkey(r)]>1)u.push('MÜKERRER');
       if(!r.vkn||r.vkn.length<10)u.push('VKN?');
+      if(r.iade)u.push('🔁 İADE FATURASI — iade/return olarak elle kaydet, normal alış değil');
       // ÖİV satırı: matrah=0 olması normal, ayrı kayıt olarak deftere yazılır
       if(r.isOivRow){
         r.sinif='Özel İletişim Vergisi'; r.altKod=218; r.altAd='Özel İletişim Vergisi'; r.stopajGider=0; r.hasOIV=false; r.sabitKiymet=false;
@@ -1446,6 +1450,7 @@ if(fails.length)console.log('Hatalı: '+fails.slice(0,10).join(' | '));
       stopaj:f('toplam stopaj'),
       vergi: f('toplam vergi'),
       durum: f('durum','makbuz durumu','fatura durumu'),
+      faturaTipi: f('fatura tipi','fatura tı','senaryo tipi','tip'),
       // Gider: KDV oranlı kolonlar
       kdv0m: f('%0 kdv matrah'),
       kdv1m: f('%1 kdv matrah'),
