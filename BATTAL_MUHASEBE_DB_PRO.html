@@ -1083,7 +1083,7 @@ const App = {
       }
       if(!(r.matrah>0))u.push('Matrah?');
       // Sınıflandırma
-      let sinif='Diğer Hizmet', altKod=0, altAd='Diğer Hizmet Giderleri (GVK 40/1)', stopajGider=0, hasOIV=false;
+      let sinif='Diğer Hizmet', altKod=195, altAd='Diğer Hizmet Giderleri (GVK 40/1)', stopajGider=0, hasOIV=false;
       const txt = (r.unvan||'').toLocaleLowerCase('tr');
       // Araç gideri tespiti — özel kısıtlamaya tabi (binek oto gider/KDV kısıtı), otomatik kod atanmaz, elle kontrol
       const aracRe = /tüvturk|tuvturk|muayene istasyon|akaryakıt|akaryakit|petrol ofisi|opet|shell|aytemiz|kasko|trafik sigorta|oto ?lastik|oto ?yıkama|oto ?servis|oto ?kiralama|rent ?a ?car|otopark|otoyol|hgs|ogs/i;
