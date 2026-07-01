@@ -564,7 +564,8 @@ const MUKELLEFLER = {
     sektor:'Mali Müşavir', nace:'692001',
     altKod:'22936', altAd:'MUHASEBE GELİRİ',
     kdvOrani:20, stopaj:true, stopajOran:20, nihaiTuketici:false, kdvDahil:false,
-    levha:'Terazidere Mah. Taş Sk. Bayrampaşa'
+    levha:'Terazidere Mah. Taş Sk. Bayrampaşa',
+    aracIzinli:true // araç giderleri otomatik işlenebilir (kısıtlama yok)
   },
   '1500360006':{
     ad:'Emir Battal', emoji:'⚖️', tip:'SMM', vd:'BEŞİKTAŞ',
@@ -601,7 +602,8 @@ const MUKELLEFLER = {
     altKod:'1069982', altAd:'MUAYENE-TEDAVİ BEDELİ',
     kdvOrani:10, stopaj:false, nihaiTuketici:true, kdvDahil:true,
     levha:'Göztepe Mah. İkar İş Mrk.',
-    kkAyrim:true // POS/Banka/Nakit kontrolü
+    kkAyrim:true, // POS/Banka/Nakit kontrolü
+    aracIzinli:true // araç giderleri otomatik işlenebilir (kısıtlama yok)
   },
   '1500127919':{
     ad:'İskender Mehmet Nuri Battal', emoji:'🩺', tip:'SMM', vd:'MECİDİYEKÖY',
@@ -609,6 +611,7 @@ const MUKELLEFLER = {
     altKod:'', altAd:'MUAYENE GELİRİ',
     kdvOrani:20, stopaj:false, nihaiTuketici:true, kdvDahil:true,
     levha:'Meşrutiyet Mah. Valikonağı',
+    aracIzinli:true, // araç giderleri otomatik işlenebilir (kısıtlama yok)
     manuel:true,
     notlar:'MANUEL işleniyor (kızlar elle giriyor) — API otomatik gönderim YAPMA'
   },
@@ -1086,7 +1089,9 @@ const App = {
       let sinif='Diğer Hizmet', altKod=195, altAd='Diğer Hizmet Giderleri (GVK 40/1)', stopajGider=0, hasOIV=false;
       const txt = (r.unvan||'').toLocaleLowerCase('tr');
       // Araç gideri tespiti — özel kısıtlamaya tabi (binek oto gider/KDV kısıtı), otomatik kod atanmaz, elle kontrol
-      const aracRe = /tüvturk|tuvturk|muayene istasyon|akaryakıt|akaryakit|petrol ofisi|opet|shell|aytemiz|kasko|trafik sigorta|oto ?lastik|oto ?yıkama|oto ?servis|oto ?kiralama|rent ?a ?car|otopark|otoyol|hgs|ogs/i;
+      // İstisna: aracIzinli:true olan mükelleflerde (Taner Battal, Cihan Güneş Ertürk, İskender Mehmet Nuri Battal) kısıtlama uygulanmaz
+      const aracIzinli = !!(m && m.aracIzinli);
+      const aracRe = aracIzinli ? /(?!)x/ : /tüvturk|tuvturk|muayene istasyon|akaryakıt|akaryakit|petrol ofisi|opet|shell|aytemiz|kasko|trafik sigorta|oto ?lastik|oto ?yıkama|oto ?servis|oto ?kiralama|rent ?a ?car|otopark|otoyol|hgs|ogs/i;
       if(aracRe.test(txt)){
         sinif='🚗 ARAÇ (elle kontrol)'; altKod=0; altAd='Araç gideri — kısıtlamaya tabi, elle işlenmeli';
       } else {
