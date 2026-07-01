@@ -12,13 +12,14 @@
   const fmt = n => (+n || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const norm = s => (s || '').toString().trim().toLocaleUpperCase('tr');
 
-  /* Ortak: yuzen buton */
-  function butonEkle(label, fn, renk) {
-    if (document.getElementById('__gkBtn')) return;
+  /* Ortak: yuzen buton (id verilirse birden fazla buton yan yana durabilir) */
+  function butonEkle(label, fn, renk, id, bottomPx) {
+    id = id || '__gkBtn';
+    if (document.getElementById(id)) return;
     const btn = document.createElement('button');
-    btn.id = '__gkBtn';
+    btn.id = id;
     btn.textContent = label;
-    btn.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:2147483646;background:' + (renk || 'linear-gradient(135deg,#d4af37,#b8941f)') + ';color:#0b1224;border:0;padding:13px 20px;border-radius:30px;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.4);font-family:Segoe UI,system-ui,sans-serif';
+    btn.style.cssText = 'position:fixed;bottom:' + (bottomPx || 20) + 'px;right:20px;z-index:2147483646;background:' + (renk || 'linear-gradient(135deg,#d4af37,#b8941f)') + ';color:#0b1224;border:0;padding:13px 20px;border-radius:30px;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.4);font-family:Segoe UI,system-ui,sans-serif';
     btn.onclick = fn;
     document.body.appendChild(btn);
   }
@@ -52,6 +53,54 @@
         } catch (e) {}
       }
       return '';
+    }
+
+    /* ── Panodan Gider Gönder: BATTAL_MUHASEBE_DB_PRO.html'de "Kopyala" ile üretilen
+       JSON paketini okur, her satırı gerçek Defter Beyan API'sine POST eder.
+       Kodlar (altKod/turKod) panelde API'den doğrulanmış olarak gelir — burada tahmin yok. */
+    async function panodanGonder() {
+      const bar = overlayAc('📥 Panodan Gider Gönder');
+      let paket;
+      try {
+        const txt = await navigator.clipboard.readText();
+        paket = JSON.parse(txt);
+        if (paket.tip !== 'battal-gider-gonder' || !Array.isArray(paket.items)) throw new Error('Panoda geçerli bir BATTAL gider paketi yok. Önce panelde "Scripti Üret + Kopyala" butonuna bas.');
+      } catch (e) {
+        bar.innerHTML = '<span style="color:#fca5a5">Hata: ' + e.message + '</span>';
+        return;
+      }
+      const TK = tokenBul();
+      const H = { 'Content-Type': 'application/json; charset=utf-8' };
+      if (TK) H.Token = TK;
+      const iso = t => { const a = t.split('.'); return a[2] + '-' + a[1] + '-' + a[0] + ' 00:00:00'; };
+      async function islem(d) {
+        try {
+          const lj = await (await fetch(B + '/adresdefteri/findbytckn/' + d.vkn, { method: 'POST', headers: H, body: '{}', credentials: 'include' })).json();
+          const rc = lj.resultContainer;
+          if (!rc) return { bno: d.bno, s: '❌', m: 'Tedarikçi sorgu boş' };
+          const t = iso(d.tarih);
+          const ad = ((rc.soyad || '') + ' ' + (rc.ad || '')).trim().toLocaleUpperCase('tr');
+          const kayitlar = [{ deleted: false, alisTuruKodu: '1', giderKayitTuruKodu: d.turKod || '4', giderKayitAltTuruKodu: String(d.altKod), aciklama: ad + ' - ' + d.altAd, tutar: d.matrah, gercekTutar: d.matrah, naceKodu: paket.nace, kdv: d.kdv, kdvOrani: d.oran, kdvsizIslem: false, donemsellik: false }];
+          if (d.oiv > 0) {
+            kayitlar.push({ deleted: false, alisTuruKodu: '1', giderKayitTuruKodu: '5', giderKayitAltTuruKodu: '218', aciklama: ad + ' - ÖZEL İLETİŞİM VERGİSİ', tutar: d.oiv, gercekTutar: d.oiv, naceKodu: paket.nace, kdvsizIslem: true, donemsellik: false });
+          }
+          const P = { giderBelgeTuruKodu: '9', versiyon: 11, kayitTarihi: t, belgeTarihi: t, belgeSiraNo: d.bno, tcknVkn: d.vkn, ad: rc.ad, soyad: rc.soyad, vergiDairesiKodu: rc.vergiDairesiKodu, subeNo: rc.subeNo, adresiGuncelleme: false, kayitlar };
+          const cr = await fetch(B + '/gider/create', { method: 'POST', headers: H, body: JSON.stringify(P), credentials: 'include' });
+          const cj = await cr.json();
+          if (cr.status === 200 && cj.resultContainer && !cj.errorMessage) return { bno: d.bno, s: '✅' };
+          return { bno: d.bno, s: '❌', m: (cj.errorMessage || cj.statusMessage || cr.status).toString().slice(0, 80) };
+        } catch (e) { return { bno: d.bno, s: '❌', m: e.message }; }
+      }
+      let ok = 0, er = 0; const rows = [];
+      bar.innerHTML = '<div id="__gonderStatus">Gönderiliyor… 0/' + paket.items.length + '</div><div id="__gonderRows" style="margin-top:10px"></div>';
+      for (let i = 0; i < paket.items.length; i += 5) {
+        const res = await Promise.all(paket.items.slice(i, i + 5).map(islem));
+        res.forEach(r => { if (r.s === '✅') ok++; else er++; rows.push(r); });
+        document.getElementById('__gonderStatus').textContent = 'Gönderiliyor… ' + (ok + er) + '/' + paket.items.length + ' (✅' + ok + ' ❌' + er + ')';
+      }
+      const rowsHtml = rows.map(r => '<div style="padding:5px 0;border-top:1px solid #1f2840">' + (r.s === '✅' ? '<span style="color:#6ee7b7">✅</span>' : '<span style="color:#fca5a5">❌</span>') + ' ' + r.bno + (r.m ? ' — <span style="color:#fca5a5">' + r.m + '</span>' : '') + '</div>').join('');
+      document.getElementById('__gonderStatus').innerHTML = '<b style="font-size:16px;color:' + (er ? '#fca5a5' : '#6ee7b7') + '">🎉 ' + paket.mukellefAdi + ' — Tamamlandı: ' + ok + '/' + paket.items.length + (er ? ' (' + er + ' hata)' : '') + '</b>';
+      document.getElementById('__gonderRows').innerHTML = rowsHtml;
     }
 
     async function pullDB(bar) {
@@ -190,8 +239,12 @@
       }
     }
 
-    butonEkle('📊 Gider Kontrol', calistir);
-    setInterval(() => butonEkle('📊 Gider Kontrol', calistir), 2000);
+    butonEkle('📊 Gider Kontrol', calistir, null, '__gkBtn', 20);
+    butonEkle('📥 Panodan Gider Gönder', panodanGonder, 'linear-gradient(135deg,#3b82f6,#1d4ed8)', '__gonderBtn', 76);
+    setInterval(() => {
+      butonEkle('📊 Gider Kontrol', calistir, null, '__gkBtn', 20);
+      butonEkle('📥 Panodan Gider Gönder', panodanGonder, 'linear-gradient(135deg,#3b82f6,#1d4ed8)', '__gonderBtn', 76);
+    }, 2000);
   }
 
   /* ════════════════════ UYUMSOFT ════════════════════ */

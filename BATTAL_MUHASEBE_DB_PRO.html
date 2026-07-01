@@ -509,19 +509,19 @@ footer.btmbar b{color:var(--acc-2)}
 <!-- SCRIPT KOPYALANDI MODAL -->
 <div class="modal" id="modal-script">
   <div class="modal-box">
-    <h2>✅ Script Klibborda Kopyalandı</h2>
-    <div class="ok-banner">📋 Defter Beyan'a giden script hazır ve klibborda kopyalandı. Şimdi:</div>
-    <ol style="margin-left:22px;color:var(--txt-soft);line-height:2;font-size:13px">
+    <h2 id="modal-script-h2">✅ Script Klibborda Kopyalandı</h2>
+    <div class="ok-banner" id="modal-script-banner">📋 Defter Beyan'a giden script hazır ve klibborda kopyalandı. Şimdi:</div>
+    <ol style="margin-left:22px;color:var(--txt-soft);line-height:2;font-size:13px" id="modal-script-steps">
       <li><b>Defter Beyan</b> sekmesini aç (giriş yapmışsın) ve <b>mükellefe geç</b>: <span id="modal-mukname"></span></li>
       <li>Klavyeden <b>F12</b> → üstten <b>"Konsol"</b> sekmesine tıkla</li>
       <li>Konsol kapalıysa "Yapıştırmaya izin ver" diye yaz Enter → açılır</li>
       <li>Konsola <b>Ctrl+V</b> ile yapıştır → <b>Enter</b></li>
       <li>Hepsi otomatik gider, başarılı/hatalı sayısı konsola düşer ✅</li>
     </ol>
-    <p style="font-size:11px;color:var(--txt-dim);margin-top:8px">Script tarayıcında o anda token'ı ile çalışır, Defter Beyan API'sine direkt POST atar.</p>
+    <p style="font-size:11px;color:var(--txt-dim);margin-top:8px" id="modal-script-not">Script tarayıcında o anda token'ı ile çalışır, Defter Beyan API'sine direkt POST atar.</p>
     <div class="modal-actions">
       <button class="btn secondary" onclick="App.modalKapat('modal-script')">Tamam</button>
-      <button class="btn" onclick="App.scriptKopyala()">📋 Tekrar Kopyala</button>
+      <button class="btn" onclick="App.scriptKopyala()" id="modal-script-tekrar">📋 Tekrar Kopyala</button>
     </div>
   </div>
 </div>
@@ -1318,9 +1318,32 @@ if(fails.length)console.log('Hatalı: '+fails.slice(0,10).join(' | '));
     this.uretilenScript = script;
     this.uretilenAd = m.ad+' (Gider)';
     document.getElementById('modal-mukname').textContent = m.ad+' ('+this.aktifVkn+')';
-    this.scriptKopyala();
+
+    // Eklenti için JSON paketi (F12 gerektirmeyen otomatik gönderim)
+    const paket = {
+      tip:'battal-gider-gonder',
+      nace: m.nace||'742027',
+      mukellefAdi: m.ad,
+      items: gonderilebilir.map(r=>({
+        bno:r.belgeNo, vkn:r.vkn, matrah:r.matrah, kdv:r.kdv, oran:r.oran,
+        tarih:r.tarih, altKod:String(r.altKod), oiv:r.oiv||0, altAd:r.altAd||'',
+        turKod:r.giderTuruKodu||'4'
+      }))
+    };
+    navigator.clipboard.writeText(JSON.stringify(paket)).then(()=>{
+      this.log('d-log', `✅ ${gonderilebilir.length} fatura panoya kopyalandı ${atlanan>0?'· '+atlanan+' fatura ATLANDI (eksik kod/sabit kıymet/uyarı)':''}\n💡 Defter Beyan'a geç → sağ alttaki "📥 Panodan Gider Gönder" butonuna bas (eklenti otomatik gönderir, F12 yok).`);
+    });
+    document.getElementById('modal-script-h2').textContent = '✅ '+gonderilebilir.length+' Fatura Panoya Kopyalandı';
+    document.getElementById('modal-script-banner').textContent = '📥 Eklenti ile otomatik gönderim hazır — F12 yok. Şimdi:';
+    document.getElementById('modal-script-steps').innerHTML = `
+      <li><b>Defter Beyan</b> sekmesini aç ve <b>mükellefe geç</b>: <span id="modal-mukname"></span></li>
+      <li>Sağ altta beliren altın <b>"📥 Panodan Gider Gönder"</b> butonuna tıkla</li>
+      <li>Eklenti panodaki ${gonderilebilir.length} faturayı otomatik okuyup Defter Beyan'a tek tek gönderir</li>
+      <li>Sonuç ekranda ✅/❌ olarak anında görünür</li>`;
+    document.getElementById('modal-mukname').textContent = m.ad+' ('+this.aktifVkn+')';
+    document.getElementById('modal-script-not').textContent = 'Battal · Defter Beyan Eklentisi kurulu olmalı (chrome://extensions). Kurulu değilse panoya kopyalanan JSON\'u eklenti kurulumundan sonra tekrar gönderebilirsin.';
+    document.getElementById('modal-script-tekrar').onclick = ()=>{ navigator.clipboard.writeText(JSON.stringify(paket)); };
     this.modalAc('modal-script');
-    this.log('d-log', `✅ Script üretildi: ${gonderilebilir.length} fatura · ${atlanan>0?atlanan+' fatura ATLANDI (eksik kod/sabit kıymet/uyarı)':''}\n📋 Klibborda kopyalandı.\n💡 Defter Beyan'a geç → F12 → Konsol → Ctrl+V → Enter`);
   },
 
   scriptKopyala(){
