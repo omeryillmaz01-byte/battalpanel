@@ -1125,7 +1125,8 @@ const App = {
       } else if(!aracRe.test(txt) && m && m.hizmet && /fujifilm|sarf|malzeme/i.test(txt) && r.matrah<=12000){
         sinif='Sarf Malzeme'; altKod=0; altAd='Diğer Sarf Malzeme Giderleri (GVK 40/1)';
       } else if(!aracRe.test(txt) && m && m.malAlis && /(?:gıda|ürün|toptan|baharat|çay|kahve|tedarik|aktar|kozmetik|tekstil|kuru ?yemiş|fındık|fıstık)/i.test(txt)){
-        sinif='Mal Alışı'; altKod=0; altAd='Mal Alışı'; r.malAlisRow=true;
+        // Mal Alışı: giderKayitTuruKodu="1" (Normal Alım) + altTuruKodu=186 — API'den dogrulandi
+        sinif='Mal Alışı'; altKod=186; altAd='Mal Alışı'; r.malAlisRow=true; r.giderTuruKodu='1';
       }
       r.sinif=sinif; r.altKod=altKod; r.altAd=altAd; r.stopajGider=stopajGider; r.hasOIV=hasOIV; r.sabitKiymet=sabitKiymet;
       if(altKod===0 && !sabitKiymet && !r.malAlisRow && sinif!=='🚗 ARAÇ (elle kontrol)')u.push('Kod henüz yok — Defter Beyan\'da Gider Ekle\'de dropdown\'dan seç');
@@ -1277,7 +1278,8 @@ if(fails.length)console.log('Hatalı: '+fails.slice(0,10).join(' | '));
     const m = MUKELLEFLER[this.aktifVkn];
     const veri = gonderilebilir.map(r=>{
       const oiv = r.oiv?`,${r.oiv}`:',0';
-      return `["${r.belgeNo}","${r.vkn}",${r.matrah},${r.kdv},${r.oran},"${r.tarih}","${r.altKod}",${oiv},"${(r.altAd||'').replace(/"/g,'\\"')}"]`;
+      const turKod = r.giderTuruKodu||'4'; // Mal Alışı="1" (API'den doğrulandı), normal gider="4"
+      return `["${r.belgeNo}","${r.vkn}",${r.matrah},${r.kdv},${r.oran},"${r.tarih}","${r.altKod}",${oiv},"${(r.altAd||'').replace(/"/g,'\\"')}","${turKod}"]`;
     }).join(',\n  ');
 
     const script = `(async()=>{
@@ -1289,12 +1291,12 @@ const DATA=[
   ${veri}
 ];
 const iso=t=>{const a=t.split('.');return a[2]+'-'+a[1]+'-'+a[0]+' 00:00:00';};
-async function islem(d){const[bno,vkn,matrah,kdv,oran,tar,altKod,oiv,altAd]=d;try{
+async function islem(d){const[bno,vkn,matrah,kdv,oran,tar,altKod,oiv,altAd,turKod]=d;try{
 const lj=await(await fetch(B+'/adresdefteri/findbytckn/'+vkn,{method:'POST',headers:H,body:'{}',credentials:'include'})).json();
 const rc=lj.resultContainer;if(!rc)return{bno,s:'❌',m:'Tedarikçi sorgu boş'};
 const t=iso(tar);
 const ad=((rc.soyad||'')+' '+(rc.ad||'')).trim().toLocaleUpperCase('tr');
-const kayitlar=[{deleted:false,alisTuruKodu:"1",giderKayitTuruKodu:"4",giderKayitAltTuruKodu:String(altKod),aciklama:ad+' - '+altAd,tutar:matrah,gercekTutar:matrah,naceKodu:NACE,kdv:kdv,kdvOrani:oran,kdvsizIslem:false,donemsellik:false}];
+const kayitlar=[{deleted:false,alisTuruKodu:"1",giderKayitTuruKodu:turKod,giderKayitAltTuruKodu:String(altKod),aciklama:ad+' - '+altAd,tutar:matrah,gercekTutar:matrah,naceKodu:NACE,kdv:kdv,kdvOrani:oran,kdvsizIslem:false,donemsellik:false}];
 if(oiv>0){
   kayitlar.push({deleted:false,alisTuruKodu:"1",giderKayitTuruKodu:"5",giderKayitAltTuruKodu:"218",aciklama:ad+' - ÖZEL İLETİŞİM VERGİSİ',tutar:oiv,gercekTutar:oiv,naceKodu:NACE,kdvsizIslem:true,donemsellik:false});
 }
