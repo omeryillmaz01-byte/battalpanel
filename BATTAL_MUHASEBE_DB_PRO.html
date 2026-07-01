@@ -700,7 +700,9 @@ const SINIF_KURALLAR = [
   {p:/avukat|hukuk büro|hukuk müşavir/i, sinif:'Avukatlık', altKod:0, altAd:'Avukatlık, Hukuk ve Müşavirlik Giderleri (GVK 40/1)', stopaj:20},
   {p:/teknik servis|bakım onarım|tamir|servis hizmet/i, sinif:'Bakım/Onarım', altKod:0, altAd:'Normal Bakım Onarım Giderleri (GVK 40/1)'},
   {p:/temizlik|hijyen/i, sinif:'Ofis (Temizlik)', altKod:0, altAd:'Ofis Giderleri (Çay, Kahve, Şeker, Temizlik vb.) (GVK 40/1)'},
-  {p:/yemek|gıda|yemek sepeti|getir/i, sinif:'Yemek', altKod:0, altAd:'Gıda ve Yemek Harcamaları (GVK 40/1-40/2)'},
+  // "gıda" kelimesi bilerek dahil edilmedi — malAlis mükelleflerde (Muzaffer gibi) toptan gıda/baharat
+  // tedarikçileriyle karışıyordu (Mal Alışı olması gerekirken Yemek Harcaması'na düşüyordu).
+  {p:/yemek sepeti|getir\b|iş yemeği|personel yemeği/i, sinif:'Yemek', altKod:0, altAd:'Gıda ve Yemek Harcamaları (GVK 40/1-40/2)'},
   {p:/akaryakıt|benzin|motorin|opet|shell|petrol ofisi|po petrol|aytemiz/i, sinif:'Akaryakıt', altKod:0, altAd:'Taşıt Akaryakıt Giderleri (GVK 40/1-40/5)'}
 ];
 
@@ -711,14 +713,21 @@ const SINIF_KURALLAR = [
    Yeni tedarikçi eklemek için: "vkn": {sinif, altKod, altAd, turKod}
    turKod: '1'=Mal Alışı, '4'=Normal İndirilecek Gider
    ════════════════════════════════════════════════════════════════════ */
+// demirbasAdayi:true olan tedarikçilerde 12.000 TL (KDV hariç) eşiği uygulanır:
+//   matrah <= 12.000  → "Doğrudan Gider Yazılan Demirbaş (GVK 40/1)" (kod doğrulanmadı, elle seçilir)
+//   matrah  > 12.000  → mevcut "SABİT KIYMET (>12.000)" / Amortisman akışına (kod 255) düşer
 const TEDARIKCI_OZEL = {
   '3100018644': {sinif:'Mal Alışı', altKod:186, altAd:'Mal Alışı', turKod:'1'}, // CSK Farma Pazarlama — baharat/gıda tedarikçisi (Muzaffer)
-  '1500053692': {sinif:'Diğer Sarf Malzeme', altKod:0, altAd:'Diğer Sarf Malzeme Giderleri (GVK 40/1)', turKod:'4'}, // Bauhaus — yapı marketi, sarf malzeme (kod doğrulanmadı, elle seçilir)
-  '6120379680': {sinif:'Diğer Sarf Malzeme', altKod:0, altAd:'Diğer Sarf Malzeme Giderleri (GVK 40/1)', turKod:'4'} // MAPA Mobilya ve Aksesuar — dükkan ekipmanı, satılık mal DEĞİL (kod doğrulanmadı, elle seçilir)
+  '1500053692': {demirbasAdayi:true, altAdBase:'Bauhaus (yapı/inşaat malzemesi)'}, // Bauhaus
+  '6120379680': {demirbasAdayi:true, altAdBase:'MAPA Mobilya ve Aksesuar'}, // MAPA — dükkan ekipmanı, satılık mal DEĞİL
+  '5820492073': {sinif:'Yemek', altKod:0, altAd:'Gıda ve Yemek Harcamaları (GVK 40/1-40/2)', turKod:'4'} // KÖFTECİ YUSUF — yemek/catering hizmeti, Mal Alışı DEĞİL (kullanıcı onayı)
 };
 // Fiziki/somut ürün ama satılık mal DEĞİL (dükkan ekipmanı, demirbaş) — bu kelimeler geçerse
 // Mal Alışı varsayılanına DÜŞMEZ, Sarf Malzeme'ye gider (gerçek kod bilinmediği için elle kontrol)
 const EKIPMAN_RE = /mobilya|aksesuar|ekipman|demirbaş|makine|cihaz|yazılım|donanım|bilgisayar|elektronik|masa|sandalye|dekorasyon|tabela/i;
+// Kişisel bakım / alkol / sigara — ÖTV'li veya işle ilgisi tartışmalı ürünler, özel muamele
+// gerektirir (kanunen kabul edilmeyen gider olabilir). Araç gibi otomatik gönderilmez, elle kontrol.
+const KISISEL_RE = /alkol|içki|bira|şarap|votka|viski|rakı|likör|mey ?içki|sigara|tütün|puro|nargile|elektronik sigara|kozmetik|parfüm|makyaj|kişisel bakım|deodorant|tıraş/i;
 
 /* ════════════════════════════════════════════════════════════════════
    ANA UYGULAMA
@@ -1115,11 +1124,22 @@ const App = {
       const tuvturkRe = /tüvturk|tuvturk|muayene istasyon/i;
       const digerAracRe = /kasko|trafik sigorta|rent ?a ?car|oto ?kiralama/i;
       const aracRe = aracIzinli ? /(?!)x/ : new RegExp(akaryakitRe.source+'|'+bakimOnarimRe.source+'|'+gecisRe.source+'|'+tuvturkRe.source+'|'+digerAracRe.source,'i');
-      // VKN bazlı özel eşleştirme — kullanıcı onaylı gerçek bilgi (tahmin değil)
-      const ozel = TEDARIKCI_OZEL[r.vkn];
-      if(ozel){
-        sinif=ozel.sinif; altKod=ozel.altKod; altAd=ozel.altAd;
-        if(ozel.turKod==='1'){ r.malAlisRow=true; r.giderTuruKodu='1'; }
+      // Kişisel bakım / alkol / sigara — özel muamele gerekir, otomatik gönderilmez (araç gibi)
+      let demirbasZorunlu=false;
+      const ozel = TEDARIKCI_OZEL[r.vkn]; // VKN bazlı özel eşleştirme — kullanıcı onaylı gerçek bilgi
+      if(KISISEL_RE.test(txt)){
+        sinif='🔞 ÖZEL ÜRÜN (elle kontrol)'; altKod=0; altAd='Alkol/Sigara/Kişisel Bakım — özel muamele gerekir, elle işlenmeli';
+      } else if(ozel){
+        if(ozel.demirbasAdayi){
+          if(r.matrah<=12000){
+            sinif='Doğrudan Gider Yazılan Demirbaş'; altKod=0; altAd='Doğrudan Gider Yazılan Demirbaş (GVK 40/1) — '+ozel.altAdBase;
+          } else {
+            sinif='SABİT KIYMET (>12.000)'; altKod=255; altAd='Amortisman Giderleri (GVK 40/7)'; demirbasZorunlu=true;
+          }
+        } else {
+          sinif=ozel.sinif; altKod=ozel.altKod; altAd=ozel.altAd;
+          if(ozel.turKod==='1'){ r.malAlisRow=true; r.giderTuruKodu='1'; }
+        }
       } else if(aracIzinli && akaryakitRe.test(txt)){
         sinif='Taşıt Akaryakıt Giderleri'; altKod=0; altAd='Taşıt Akaryakıt Giderleri (GVK 40/1-40/5)';
       } else if(aracIzinli && bakimOnarimRe.test(txt)){
@@ -1151,19 +1171,18 @@ const App = {
           sinif='Mal Alışı'; altKod=186; altAd='Mal Alışı'; r.malAlisRow=true; r.giderTuruKodu='1';
         }
       }
-      // Sabit kıymet kontrolü
-      let sabitKiymet=false;
-      if(!aracRe.test(txt) && r.matrah>12000 && m && m.hizmet){
+      // Sabit kıymet kontrolü — demirbasZorunlu (TEDARIKCI_OZEL'den 12.000 üstü) zaten sabit kıymete işaretlenmiş
+      let sabitKiymet = demirbasZorunlu;
+      if(!sabitKiymet && !aracRe.test(txt) && r.matrah>12000 && m && m.hizmet){
         sabitKiymet=true; sinif='SABİT KIYMET (>12.000)'; altKod=255; altAd='Amortisman Giderleri (GVK 40/7)';
-      } else if(!aracRe.test(txt) && m && m.hizmet && /fujifilm|sarf|malzeme/i.test(txt) && r.matrah<=12000){
+      } else if(!sabitKiymet && !ozel && !aracRe.test(txt) && m && m.hizmet && /fujifilm|sarf|malzeme/i.test(txt) && r.matrah<=12000){
         sinif='Sarf Malzeme'; altKod=0; altAd='Diğer Sarf Malzeme Giderleri (GVK 40/1)';
-      } else if(!aracRe.test(txt) && m && m.malAlis && /(?:gıda|ürün|toptan|baharat|çay|kahve|tedarik|aktar|kozmetik|tekstil|kuru ?yemiş|fındık|fıstık)/i.test(txt)){
-        // Mal Alışı: giderKayitTuruKodu="1" (Normal Alım) + altTuruKodu=186 — API'den dogrulandi
-        sinif='Mal Alışı'; altKod=186; altAd='Mal Alışı'; r.malAlisRow=true; r.giderTuruKodu='1';
       }
       r.sinif=sinif; r.altKod=altKod; r.altAd=altAd; r.stopajGider=stopajGider; r.hasOIV=hasOIV; r.sabitKiymet=sabitKiymet;
-      if(altKod===0 && !sabitKiymet && !r.malAlisRow && sinif!=='🚗 ARAÇ (elle kontrol)')u.push('Kod henüz yok — Defter Beyan\'da Gider Ekle\'de dropdown\'dan seç');
+      if(altKod===0 && !sabitKiymet && !r.malAlisRow && sinif!=='🚗 ARAÇ (elle kontrol)' && sinif!=='🔞 ÖZEL ÜRÜN (elle kontrol)')u.push('Kod henüz yok — Defter Beyan\'da Gider Ekle\'de dropdown\'dan seç');
       if(sinif==='🚗 ARAÇ (elle kontrol)')u.push('🚗 ARAÇ — otomatik gönderilmez, elle kontrol et');
+      if(sinif==='🔞 ÖZEL ÜRÜN (elle kontrol)')u.push('🔞 ALKOL/SİGARA/KİŞİSEL BAKIM — otomatik gönderilmez, elle kontrol et');
+      if(sabitKiymet)u.push('🏛️ SABİT KIYMET (>12.000) — Aktifleştirme menüsünden elle işlenmeli, otomatik gönderilmez');
       r.uyari=u;
     });
   },
