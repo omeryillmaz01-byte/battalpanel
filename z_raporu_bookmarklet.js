@@ -29,7 +29,7 @@
   for(const b of firma.belgeler){
     if(mevcut.has(String(b.zno).trim())){atla++;console.log('⏭ Z '+b.zno+' zaten kayitli - atlandi');continue;}
     const t=iso(b.tarih);const P=JSON.parse(JSON.stringify(tmpl));P.kayitTarihi=t;P.belgeTarihi=t;P.belgeSiraNo=String(b.zno);let top=0;
-    P.kayitlar=b.satirlar.map(s=>{const k=JSON.parse(JSON.stringify(kTmpl));const oran=s.oran||0;const dahil=s.tutar;const matrah=r2(dahil/(1+oran/100));const kdv=r2(dahil-matrah);k.tutar=dahil;k.isKdvDahil=true;if('kdv' in k)k.kdv=kdv;k.kdvOrani=oran;k.aciklama=s.aciklama;top+=dahil;delete k.id;delete k.gelirBelgeId;delete k.key;return k;});
+    P.kayitlar=b.satirlar.map(s=>{const k=JSON.parse(JSON.stringify(kTmpl));const oran=s.oran||0;const dahil=s.tutar;const matrah=r2(dahil/(1+oran/100));const kdv=r2(dahil-matrah);k.tutar=matrah;k.isKdvDahil=false;if('kdv' in k)k.kdv=kdv;k.kdvOrani=oran;k.aciklama=s.aciklama;top+=dahil;delete k.id;delete k.gelirBelgeId;delete k.key;return k;});
     P.belgeTutari=r2(top);P[krediKey]=r2(b.kredi);if(nakitKey)P[nakitKey]=r2(b.nakit);
     delete P.id;delete P.gelirBelgeId;delete P.key;
     try{const cr=await fetch(B+'/gelir/create',{method:'POST',headers:H,body:JSON.stringify(P),credentials:'include'});const cj=await cr.json();
@@ -37,5 +37,5 @@
       else{const m=(cj.errorMessage||cj.statusMessage||cr.status).toString();if(/aynı|mükerrer|zaten/i.test(m)){atla++;console.log('⏭ Z '+b.zno+' zaten var');}else{f++;hata.push(b.zno+': '+m);console.log('❌ Z '+b.zno+' - '+m);}}
     }catch(e){f++;hata.push(b.zno+': '+e.message);}
   }
-  alert('🎉 '+firma.ad+' bitti  [v3-KDVDahil]\n✅ Yeni: '+ok+'\n⏭ Zaten kayitli (atlandi): '+atla+(f?'\n❌ Hata: '+f+'\n'+hata.slice(0,8).join('\n'):''));
+  alert('🎉 '+firma.ad+' bitti  [v4-MATRAH]\n✅ Yeni: '+ok+'\n⏭ Zaten kayitli (atlandi): '+atla+(f?'\n❌ Hata: '+f+'\n'+hata.slice(0,8).join('\n'):''));
 })();
