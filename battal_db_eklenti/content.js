@@ -494,6 +494,30 @@
       };
     }
 
+    // ── e-SM Makbuzu (Verilen) ↔ Gelir · Eksik Bul (GİB kesilen makbuz tablosunu kazır, gelirle karşılaştırır)
+    async function esmmEksik() {
+      const bar = overlayAc('📋 e-SM Makbuzu (Verilen) ↔ Gelir · Eksik Kontrol');
+      let tbl = null;
+      document.querySelectorAll('table').forEach(t => { const h = t.querySelector('thead'); if (!tbl && h && /fatura no/i.test(h.innerText) && /(net tahsil|alıcı|brüt)/i.test(h.innerText)) tbl = t; });
+      if (!tbl) { bar.innerHTML = '<div style="color:#fcd34d;line-height:1.8">Bu sayfada makbuz tablosu yok.<br><b>Yap:</b> Sol menü → <b>Mali Bilgilerim → e-SM Makbuzu (Verilen)</b> → tarih aralığını <b>01.06.2026 – 30.06.2026</b> seç → <b>Görüntüle</b> → sonra bu butona tekrar bas.</div>'; return; }
+      const makbuz = [];
+      tbl.querySelectorAll('tbody tr').forEach(tr => { const td = tr.querySelectorAll('td'); if (td.length >= 5) { const no = (td[0].textContent || '').trim(); if (/^[A-Z]{2,4}\d/.test(no)) makbuz.push({ no, alici: (td[2] ? td[2].textContent : '').trim(), tarih: (td[4] ? td[4].textContent : '').trim(), brut: (td[5] ? td[5].textContent : '').trim() }); } });
+      if (!makbuz.length) { bar.innerHTML = '<div style="color:#fcd34d">Tabloda makbuz satırı okunamadı. Tarih aralığını seçip Görüntüle\'ye bastığından emin ol.</div>'; return; }
+      bar.textContent = 'Defter Beyan gelir kayıtları çekiliyor…';
+      let R; try { R = await pullGelirDB(bar); } catch (e) { bar.innerHTML = '<span style="color:#fca5a5">Hata: ' + e.message + '</span>'; return; }
+      const dbNos = new Set(R.all.map(r => norm(r.belgeSiraNo)).filter(Boolean));
+      const eksik = makbuz.filter(m => !dbNos.has(norm(m.no)));
+      let h = '<div style="margin-bottom:12px">' + chip('Kesilen Makbuz', makbuz.length, '#1e3a2f') + chip('Deftere Girilmiş', makbuz.length - eksik.length, '#1e2f3a') + chip('EKSİK', eksik.length, eksik.length ? '#5b1a1a' : '#1e3a2f') + '</div>';
+      if (!eksik.length) { h += '<div style="color:#6ee7b7;font-size:16px;padding:12px;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:10px">✅ Tüm kesilen makbuzlar deftere girilmiş — <b>EKSİK YOK.</b></div>'; }
+      else {
+        h += '<div style="margin-bottom:8px;color:#fca5a5;font-weight:700">⚠️ ' + eksik.length + ' makbuz kesilmiş ama deftere GİRİLMEMİŞ:</div>';
+        h += '<div style="overflow:auto;border:1px solid #5b1a1a;border-radius:8px"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#2a1414;text-align:left">' + ['Fatura No', 'Alıcı', 'Tarih', 'Brüt (KDV Hariç)'].map(x => '<th style="padding:8px">' + x + '</th>').join('') + '</tr></thead><tbody>';
+        eksik.forEach(m => { h += '<tr style="border-top:1px solid #3a1a1a"><td style="padding:7px;color:#fca5a5;font-weight:700">' + m.no + '</td><td style="padding:7px">' + m.alici.slice(0, 45) + '</td><td style="padding:7px">' + m.tarih + '</td><td style="padding:7px;text-align:right">' + m.brut + '</td></tr>'; });
+        h += '</tbody></table></div>';
+      }
+      bar.innerHTML = h;
+    }
+
     async function calistir() {
       const bar = overlayAc('📊 Defter Beyan · Gider Kontrol');
       let R;
@@ -615,6 +639,7 @@
       butonEkle('📥 Panodan Gider Gönder', panodanGonder, 'linear-gradient(135deg,#3b82f6,#1d4ed8)', '__gonderBtn', 76);
       butonEkle('📊 Gelir Kontrol', gelirKontrol, 'linear-gradient(135deg,#d4af37,#b8941f)', '__glBtn', 132);
       butonEkle('📤 Giden (Satış) Gönder', gidenGonder, 'linear-gradient(135deg,#60a5fa,#2563eb)', '__gdGonderBtn', 188);
+      butonEkle('📋 e-SMM Eksik Bul', esmmEksik, 'linear-gradient(135deg,#34d399,#059669)', '__esmmBtn', 244);
     };
     kur();
     setInterval(kur, 2000);
