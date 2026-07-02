@@ -43,21 +43,37 @@
   if (/defterbeyan\.gov\.tr/.test(host)) {
     const B = 'https://backend-p.defterbeyan.gov.tr/rs';
 
-    /* CASUS: /gelir/create isteklerini yakala (istek gövdesi + sunucu cevabı).
-       Z raporu DOM otomasyonu Kaydet'e bastığında gerçekten kaydoldu mu / hata ne
-       görebilmek için. window.__zcap'e son cevabı yazar. */
+    /* CASUS (sayfa-dünyası): /gelir/create isteğini SAYFANIN kendi fetch'inden yakala.
+       İçerik betiği izole dünyada olduğu için sayfanın fetch'ini göremez; bu yüzden
+       sayfaya <script> enjekte ediyoruz. Yakalanan gerçek payload'ı (Z raporu şablonu)
+       chrome.storage'a yazarız → sonra Z raporlarını AYNI yapıyla API ile göndeririz. */
     (function () {
-      if (window.__zcapHook) return; window.__zcapHook = true;
-      const of = window.fetch;
-      window.fetch = function (u, o) {
-        const url = (u && u.url) || u || '';
-        const isGelir = /\/gelir\/(create|update)/.test(String(url));
-        const body = o && o.body;
-        return of.apply(this, arguments).then(r => {
-          if (isGelir) { try { r.clone().json().then(j => { window.__zcap = { url: String(url), req: (() => { try { return JSON.parse(body); } catch (e) { return body; } })(), status: r.status, res: j, ts: Date.now() }; }).catch(() => {}); } catch (e) {} }
-          return r;
-        });
-      };
+      if (window.__zPageInjected) return; window.__zPageInjected = true;
+      const code = '(' + function () {
+        if (window.__zPageHook) return; window.__zPageHook = true;
+        const of = window.fetch;
+        window.fetch = function (u, o) {
+          const url = (u && u.url) || u || '';
+          const isC = /\/gelir\/create/.test('' + url);
+          const body = o && o.body;
+          const p = of.apply(this, arguments);
+          if (isC) { p.then(r => { r.clone().json().then(j => { let req = null; try { req = JSON.parse(body); } catch (e) {} window.postMessage({ __zcapReal: 1, req: req, status: r.status, res: j }, '*'); }).catch(() => {}); }).catch(() => {}); }
+          return p;
+        };
+      } + ')();';
+      const sc = document.createElement('script');
+      sc.textContent = code;
+      (document.head || document.documentElement).appendChild(sc);
+      sc.remove();
+      window.addEventListener('message', e => {
+        const d = e.data;
+        if (!d || !d.__zcapReal) return;
+        window.__zLastCap = d;
+        // Başarılı bir Z Raporu create'i şablon olarak sakla
+        if (d.status === 200 && d.req && d.req.gelirBelgeTuruKodu && d.res && d.res.resultContainer && !d.res.errorMessage) {
+          try { chrome.storage.local.set({ zTemplate: { req: d.req, ts: Date.now() } }); } catch (x) {}
+        }
+      });
     })();
 
     function tokenBul() {
@@ -156,183 +172,90 @@
       }
 
       const D = document;
-      const wait = ms => new Promise(r => setTimeout(r, ms));
       const norm = s => (s || '').toString().trim().toLocaleUpperCase('tr').replace(/İ/g, 'I').replace(/[ĞÜŞÖÇ]/g, c => ({ Ğ: 'G', Ü: 'U', Ş: 'S', Ö: 'O', Ç: 'C' }[c]));
-      const setReact = (el, v) => { if (!el) return false; try { const p = el.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype; Object.getOwnPropertyDescriptor(p, 'value').set.call(el, v); el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); return true; } catch (e) { return false; } };
-      const setTarih = async (el, val) => { if (!el || !val) return; el.focus(); await wait(150); setReact(el, val); await wait(200); el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true })); el.blur(); await wait(200); };
-      // react-widgets DropdownList seçici: base '_input' combobox, '_listbox' li'ler
-      const okuCombo = base => { const c = document.querySelector('#' + base + '_input .rw-input'); return c ? (c.innerText || '').trim() : ''; };
-      const pick = async (base, text, partial) => {
-        const combo = document.querySelector('#' + base + '_input');
-        if (!combo) return { ok: false, sebep: 'combobox yok' };
-        if (okuCombo(base) === text) return { ok: true };
-        combo.click(); await wait(320);
-        let opt = null; const opts = [];
-        document.querySelectorAll('#' + base + '_listbox li').forEach(el => { const t = (el.innerText || '').trim(); if (t) opts.push(t); if (!opt && t === text) opt = el; });
-        if (!opt && partial) document.querySelectorAll('#' + base + '_listbox li').forEach(el => { const t = (el.innerText || '').trim(); if (!opt && t.indexOf(text) === 0) opt = el; });
-        if (opt) { opt.click(); await wait(380); return { ok: true }; }
-        combo.click(); // menüyü kapat
-        return { ok: false, sebep: 'seçenek yok', opts };
-      };
+      const r2 = v => Math.round(v * 100) / 100;
+      const iso = t => { const a = String(t).split('.'); return a.length === 3 ? a[2] + '-' + a[1] + '-' + a[0] + ' 00:00:00' : t; };
 
-      // Defter Beyan açık mı?
+      // Aktif mükellef
       const banner = D.querySelector('.dbs-navbar__content span');
-      if (!banner) { bar.innerHTML = '<span style="color:#fca5a5">❌ Defter Beyan açık değil / mükellef paneli bulunamadı. portal.defterbeyan.gov.tr\'da giriş yapıp mükellefe gir.</span>'; return; }
+      if (!banner) { bar.innerHTML = '<span style="color:#fca5a5">❌ Defter Beyan açık değil. Giriş yapıp mükellefe gir.</span>'; return; }
       const aktif = banner.innerText.split('\n')[0].trim();
       const aktifN = norm(aktif);
-
-      // Aktif mükellefe uyan firmayı paketten bul
       const firma = paket.firmalar.find(f => aktifN.includes(norm(f.ad).slice(0, 8)) || norm(f.ad).includes(aktifN.slice(0, 8)));
       const digerleri = paket.firmalar.filter(f => f !== firma).map(f => f.ad);
       if (!firma) {
-        bar.innerHTML = '<div style="color:#fca5a5">⚠️ Aktif mükellef "<b>' + aktif + '</b>" paketteki firmalarla eşleşmedi.<br>Pakette: ' + paket.firmalar.map(f => f.ad).join(', ') + '<br><br>Defter Beyan\'da bu firmalardan birine geç, tekrar bas.</div>';
+        bar.innerHTML = '<div style="color:#fca5a5">⚠️ Aktif mükellef "<b>' + aktif + '</b>" paketteki firmalarla eşleşmedi.<br>Pakette: ' + paket.firmalar.map(f => f.ad).join(', ') + '</div>';
         return;
       }
 
-      // Karışık KDV (aynı belgede >1 satır) — KDV oranı seçici doğrulanmadığından otomatik girilmez
-      const karisik = firma.belgeler.filter(b => b.satirlar.length > 1);
-      const tekil = firma.belgeler.filter(b => b.satirlar.length === 1);
+      // Z Raporu şablonu (senin elle kaydettiğin bir Z'den casusla öğrenilmiş gerçek payload)
+      let tmpl = null;
+      try { const st = await chrome.storage.local.get('zTemplate'); tmpl = st && st.zTemplate && st.zTemplate.req; } catch (e) {}
+      if (!tmpl) {
+        bar.innerHTML =
+          '<div style="color:#fcd34d;font-size:15px;margin-bottom:10px"><b>ℹ️ Önce Z Raporu şablonu öğrenilmeli (tek seferlik)</b></div>' +
+          '<div style="color:#e8edf5;line-height:1.7">Güvenilir gönderim için Defter Beyan\'ın Z Raporu payload yapısını, senin <b>elle kaydettiğin bir Z raporundan</b> öğrenmem gerekiyor (kodlar sistemde gizli).<br><br>' +
+          '<b>Yapman gereken (1 kez):</b><br>1. <b>Gelir Ekle</b> → Belge Türü <b>Z Raporu</b> → bir Z raporunu elle gir → <b>Kaydet</b>.<br>2. Kaydolunca casus payload\'ı otomatik yakalar ve saklar.<br>3. Sonra tekrar <b>"📊 Z Raporu Gönder"</b> bas — kalan tüm Z\'leri (tüm firmalar) API ile otomatik basar.<br><br>' +
+          '<span style="color:#9aa6c0">Not: Bu şablon bir kez öğrenilince kalıcıdır; her ay/firma için tekrar gerekmez.</span></div>' +
+          '<div style="margin-top:12px;padding:8px 12px;background:#0b1020;border-radius:8px;color:#6ee7b7;font-size:12px">Durum: elle 1 Z raporu kaydedilmesi bekleniyor…</div>';
+        // Yakalanınca haber ver
+        const iv = setInterval(async () => { try { const st = await chrome.storage.local.get('zTemplate'); if (st && st.zTemplate) { clearInterval(iv); const b2 = D.getElementById('__gkb'); if (b2) b2.querySelector('div:last-child').innerHTML = '✅ Şablon yakalandı! Şimdi bu pencereyi kapatıp tekrar "Z Raporu Gönder" bas.'; } } catch (e) {} }, 1500);
+        return;
+      }
 
-      const testMode = true; // ilk çalıştırma daima test: 1 kayıt doldurulur, KAYDET basılmaz
+      const belgeler = firma.belgeler;
       bar.innerHTML =
-        '<div style="margin-bottom:10px">Aktif mükellef: <b style="color:#6ee7b7">' + aktif + '</b> · ' + tekil.length + ' Z raporu' + (karisik.length ? ' · <span style="color:#fca5a5">' + karisik.length + ' karışık oranlı (elle gir)</span>' : '') + (digerleri.length ? ' · diğer firmalar: ' + digerleri.join(', ') : '') + '</div>' +
-        '<label style="display:block;margin-bottom:10px"><input type="checkbox" id="__zTest" checked> 🧪 Test modu (sadece 1 Z doldurulur, Kaydet basılmaz — kontrol et)</label>' +
-        '<button id="__zStart" style="background:#7c3aed;color:#fff;border:0;padding:11px 20px;border-radius:8px;font-weight:800;cursor:pointer">🚀 Başlat</button>' +
+        '<div style="margin-bottom:8px">Aktif mükellef: <b style="color:#6ee7b7">' + aktif + '</b> · <b>' + belgeler.length + '</b> Z raporu · API ile gönderilecek' + (digerleri.length ? ' · diğer firmalar: ' + digerleri.join(', ') : '') + '</div>' +
+        '<div style="margin-bottom:8px;color:#9aa6c0;font-size:12px">Şablon: Belge Türü kodu <b>' + tmpl.gelirBelgeTuruKodu + '</b> · Kayıt Türü <b>' + ((tmpl.kayitlar && tmpl.kayitlar[0] && tmpl.kayitlar[0].gelirKayitTuruKodu) || '?') + '</b> · Alt Tür <b>' + ((tmpl.kayitlar && tmpl.kayitlar[0] && tmpl.kayitlar[0].gelirKayitAltTuruKodu) || '?') + '</b></div>' +
+        '<button id="__zStart" style="background:#7c3aed;color:#fff;border:0;padding:11px 20px;border-radius:8px;font-weight:800;cursor:pointer">🚀 Gönder</button>' +
         '<div id="__zLog" style="margin-top:12px;font-family:Consolas,monospace;font-size:12px;max-height:340px;overflow:auto;background:#0b1020;padding:10px;border-radius:8px"></div>';
       const logEl = D.getElementById('__zLog');
       const zlog = (t, c) => { const d = document.createElement('div'); d.style.color = c || '#9aa6c0'; d.textContent = t; logEl.appendChild(d); logEl.scrollTop = logEl.scrollHeight; };
 
       D.getElementById('__zStart').onclick = async () => {
-        const test = D.getElementById('__zTest').checked;
         D.getElementById('__zStart').disabled = true;
-        zlog('🚀 ' + firma.ad + ' — ' + tekil.length + ' Z raporu · Test modu: ' + (test ? 'AÇIK' : 'KAPALI'), '#7c3aed');
-        if (karisik.length) zlog('⚠️ ' + karisik.length + ' karışık KDV oranlı Z raporu otomatik girilmez, elle gir: ' + karisik.map(b => b.zno).join(', '), '#fbbf24');
-
-        // Gelir Ekle sayfasını aç
-        if (!location.href.includes('/muhasebe/gelir/ekle')) {
-          const g = D.querySelector('#muhasebeGelirEkle');
-          if (g) { g.click(); await wait(2500); zlog('📋 Gelir Ekle açıldı', '#3b82f6'); }
-          else zlog('⚠️ "Gelir Ekle" menüsü bulunamadı — elle Gelir Ekle sayfasına geç', '#fbbf24');
-        }
+        const TK = tokenBul();
+        const H = { 'Content-Type': 'application/json; charset=utf-8' };
+        if (TK) H.Token = TK;
+        // Şablon kayıt kaleminin KDV dahil mi olduğunu tespit et
+        const kTmpl = (tmpl.kayitlar && tmpl.kayitlar[0]) || {};
+        const kdvDahil = kTmpl.isKdvDahil !== false; // Z raporu: genelde true
+        const nakitKey = Object.keys(tmpl).find(k => /nakit/i.test(k));
+        const krediKey = Object.keys(tmpl).find(k => /krediKarti/i.test(k)) || 'krediKartiTutari';
+        zlog('🚀 ' + firma.ad + ' — ' + belgeler.length + ' Z raporu API ile gönderiliyor…', '#7c3aed');
 
         let ok = 0, fail = 0;
-        for (let i = 0; i < tekil.length; i++) {
-          const b = tekil[i], s = b.satirlar[0];
-          zlog('[' + (i + 1) + '/' + tekil.length + '] Z ' + b.zno + ' işleniyor…', '#3b82f6');
+        for (let i = 0; i < belgeler.length; i++) {
+          const b = belgeler[i];
           try {
-            // Belge Türü = Z Raporu — açılır menüyü sağlam bul (react-widgets)
-            // Mevcut değeri oku (birden çok olası konum)
-            const okuBelge = () => {
-              const c = D.querySelector('#gelirBelgeTuru_input .rw-input, #gelirBelgeTuru .rw-input, #gelirBelgeTuru_input, [id^="gelirBelgeTuru"] .rw-input');
-              return c ? (c.innerText || c.value || '').trim() : '';
-            };
-            if (okuBelge() !== 'Z Raporu') {
-              // Combobox'ı bul: önce bilinen id'ler, sonra "Belge Türü" etiketi yanındaki react-widget
-              let dd = D.querySelector('#gelirBelgeTuru_input, #gelirBelgeTuru, [id^="gelirBelgeTuru"] .rw-widget-picker, [id^="gelirBelgeTuru"]');
-              if (!dd) {
-                D.querySelectorAll('label, .form-label, span, div').forEach(l => {
-                  if (!dd && /belge\s*t[üu]r[üu]/i.test((l.innerText || '').trim()) && (l.innerText || '').trim().length < 20) {
-                    const scope = l.closest('.form-group, .field, .row, div') || l.parentElement;
-                    dd = scope && (scope.querySelector('.rw-dropdown-list, .rw-widget-picker, [role="combobox"]'));
-                  }
-                });
-              }
-              if (dd) {
-                (dd.querySelector('.rw-widget-picker, [role="combobox"], input') || dd).click();
-                dd.click();
-                await wait(500);
-              } else {
-                zlog('  🔍 Belge Türü menüsü bulunamadı. Sayfadaki combobox id\'leri:', '#fbbf24');
-                const ids = []; D.querySelectorAll('[id*="elge"], .rw-dropdown-list, [role="combobox"]').forEach(e => { if (e.id) ids.push(e.id); });
-                zlog('     ' + (ids.slice(0, 15).join(' · ') || '(hiç bulunamadı)'), '#9aa6c0');
-              }
-              // Açılan listede "Z Raporu"yu ara (tüm olası konumlar)
-              let zOpt = null;
-              D.querySelectorAll('[role="option"], .rw-list-option, ul[role="listbox"] li, .rw-list li, li').forEach(el => { if (!zOpt && (el.innerText || '').trim() === 'Z Raporu') zOpt = el; });
-              if (zOpt) { zOpt.click(); await wait(700); zlog('  ✓ Belge Türü: Z Raporu', '#10b981'); }
-              else {
-                // Diagnostik: açılan menüde hangi seçenekler var?
-                const opts = []; D.querySelectorAll('[role="option"], .rw-list-option, ul[role="listbox"] li, .rw-list li').forEach(el => { const t = (el.innerText || '').trim(); if (t && t.length < 40) opts.push(t); });
-                zlog('  ⚠ "Z Raporu" seçeneği bulunamadı. Menüdeki seçenekler: ' + (opts.slice(0, 20).join(' | ') || '(menü açılmadı)'), '#ef4444');
-                zlog('  ℹ Bu listeyi ekran görüntüsüyle bana at — doğru seçiciyi eklerim.', '#fcd34d');
-                fail++; continue;
-              }
-            }
-            await setTarih(D.querySelector('#kayitTarihi'), b.tarih);
-            await setTarih(D.querySelector('#belgeTarihi'), b.tarih);
-            const sira = D.querySelector('#siraNo, input[name="siraNo"]');
-            if (sira) { sira.focus(); setReact(sira, String(b.zno)); sira.blur(); await wait(200); }
-            await wait(200);
-
-            // Gelir Kalemleri — ZORUNLU alanlar (Z raporu: Normal Satışlar / Mal Satışı / Mal Satışı)
-            await pick('satisTuru', 'Normal Satışlar', true);
-            const rTur = await pick('gelirKayitTuru', 'Mal Satışı');
-            if (rTur.ok) zlog('  ✓ Gelir Kayıt Türü: Mal Satışı', '#10b981');
-            else zlog('  ⚠ Gelir Kayıt Türü "Mal Satışı" seçilemedi — seçenekler: ' + ((rTur.opts || []).join(' | ') || rTur.sebep), '#ef4444');
-            await wait(300);
-            const rAlt = await pick('gelirKayitAltTuru', 'Mal Satışı');
-            if (rAlt.ok) zlog('  ✓ Gelir Kayıt Alt Türü: Mal Satışı', '#10b981');
-            else zlog('  ⚠ Alt Tür "Mal Satışı" seçilemedi — seçenekler: ' + ((rAlt.opts || []).join(' | ') || rAlt.sebep), '#fbbf24');
-            await wait(300);
-
-            // KDV Oranı — türü seçilince gelir; olası id'leri dene
-            let kdvSecildi = false;
-            for (const kb of ['kdvOrani', 'kdvOran', 'gelirKdvOrani', 'kdv']) {
-              if (!D.querySelector('#' + kb + '_input')) continue;
-              const hedefler = s.oran === 0 ? ['%0', '0'] : ['%' + s.oran, '%0' + s.oran, String(s.oran), '% ' + s.oran];
-              for (const h of hedefler) { const rk = await pick(kb, h, true); if (rk.ok) { kdvSecildi = true; zlog('  ✓ KDV Oranı: %' + s.oran + ' (' + kb + ')', '#10b981'); break; } }
-              if (kdvSecildi) break;
-            }
-            if (!kdvSecildi) {
-              const combos = []; D.querySelectorAll('[id$="_input"][role="combobox"]').forEach(e => combos.push(e.id.replace('_input', '') + '=' + ((e.querySelector('.rw-input') || {}).innerText || '').trim().slice(0, 18)));
-              zlog('  🔍 KDV Oranı alanı otomatik bulunamadı. Formdaki menüler: ' + combos.join(' · '), '#fbbf24');
-            }
-
-            const tutar = D.querySelector('div[name="tutarDiv"] input:not([disabled])');
-            if (tutar) { tutar.focus(); setReact(tutar, String(s.tutar).replace('.', ',')); tutar.blur(); await wait(300); }
-            else zlog('  ⚠ Tutar alanı yok (Z Raporu paneli açıldı mı?)', '#fbbf24');
-            const acik = D.querySelector('input[name="aciklama"]:not([disabled])');
-            if (acik) { acik.focus(); setReact(acik, s.aciklama || (b.zno + ' NL. Z RAPORU Mal Satışı')); acik.blur(); await wait(150); }
-            const satirEkle = Array.from(D.querySelectorAll('button')).find(x => x.innerText && x.innerText.trim() === 'Satır Ekle' && !x.disabled);
-            if (satirEkle) { satirEkle.click(); await wait(900); }
-            else zlog('  ⚠ Satır Ekle pasif/yok', '#fbbf24');
-            // Satır gerçekten eklendi mi?
-            const kalemTablo = D.querySelector('.eklenen-kayitlar-table tbody');
-            const eklendi = kalemTablo && !/henüz kalem eklenmedi/i.test(kalemTablo.innerText || '');
-            if (eklendi) zlog('  ➕ Satır eklendi ✓', '#10b981');
-            else { zlog('  ❌ Satır EKLENMEDİ (zorunlu alan eksik: Gelir Kayıt Türü/KDV Oranı). Yukarıdaki uyarıları bana at.', '#ef4444'); fail++; continue; }
-
-            const krd = D.querySelector('input[placeholder="Kredi Kartı"]');
-            if (krd) { krd.focus(); setReact(krd, String(b.kredi).replace('.', ',')); krd.blur(); await wait(200); }
-            const nkt = D.querySelector('input[placeholder="Nakit"]');
-            if (nkt) { nkt.focus(); setReact(nkt, String(b.nakit).replace('.', ',')); nkt.blur(); await wait(250); }
-            zlog('  💰 Tutar ' + s.tutar.toFixed(2) + ' · 💳 Kredi ' + b.kredi.toFixed(2) + ' · 💵 Nakit ' + b.nakit.toFixed(2), '#6b7280');
-
-            if (test) { zlog('  🧪 Form dolduruldu — KAYDET BASILMADI. Kontrol et; doğruysa test modunu kapat, tekrar bas.', '#fbbf24'); ok++; break; }
-            const kaydet = Array.from(D.querySelectorAll('button')).find(x => (x.innerText || '').trim() === 'Kaydet' && !x.disabled);
-            if (kaydet) {
-              window.__zcap = null;
-              kaydet.click();
-              // Sunucu cevabını bekle (casus)
-              let cap = null;
-              for (let w = 0; w < 20; w++) { await wait(300); if (window.__zcap) { cap = window.__zcap; break; } }
-              // Toastr mesajı (yedek)
-              let toast = ''; D.querySelectorAll('.redux-toastr .toastr .rrt-text, .redux-toastr .rrt-text, .redux-toastr .toastr').forEach(t => { const x = (t.innerText || '').trim(); if (x) toast = x; });
-              if (cap) {
-                const basarili = cap.status === 200 && cap.res && (cap.res.resultContainer || cap.res.success) && !cap.res.errorMessage;
-                if (basarili) { zlog('  ✅ Z ' + b.zno + ' KAYDEDİLDİ (' + s.tutar.toFixed(2) + ' TL)', '#10b981'); ok++; }
-                else { const msg = (cap.res && (cap.res.errorMessage || cap.res.statusMessage)) || ('HTTP ' + cap.status); zlog('  ❌ Z ' + b.zno + ' KAYDEDİLMEDİ — sunucu: ' + String(msg).slice(0, 120), '#ef4444'); fail++; }
-              } else {
-                zlog('  ⚠ Z ' + b.zno + ' — sunucu cevabı yakalanamadı. ' + (toast ? 'Ekran mesajı: ' + toast : 'Kaydet /gelir/create isteği görülmedi (buton işlem yapmadı olabilir).'), '#fbbf24');
-                fail++;
-              }
-              const g2 = D.querySelector('#muhasebeGelirEkle'); if (g2) { g2.click(); await wait(1200); }
-            }
-            else { zlog('  ⚠ Kaydet butonu pasif/yok', '#fbbf24'); fail++; }
-          } catch (err) { zlog('  ❌ ' + err.message, '#ef4444'); fail++; }
+            const t = iso(b.tarih);
+            const P = JSON.parse(JSON.stringify(tmpl));
+            P.kayitTarihi = t; P.belgeTarihi = t;
+            P.belgeSiraNo = String(b.zno);
+            let belgeToplam = 0;
+            P.kayitlar = b.satirlar.map(s => {
+              const k = JSON.parse(JSON.stringify(kTmpl));
+              const oran = s.oran || 0;
+              let matrah, kdv, dahil;
+              if (kdvDahil) { dahil = s.tutar; matrah = r2(dahil / (1 + oran / 100)); kdv = r2(dahil - matrah); k.tutar = dahil; }
+              else { matrah = s.tutar; kdv = r2(matrah * oran / 100); k.tutar = matrah; dahil = r2(matrah + kdv); }
+              k.kdvOrani = oran;
+              if ('kdv' in k) k.kdv = kdv;
+              k.aciklama = s.aciklama || (b.zno + ' NL. Z RAPORU Mal Satışı');
+              belgeToplam += dahil;
+              return k;
+            });
+            P.belgeTutari = r2(belgeToplam);
+            P[krediKey] = r2(b.kredi);
+            if (nakitKey) P[nakitKey] = r2(b.nakit);
+            const cr = await fetch(B + '/gelir/create', { method: 'POST', headers: H, body: JSON.stringify(P), credentials: 'include' });
+            const cj = await cr.json();
+            if (cr.status === 200 && cj.resultContainer && !cj.errorMessage) { zlog('  ✅ Z ' + b.zno + ' (' + belgeToplam.toFixed(2) + ' TL' + (b.satirlar.length > 1 ? ', ' + b.satirlar.length + ' satır' : '') + ')', '#10b981'); ok++; }
+            else { const m = (cj.errorMessage || cj.statusMessage || cr.status).toString(); if (/aynı|mükerrer|zaten/i.test(m)) { zlog('  ⏭ Z ' + b.zno + ' zaten kayıtlı', '#9aa6c0'); ok++; } else { zlog('  ❌ Z ' + b.zno + ' — ' + m.slice(0, 120), '#ef4444'); fail++; } }
+          } catch (err) { zlog('  ❌ Z ' + b.zno + ' — ' + err.message, '#ef4444'); fail++; }
         }
         zlog('🎉 ' + firma.ad + ' bitti — ✅ ' + ok + (fail ? ' · ❌ ' + fail : ''), fail ? '#fbbf24' : '#10b981');
-        if (!test && digerleri.length) zlog('👉 Şimdi diğer firmaya geç (' + digerleri.join(', ') + ') ve tekrar "Z Raporu Gönder" bas.', '#fcd34d');
+        if (digerleri.length) zlog('👉 Diğer firmalar (' + digerleri.join(', ') + ') için o mükellefe geçip tekrar bas.', '#fcd34d');
         D.getElementById('__zStart').disabled = false;
       };
     }
