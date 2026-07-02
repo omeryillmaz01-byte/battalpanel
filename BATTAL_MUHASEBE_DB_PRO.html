@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<title>Battal Muhasebe · Defter Beyan Pro · v10.1</title>
+<title>Battal Muhasebe · Defter Beyan Pro · v10.2</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{
@@ -332,7 +332,7 @@ footer.btmbar b{color:var(--acc-2)}
     <div class="logo-icon">⚡</div>
     <div class="logo-text">
       <div class="t1">BATTAL MUHASEBE · DB PRO</div>
-      <div class="t2">DEFTER BEYAN OTOMASYONU · v10.1</div>
+      <div class="t2">DEFTER BEYAN OTOMASYONU · v10.2</div>
     </div>
   </div>
   <div class="spc"></div>
@@ -369,6 +369,7 @@ footer.btmbar b{color:var(--acc-2)}
   <div class="tabs">
     <button class="tab active" data-tab="gelir" id="tabGelirBtn" onclick="App.tab('gelir')">💰 Gelir / e-SMM</button>
     <button class="tab" data-tab="gider" onclick="App.tab('gider')">📥 Gider / e-Fatura</button>
+    <button class="tab" data-tab="zrapor" id="tabZraporBtn" onclick="App.tab('zrapor')" style="display:none">📊 Z Raporu</button>
     <button class="tab" data-tab="sabit" onclick="App.tab('sabit')">🏛️ Sabit Kıymet</button>
     <button class="tab" data-tab="vuk" onclick="App.tab('vuk')">📚 VUK 333 & Levha</button>
   </div>
@@ -446,6 +447,38 @@ footer.btmbar b{color:var(--acc-2)}
       </div>
 
       <div class="log" id="d-log" style="display:none"></div>
+    </div>
+  </div>
+
+  <!-- Z RAPORU TAB -->
+  <div class="tab-content" id="tab-zrapor">
+    <div class="dropzone" id="dz-zrapor" onclick="document.getElementById('f-zrapor').click()">
+      <div class="dz-icon">📊</div>
+      <div class="dz-title">Z Raporu Excel'ini buraya bırak (Z_RAPORU_YYYY-MM.xlsx)</div>
+      <div class="dz-sub">Tüm firma sayfaları okunur · Nakit+Kredi=Tutar ve KDV kontrolü otomatik · Karışık oran desteklenir</div>
+      <input type="file" id="f-zrapor" accept=".csv,.xlsx,.xls">
+    </div>
+
+    <div id="zrapor-panel" style="display:none">
+      <div class="kpis" id="z-kpi"></div>
+      <div class="warn-banner" id="z-warn" style="display:none"></div>
+
+      <div class="tablewrap">
+        <div class="tablewrap-h">📋 Z Raporu Önizleme · Firma bazlı · Kontrolden geçti</div>
+        <div style="max-height:460px;overflow:auto">
+          <table id="z-tab">
+            <thead><tr><th>Firma</th><th>Tarih</th><th>Z No</th><th class="r">Tutar</th><th class="r">KDV%</th><th class="r">Nakit</th><th class="r">Kredi</th><th class="r">Hes. KDV</th><th>Kontrol</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn secondary" onclick="App.tekrarYukle('zrapor')">🔄 Tekrar Yükle</button>
+        <button class="btn big" onclick="App.uretZrapor()">📊 Z Raporlarını Panoya Kopyala (Eklenti Gönderir)</button>
+      </div>
+
+      <div class="log" id="z-log" style="display:none"></div>
     </div>
   </div>
 
@@ -548,7 +581,7 @@ footer.btmbar b{color:var(--acc-2)}
 </div>
 
 <footer class="btmbar">
-  <span>v10.1 · 15 mükellef · Defter Beyan API · VUK 333</span>
+  <span>v10.2 · 15 mükellef · Defter Beyan API · VUK 333</span>
   <div style="flex:1"></div>
   <span id="ftrInfo">Hazır</span>
 </footer>
@@ -648,13 +681,13 @@ const MUKELLEFLER = {
     ad:'Altuğ Erden', emoji:'☕', tip:'ISL', vd:'ÜSKÜDAR',
     sektor:'Çay/Kahve/Baharat Perakende', nace:'472704',
     levha:'İcadiye Mah. Üsküdar',
-    girisVar:true, giderEvet:true, malAlis:true
+    girisVar:true, giderEvet:true, malAlis:true, zRapor:true
   },
   '2640193570':{
     ad:'Muzaffer Murat Çubukçuoğlu', emoji:'☕', tip:'ISL', vd:'ÜSKÜDAR',
     sektor:'Çay/Kahve/Baharat Perakende', nace:'472704',
     levha:'Selimiye Mah. Üsküdar',
-    girisVar:true, giderEvet:true, malAlis:true
+    girisVar:true, giderEvet:true, malAlis:true, zRapor:true
   },
   '0250587861':{
     ad:'Kadir Akıllı', emoji:'🥜', tip:'ISL', vd:'-',
@@ -742,6 +775,7 @@ const App = {
   aktifVkn: null,
   gelirData: [],
   giderData: [],
+  zData: [],
   uretilenScript: '',
   uretilenAd: '',
 
@@ -751,6 +785,7 @@ const App = {
     this.donemDoldur();
     this.bindDrop('dz-gelir','f-gelir','gelir');
     this.bindDrop('dz-gider','f-gider','gider');
+    this.bindDrop('dz-zrapor','f-zrapor','zrapor');
     // Restore last mükellef
     const son = localStorage.getItem('sonMukellef');
     if(son && MUKELLEFLER[son]){
@@ -822,9 +857,12 @@ const App = {
     document.getElementById('dzGelirSub').textContent = isl
       ? 'Giden satış faturaları · İptaller otomatik elenir · Z raporları ayrıca girilir'
       : 'Tüm dönem gelse de filtreliyorum · İptaller otomatik elenir';
+    // Z Raporu sekmesi — sadece yazarkasa/perakende (zRapor:true) mükelleflerde
+    document.getElementById('tabZraporBtn').style.display = m.zRapor ? '' : 'none';
     // Reset
     this.gelirData=[];
     this.giderData=[];
+    this.zData=[];
     document.getElementById('gelir-panel').style.display='none';
     document.getElementById('gider-panel').style.display='none';
     document.getElementById('sk-list').innerHTML='<div class="empty">Önce Gider sekmesinden CSV yükle.</div>';
@@ -910,11 +948,22 @@ const App = {
 
   readFile(file,tip){
     if(!this.aktifVkn){alert('Önce mükellef seç');return;}
-    const id = tip==='gelir'?'g-file':'d-file';
-    document.getElementById(id).value = file.name;
+    if(tip!=='zrapor'){
+      const id = tip==='gelir'?'g-file':'d-file';
+      document.getElementById(id).value = file.name;
+    }
     const rd = new FileReader();
     rd.onload = e=>{
       try{
+        // Z Raporu: TÜM firma sayfalarını oku (çok sayfalı workbook)
+        if(tip==='zrapor'){
+          if(!/\.(xlsx|xls)$/i.test(file.name)){alert('Z Raporu için Excel (.xlsx) gerekir');return;}
+          const wb = XLSX.read(e.target.result,{type:'array'});
+          const sheets = {};
+          wb.SheetNames.forEach(sn=>{ sheets[sn]=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,defval:''}); });
+          this.zRaporIsle(sheets, file.name);
+          return;
+        }
         let rows = [];
         if(/\.(xlsx|xls)$/i.test(file.name)){
           const wb = XLSX.read(e.target.result,{type:'array'});
@@ -1415,6 +1464,145 @@ if(fails.length)console.log('Hatalı: '+fails.slice(0,10).join(' | '));
     this.modalAc('modal-script');
   },
 
+  /* ═══════════════ Z RAPORU ═══════════════
+     Excel düzeni (firma başına ayrı sayfa):
+       satır 3 B: TCKN/VKN · satır 4 B: Faaliyet Kodu (NACE)
+       başlık satırı: Tarih | Gün | Z No | Tutar(KDV Dahil) | KDV% | Nakit | Kredi | Hes.KDV | Açıklama
+     Kontroller: Nakit+Kredi=Tutar · Hesaplanan KDV doğru mu · Z No mükerrer · tarih formatı  */
+  zRaporIsle(sheets, dosyaAdi){
+    const norm = s => (s||'').toString().trim().toLocaleUpperCase('tr').replace(/İ/g,'I').replace(/[ĞÜŞÖÇ]/g,c=>({Ğ:'G',Ü:'U',Ş:'S',Ö:'O',Ç:'C'}[c]));
+    const firmalar = [];
+    Object.keys(sheets).forEach(sn=>{
+      if(/ANA SAYFA/i.test(sn)) return;
+      const rows = sheets[sn];
+      if(!rows||!rows.length) return;
+      // VKN & NACE (etikete bakarak bul — satır kayması olsa da tutar)
+      let vkn='', nace='';
+      for(let i=0;i<Math.min(rows.length,12);i++){
+        const a=(rows[i]||[]).map(x=>String(x||''));
+        const lab=(a[0]||'').toLocaleUpperCase('tr');
+        if(/VKN|TCKN/.test(lab)){ const m=a.join(' ').match(/\b(\d{10,11})\b/); if(m)vkn=m[1]; }
+        if(/FAALİYET|FAALIYET|NACE/.test(lab)){ const m=a.join(' ').match(/\b(\d{6})\b/); if(m)nace=m[1]; }
+      }
+      // Başlık satırını bul (Z No içeren)
+      let hi=-1;
+      for(let i=0;i<rows.length;i++){ if((rows[i]||[]).some(c=>/^z\s*no$/i.test(String(c||'').trim()))){hi=i;break;} }
+      if(hi<0) hi=11; // varsayılan (13. satır → index 12, başlık 12→index 11)
+      // Mükellef eşleştir (önce VKN, sonra ada göre)
+      let mvkn='', mad=sn;
+      if(vkn && MUKELLEFLER[vkn]){ mvkn=vkn; mad=MUKELLEFLER[vkn].ad; }
+      else { for(const k in MUKELLEFLER){ if(norm(MUKELLEFLER[k].ad).includes(norm(sn).slice(0,8))||norm(sn).includes(norm(MUKELLEFLER[k].ad).slice(0,8))){ mvkn=k; mad=MUKELLEFLER[k].ad; break; } } }
+      const naceFinal = nace || (mvkn&&MUKELLEFLER[mvkn]?MUKELLEFLER[mvkn].nace:'');
+      // Kayıtları oku
+      const raporlar=[];
+      for(let i=hi+1;i<rows.length;i++){
+        const r=rows[i]||[];
+        const zno=String(r[2]||'').trim();
+        const tutar=this.num(r[3]);
+        if(!zno||!(tutar>0)) continue;
+        let tar=String(r[0]||'').split(' ')[0];
+        if(/^\d{4}-\d{2}-\d{2}/.test(tar)){const p=tar.split('-');tar=p[2].slice(0,2)+'.'+p[1]+'.'+p[0];}
+        const oran=this.num(r[4])||0;
+        const nakit=this.num(r[5]);
+        const kredi=this.num(r[6]);
+        const hesKdv=this.num(r[7]);
+        const acik=String(r[8]||'').trim()||`${zno} NL. Z RAPORU Mal Satışı`;
+        raporlar.push({tarih:tar, zno, tutar, oran, nakit, kredi, hesKdv, aciklama:acik, uyari:[]});
+      }
+      if(!raporlar.length) return;
+      // Kontroller
+      const seen={};
+      raporlar.forEach(x=>{
+        if(!/^\d{2}\.\d{2}\.\d{4}$/.test(x.tarih)) x.uyari.push('TARİH?');
+        if([0,1,8,10,18,20].indexOf(x.oran)<0) x.uyari.push('KDV ORANI?');
+        // Nakit+Kredi = Tutar
+        if(Math.abs((x.nakit+x.kredi)-x.tutar)>0.05) x.uyari.push('NAKİT+KREDİ≠TUTAR');
+        // Hesaplanan KDV doğrulama (KDV dahil → matrah=tutar/(1+oran))
+        const beklenenKdv=this.r2(x.tutar-x.tutar/(1+x.oran/100));
+        if(x.hesKdv>0 && Math.abs(beklenenKdv-x.hesKdv)>0.05) x.uyari.push('KDV HESAP?');
+        x.hesKdvBeklenen=beklenenKdv;
+        // Mükerrer Z No
+        if(seen[x.zno]) x.uyari.push('MÜKERRER Z NO'); else seen[x.zno]=1;
+      });
+      firmalar.push({ sheet:sn, vkn:mvkn||vkn, ad:mad, nace:naceFinal, eslesti:!!mvkn, raporlar });
+    });
+    this.zData = firmalar;
+    this.zRaporGoster(dosyaAdi);
+  },
+
+  zRaporGoster(dosyaAdi){
+    document.getElementById('dz-zrapor').style.display='none';
+    document.getElementById('zrapor-panel').style.display='block';
+    const firmalar=this.zData;
+    const tumRap=[].concat(...firmalar.map(f=>f.raporlar));
+    const hatali=tumRap.filter(r=>r.uyari.length).length;
+    const toplam=tumRap.reduce((a,r)=>a+r.tutar,0);
+    const esleşmeyen=firmalar.filter(f=>!f.eslesti);
+    document.getElementById('z-kpi').innerHTML =
+      `<div class="kpi"><div class="l">Firma</div><div class="v">${firmalar.length}</div></div>`+
+      `<div class="kpi"><div class="l">Z Raporu</div><div class="v">${tumRap.length}</div></div>`+
+      `<div class="kpi"><div class="l">Toplam Satış</div><div class="v">₺${this.f(toplam)}</div></div>`+
+      `<div class="kpi ${hatali?'warn':''}"><div class="l">Uyarılı</div><div class="v">${hatali}</div></div>`;
+    const w=document.getElementById('z-warn');
+    const uyarilar=[];
+    if(esleşmeyen.length) uyarilar.push('⚠️ Eşleşmeyen firma sayfası: '+esleşmeyen.map(f=>f.sheet).join(', ')+' — bu sayfalar gönderilmez (VKN paneldeki mükelleflerle tutmuyor).');
+    if(hatali) uyarilar.push('🔴 '+hatali+' Z raporunda uyarı var (aşağıda kırmızı). Nakit+Kredi=Tutar tutmuyorsa veya KDV hesabı hatalıysa Excel\'i düzelt — bunlar gönderilmez.');
+    if(uyarilar.length){ w.style.display='block'; w.innerHTML=uyarilar.join('<br>'); } else { w.style.display='none'; }
+    const tb=document.querySelector('#z-tab tbody'); tb.innerHTML='';
+    firmalar.forEach(f=>{
+      f.raporlar.forEach(r=>{
+        const bad=r.uyari.length;
+        tb.innerHTML+=`<tr${bad?' style="background:rgba(239,68,68,.08)"':''}>`+
+          `<td>${f.ad}${f.eslesti?'':' <span style="color:#fca5a5">(eşleşmedi)</span>'}</td>`+
+          `<td>${r.tarih}</td><td><b>${r.zno}</b></td>`+
+          `<td class="r">${this.f(r.tutar)}</td><td class="r">${r.oran}</td>`+
+          `<td class="r">${this.f(r.nakit)}</td><td class="r">${this.f(r.kredi)}</td>`+
+          `<td class="r">${this.f(r.hesKdv||r.hesKdvBeklenen)}</td>`+
+          `<td>${bad?'<span style="color:#fca5a5;font-weight:700">'+r.uyari.join(' ')+'</span>':'<span style="color:#6ee7b7">✓</span>'}</td>`+
+          `</tr>`;
+      });
+    });
+    this.log('z-log', `📊 ${dosyaAdi} okundu · ${firmalar.length} firma · ${tumRap.length} Z raporu${hatali?' · ⚠️ '+hatali+' uyarılı':''}`);
+  },
+
+  uretZrapor(){
+    const firmalar=(this.zData||[]).filter(f=>f.eslesti);
+    if(!firmalar.length){alert('Gönderilecek eşleşen firma yok. Excel sayfa adları/VKN paneldeki mükelleflerle tutmuyor.');return;}
+    // Sadece uyarısız kayıtlar; Z No bazında grupla (karışık KDV → aynı Z No çok satır)
+    const paketFirmalar=[];
+    let toplamRap=0, atlanan=0;
+    firmalar.forEach(f=>{
+      const temiz=f.raporlar.filter(r=>!r.uyari.length);
+      atlanan += f.raporlar.length-temiz.length;
+      const grup={};
+      temiz.forEach(r=>{
+        const key=r.zno+'|'+r.tarih;
+        if(!grup[key]) grup[key]={zno:r.zno, tarih:r.tarih, nakit:0, kredi:0, satirlar:[]};
+        grup[key].nakit+=r.nakit; grup[key].kredi+=r.kredi;
+        grup[key].satirlar.push({tutar:r.tutar, oran:r.oran, aciklama:r.aciklama});
+      });
+      const belgeler=Object.values(grup);
+      if(belgeler.length){ paketFirmalar.push({vkn:f.vkn, ad:f.ad, nace:f.nace, belgeler}); toplamRap+=belgeler.length; }
+    });
+    if(!toplamRap){alert('Temiz (uyarısız) Z raporu yok. Önce Excel\'deki uyarıları düzelt.');return;}
+    const paket={tip:'battal-zrapor-gonder', donem:'', firmalar:paketFirmalar};
+    navigator.clipboard.writeText(JSON.stringify(paket)).then(()=>{
+      this.log('z-log', `✅ ${toplamRap} Z raporu (${paketFirmalar.length} firma) panoya kopyalandı${atlanan?' · '+atlanan+' kayıt ATLANDI (uyarılı)':''}\n💡 Defter Beyan'a geç → mükellefe gir → sağ alttaki "📊 Z Raporu Gönder" butonuna bas. Eklenti aktif mükellefin Z raporlarını otomatik girer; bittiğinde diğer firmaya geçmen için uyarır.`);
+    });
+    document.getElementById('modal-script-h2').textContent = '✅ '+toplamRap+' Z Raporu Panoya Kopyalandı';
+    document.getElementById('modal-script-banner').textContent = '📊 Eklenti ile otomatik Z raporu girişi hazır. Şimdi:';
+    document.getElementById('modal-script-steps').innerHTML = `
+      <li><b>Defter Beyan</b>'ı aç ve <b>ilk firmaya geç</b> (${paketFirmalar.map(f=>f.ad).join(', ')})</li>
+      <li>Sağ altta beliren <b>"📊 Z Raporu Gönder"</b> butonuna tıkla</li>
+      <li>Eklenti aktif mükellefin Z raporlarını Gelir Ekle → Belge Türü "Z Raporu" formuna otomatik girer</li>
+      <li><b>🧪 Test modu</b> açıkken sadece 1 tanesini doldurur, Kaydet basmaz — kontrol et, doğruysa testi kapatıp tekrar bas</li>
+      <li>Bir firma bitince eklenti "diğer firmaya geç" der; mükellefi değiştirip tekrar bas</li>`;
+    document.getElementById('modal-mukname').textContent = paketFirmalar.map(f=>f.ad).join(', ');
+    document.getElementById('modal-script-not').textContent = 'Nakit+Kredi=Tutar ve KDV hesabı tutmayan kayıtlar gönderilmez (uyarılı). Karışık KDV oranlı Z raporu, aynı Z No altında birden fazla satır olarak girilir.';
+    document.getElementById('modal-script-tekrar').onclick = ()=>{ navigator.clipboard.writeText(JSON.stringify(paket)); };
+    this.modalAc('modal-script');
+  },
+
   scriptKopyala(){
     if(!this.uretilenScript){alert('Henüz script yok');return}
     navigator.clipboard.writeText(this.uretilenScript).then(()=>{
@@ -1428,6 +1616,7 @@ if(fails.length)console.log('Hatalı: '+fails.slice(0,10).join(' | '));
 
   tekrarYukle(tip){
     if(tip==='gelir'){this.gelirData=[];document.getElementById('gelir-panel').style.display='none';document.getElementById('dz-gelir').style.display='block';document.getElementById('f-gelir').value=''}
+    else if(tip==='zrapor'){this.zData=[];document.getElementById('zrapor-panel').style.display='none';document.getElementById('dz-zrapor').style.display='block';document.getElementById('f-zrapor').value=''}
     else{this.giderData=[];document.getElementById('gider-panel').style.display='none';document.getElementById('dz-gider').style.display='block';document.getElementById('f-gider').value=''}
   },
 

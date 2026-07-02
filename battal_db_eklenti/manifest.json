@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "BATTAL · Defter Beyan + Uyumsoft Kontrol",
-  "version": "2.8",
+  "version": "2.9",
   "description": "Defter Beyan'da gider kontrolu, Uyumsoft'ta gelen fatura cekme ve iki sistem arasinda capraz eslestirme (eksik fatura tespiti). Salt-okuma, guvenli.",
   "permissions": ["storage"],
   "host_permissions": [

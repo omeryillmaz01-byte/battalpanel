@@ -111,6 +111,111 @@
       document.getElementById('__gonderRows').innerHTML = rowsHtml;
     }
 
+    /* ── Panodan Z Raporu Gönder: BATTAL_MUHASEBE_DB_PRO.html'de üretilen
+       'battal-zrapor-gonder' paketini okur, aktif mükellefin Z raporlarını
+       Gelir Ekle → Belge Türü "Z Raporu" formuna DOM ile otomatik girer.
+       (MUSAVIR_PRO_PANEL'deki test edilmiş akış — artık DB sayfasına doğrudan
+       enjekte oldugu icin iframe/window.parent gerekmez.) */
+    async function zRaporGonder() {
+      const bar = overlayAc('📊 Z Raporu Gönder');
+      let paket;
+      try {
+        paket = JSON.parse(await navigator.clipboard.readText());
+        if (paket.tip !== 'battal-zrapor-gonder' || !Array.isArray(paket.firmalar)) throw new Error('Panoda geçerli bir Z Raporu paketi yok. Önce panelde "Z Raporlarını Panoya Kopyala" butonuna bas.');
+      } catch (e) { bar.innerHTML = '<span style="color:#fca5a5">Hata: ' + e.message + '</span>'; return; }
+
+      const D = document;
+      const wait = ms => new Promise(r => setTimeout(r, ms));
+      const norm = s => (s || '').toString().trim().toLocaleUpperCase('tr').replace(/İ/g, 'I').replace(/[ĞÜŞÖÇ]/g, c => ({ Ğ: 'G', Ü: 'U', Ş: 'S', Ö: 'O', Ç: 'C' }[c]));
+      const setReact = (el, v) => { if (!el) return false; try { const p = el.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype; Object.getOwnPropertyDescriptor(p, 'value').set.call(el, v); el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); return true; } catch (e) { return false; } };
+      const setTarih = async (el, val) => { if (!el || !val) return; el.focus(); await wait(150); setReact(el, val); await wait(200); el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true })); el.blur(); await wait(200); };
+
+      // Defter Beyan açık mı?
+      const banner = D.querySelector('.dbs-navbar__content span');
+      if (!banner) { bar.innerHTML = '<span style="color:#fca5a5">❌ Defter Beyan açık değil / mükellef paneli bulunamadı. portal.defterbeyan.gov.tr\'da giriş yapıp mükellefe gir.</span>'; return; }
+      const aktif = banner.innerText.split('\n')[0].trim();
+      const aktifN = norm(aktif);
+
+      // Aktif mükellefe uyan firmayı paketten bul
+      const firma = paket.firmalar.find(f => aktifN.includes(norm(f.ad).slice(0, 8)) || norm(f.ad).includes(aktifN.slice(0, 8)));
+      const digerleri = paket.firmalar.filter(f => f !== firma).map(f => f.ad);
+      if (!firma) {
+        bar.innerHTML = '<div style="color:#fca5a5">⚠️ Aktif mükellef "<b>' + aktif + '</b>" paketteki firmalarla eşleşmedi.<br>Pakette: ' + paket.firmalar.map(f => f.ad).join(', ') + '<br><br>Defter Beyan\'da bu firmalardan birine geç, tekrar bas.</div>';
+        return;
+      }
+
+      // Karışık KDV (aynı belgede >1 satır) — KDV oranı seçici doğrulanmadığından otomatik girilmez
+      const karisik = firma.belgeler.filter(b => b.satirlar.length > 1);
+      const tekil = firma.belgeler.filter(b => b.satirlar.length === 1);
+
+      const testMode = true; // ilk çalıştırma daima test: 1 kayıt doldurulur, KAYDET basılmaz
+      bar.innerHTML =
+        '<div style="margin-bottom:10px">Aktif mükellef: <b style="color:#6ee7b7">' + aktif + '</b> · ' + tekil.length + ' Z raporu' + (karisik.length ? ' · <span style="color:#fca5a5">' + karisik.length + ' karışık oranlı (elle gir)</span>' : '') + (digerleri.length ? ' · diğer firmalar: ' + digerleri.join(', ') : '') + '</div>' +
+        '<label style="display:block;margin-bottom:10px"><input type="checkbox" id="__zTest" checked> 🧪 Test modu (sadece 1 Z doldurulur, Kaydet basılmaz — kontrol et)</label>' +
+        '<button id="__zStart" style="background:#7c3aed;color:#fff;border:0;padding:11px 20px;border-radius:8px;font-weight:800;cursor:pointer">🚀 Başlat</button>' +
+        '<div id="__zLog" style="margin-top:12px;font-family:Consolas,monospace;font-size:12px;max-height:340px;overflow:auto;background:#0b1020;padding:10px;border-radius:8px"></div>';
+      const logEl = D.getElementById('__zLog');
+      const zlog = (t, c) => { const d = document.createElement('div'); d.style.color = c || '#9aa6c0'; d.textContent = t; logEl.appendChild(d); logEl.scrollTop = logEl.scrollHeight; };
+
+      D.getElementById('__zStart').onclick = async () => {
+        const test = D.getElementById('__zTest').checked;
+        D.getElementById('__zStart').disabled = true;
+        zlog('🚀 ' + firma.ad + ' — ' + tekil.length + ' Z raporu · Test modu: ' + (test ? 'AÇIK' : 'KAPALI'), '#7c3aed');
+        if (karisik.length) zlog('⚠️ ' + karisik.length + ' karışık KDV oranlı Z raporu otomatik girilmez, elle gir: ' + karisik.map(b => b.zno).join(', '), '#fbbf24');
+
+        // Gelir Ekle sayfasını aç
+        if (!location.href.includes('/muhasebe/gelir/ekle')) {
+          const g = D.querySelector('#muhasebeGelirEkle');
+          if (g) { g.click(); await wait(2500); zlog('📋 Gelir Ekle açıldı', '#3b82f6'); }
+          else zlog('⚠️ "Gelir Ekle" menüsü bulunamadı — elle Gelir Ekle sayfasına geç', '#fbbf24');
+        }
+
+        let ok = 0, fail = 0;
+        for (let i = 0; i < tekil.length; i++) {
+          const b = tekil[i], s = b.satirlar[0];
+          zlog('[' + (i + 1) + '/' + tekil.length + '] Z ' + b.zno + ' işleniyor…', '#3b82f6');
+          try {
+            // Belge Türü = Z Raporu
+            const btText = D.querySelector('#gelirBelgeTuru_input .rw-input');
+            if ((btText ? btText.innerText.trim() : '') !== 'Z Raporu') {
+              const dd = D.querySelector('#gelirBelgeTuru_input');
+              if (dd) { dd.click(); await wait(700); }
+              let zOpt = null;
+              D.querySelectorAll('#gelirBelgeTuru_listbox li, .rw-list-option, [role="option"], li').forEach(el => { if (!zOpt && el.innerText && el.innerText.trim() === 'Z Raporu') zOpt = el; });
+              if (zOpt) { zOpt.click(); await wait(1500); zlog('  ✓ Belge Türü: Z Raporu', '#10b981'); }
+              else { zlog('  ⚠ Z Raporu seçeneği bulunamadı', '#ef4444'); fail++; continue; }
+            }
+            await setTarih(D.querySelector('#kayitTarihi'), b.tarih);
+            await setTarih(D.querySelector('#belgeTarihi'), b.tarih);
+            const sira = D.querySelector('#siraNo, input[name="siraNo"]');
+            if (sira) { sira.focus(); setReact(sira, String(b.zno)); sira.blur(); await wait(400); }
+            await wait(800);
+            const tutar = D.querySelector('div[name="tutarDiv"] input:not([disabled])');
+            if (tutar) { tutar.focus(); setReact(tutar, String(s.tutar).replace('.', ',')); tutar.blur(); await wait(500); }
+            else zlog('  ⚠ Tutar alanı yok (Z Raporu paneli açıldı mı?)', '#fbbf24');
+            const acik = D.querySelector('input[name="aciklama"]:not([disabled])');
+            if (acik) { acik.focus(); setReact(acik, s.aciklama || (b.zno + ' NL. Z RAPORU Mal Satışı')); acik.blur(); await wait(300); }
+            const satirEkle = Array.from(D.querySelectorAll('button')).find(x => x.innerText && x.innerText.trim() === 'Satır Ekle' && !x.disabled);
+            if (satirEkle) { satirEkle.click(); await wait(1800); zlog('  ➕ Satır Ekle', '#6b7280'); }
+            else zlog('  ⚠ Satır Ekle pasif/yok', '#fbbf24');
+            const krd = D.querySelector('input[placeholder="Kredi Kartı"]');
+            if (krd) { krd.focus(); setReact(krd, String(b.kredi).replace('.', ',')); krd.blur(); await wait(400); }
+            const nkt = D.querySelector('input[placeholder="Nakit"]');
+            if (nkt) { nkt.focus(); setReact(nkt, String(b.nakit).replace('.', ',')); nkt.blur(); await wait(500); }
+            zlog('  💰 Tutar ' + s.tutar.toFixed(2) + ' · 💳 Kredi ' + b.kredi.toFixed(2) + ' · 💵 Nakit ' + b.nakit.toFixed(2), '#6b7280');
+
+            if (test) { zlog('  🧪 Form dolduruldu — KAYDET BASILMADI. Kontrol et; doğruysa test modunu kapat, tekrar bas.', '#fbbf24'); ok++; break; }
+            const kaydet = Array.from(D.querySelectorAll('button')).find(x => (x.innerText || '').trim() === 'Kaydet' && !x.disabled);
+            if (kaydet) { kaydet.click(); await wait(3000); zlog('  ✅ Z ' + b.zno + ' KAYDEDİLDİ (' + s.tutar.toFixed(2) + ' TL)', '#10b981'); ok++; const g2 = D.querySelector('#muhasebeGelirEkle'); if (g2) { g2.click(); await wait(2000); } }
+            else { zlog('  ⚠ Kaydet butonu pasif/yok', '#fbbf24'); fail++; }
+          } catch (err) { zlog('  ❌ ' + err.message, '#ef4444'); fail++; }
+        }
+        zlog('🎉 ' + firma.ad + ' bitti — ✅ ' + ok + (fail ? ' · ❌ ' + fail : ''), fail ? '#fbbf24' : '#10b981');
+        if (!test && digerleri.length) zlog('👉 Şimdi diğer firmaya geç (' + digerleri.join(', ') + ') ve tekrar "Z Raporu Gönder" bas.', '#fcd34d');
+        D.getElementById('__zStart').disabled = false;
+      };
+    }
+
     async function pullDB(bar) {
       const TK = tokenBul();
       const H = { 'Content-Type': 'application/json; charset=utf-8' };
@@ -255,9 +360,11 @@
 
     butonEkle('📊 Gider Kontrol', calistir, null, '__gkBtn', 20);
     butonEkle('📥 Panodan Gider Gönder', panodanGonder, 'linear-gradient(135deg,#3b82f6,#1d4ed8)', '__gonderBtn', 76);
+    butonEkle('📊 Z Raporu Gönder', zRaporGonder, 'linear-gradient(135deg,#7c3aed,#5b21b6)', '__zBtn', 132);
     setInterval(() => {
       butonEkle('📊 Gider Kontrol', calistir, null, '__gkBtn', 20);
       butonEkle('📥 Panodan Gider Gönder', panodanGonder, 'linear-gradient(135deg,#3b82f6,#1d4ed8)', '__gonderBtn', 76);
+      butonEkle('📊 Z Raporu Gönder', zRaporGonder, 'linear-gradient(135deg,#7c3aed,#5b21b6)', '__zBtn', 132);
     }, 2000);
   }
 
