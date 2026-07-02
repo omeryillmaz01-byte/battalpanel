@@ -162,26 +162,6 @@
     async function zRaporGonder() {
       let __v = ''; try { __v = chrome.runtime.getManifest().version; } catch (e) {}
       const bar = overlayAc('📊 Z Raporu Gönder (API) · v' + __v);
-      let paket = null;
-      // 1) Panodan otomatik oku
-      try {
-        const txt = (await navigator.clipboard.readText() || '').trim();
-        if (txt) { const p = JSON.parse(txt); if (p.tip === 'battal-zrapor-gonder' && Array.isArray(p.firmalar)) paket = p; }
-      } catch (e) {}
-      // 2) Pano boş/geçersizse elle yapıştırma kutusu göster
-      if (!paket) {
-        bar.innerHTML = '<div style="color:#fca5a5;margin-bottom:8px">Panoda geçerli Z Raporu paketi bulunamadı.</div>' +
-          '<div style="margin-bottom:8px;color:#9aa6c0">Panelde <b>"Z Raporlarını Panoya Kopyala"</b>ya bas, sonra buraya <b>Ctrl+V</b> yapıştır ve <b>Devam</b>a tıkla.</div>' +
-          '<textarea id="__zPaste" style="width:100%;height:120px;background:#0b1020;color:#e8edf5;border:1px solid #2a3550;border-radius:8px;padding:8px;font-family:Consolas,monospace;font-size:11px" placeholder="JSON paketini buraya yapıştır…"></textarea>' +
-          '<button id="__zGo" style="margin-top:8px;background:#7c3aed;color:#fff;border:0;padding:10px 18px;border-radius:8px;font-weight:800;cursor:pointer">Devam ▶</button>';
-        await new Promise(res => {
-          document.getElementById('__zGo').onclick = () => {
-            try { const p = JSON.parse((document.getElementById('__zPaste').value || '').trim()); if (p.tip === 'battal-zrapor-gonder' && Array.isArray(p.firmalar)) { paket = p; res(); } else alert('Geçersiz paket. Panelden kopyaladığın JSON\'u yapıştır.'); }
-            catch (e) { alert('JSON okunamadı: ' + e.message); }
-          };
-        });
-      }
-
       const D = document;
       const norm = s => (s || '').toString().trim().toLocaleUpperCase('tr').replace(/İ/g, 'I').replace(/[ĞÜŞÖÇ]/g, c => ({ Ğ: 'G', Ü: 'U', Ş: 'S', Ö: 'O', Ç: 'C' }[c]));
       const r2 = v => Math.round(v * 100) / 100;
@@ -192,12 +172,7 @@
       if (!banner) { bar.innerHTML = '<span style="color:#fca5a5">❌ Defter Beyan açık değil. Giriş yapıp mükellefe gir.</span>'; return; }
       const aktif = banner.innerText.split('\n')[0].trim();
       const aktifN = norm(aktif);
-      const firma = paket.firmalar.find(f => aktifN.includes(norm(f.ad).slice(0, 8)) || norm(f.ad).includes(aktifN.slice(0, 8)));
-      const digerleri = paket.firmalar.filter(f => f !== firma).map(f => f.ad);
-      if (!firma) {
-        bar.innerHTML = '<div style="color:#fca5a5">⚠️ Aktif mükellef "<b>' + aktif + '</b>" paketteki firmalarla eşleşmedi.<br>Pakette: ' + paket.firmalar.map(f => f.ad).join(', ') + '</div>';
-        return;
-      }
+      let paket = null, firma = null, digerleri = [];
 
       // Z Raporu şablonu — önce hafızadan, yoksa API'den (mevcut kayıtlı Z'den) otomatik öğren
       let tmpl = null;
@@ -242,24 +217,40 @@
           try { chrome.storage.local.set({ zTemplate: { req: tmpl, ts: Date.now(), kaynak: 'api:' + learn.ep } }); } catch (e) {}
         } else {
           bar.innerHTML =
-            '<div style="color:#fcd34d;font-size:15px;margin-bottom:8px"><b>🎯 EN KOLAY: Gelir Listele\'de bir Z\'ye tıkla</b></div>' +
-            '<div style="color:#e8edf5;font-size:13px;line-height:1.7">Detay endpoint\'ini bulamadım ama casus artık Defter Beyan\'ın <b>kendi çağrısını</b> dinliyor.<br>' +
-            '<b>Yap (elle giriş DEĞİL, sadece bakma):</b><br>1. Sol menü → <b>Gelir Listele</b> → herhangi bir <b>Z Raporu</b> satırına / <b>"Tüm Belgeyi Görüntüle"</b>ye tıkla (belgeyi aç).<br>2. Belge açılınca casus şablonu otomatik yakalar.<br>3. Tekrar <b>📊 Z Raporu Gönder</b> → 🚀 Gönder.</div>' +
-            '<div style="margin-top:10px;color:#6ee7b7;font-size:12px" id="__zBekle">Durum: bir Z belgesinin açılması bekleniyor…</div>' +
-            '<div style="margin-top:10px;color:#64748b;font-size:11px">Teknik: ' + (learn.err || '?') + (learn.keys ? ' · alanlar: ' + learn.keys : '') + '</div>';
+            '<div style="color:#fcd34d;font-size:15px;margin-bottom:8px"><b>🎯 Şablonu yakalamak için: bir Z belgesini "Belgeyi Güncelle" ile kaydet</b></div>' +
+            '<div style="color:#e8edf5;font-size:13px;line-height:1.8">Casus, Defter Beyan\'ın <b>kendi kaydetme çağrısını</b> dinliyor. Kayıtlı bir Z belgesini hiç değiştirmeden tekrar kaydettirmen yeter (mükerrer olmaz):<br>' +
+            '<b>1.</b> Sol menü → <b>Gelir Listele</b> → bir <b>Z Raporu</b> satırına tıkla (Gelir Güncelle açılır).<br>' +
+            '<b>2.</b> Sağ alttaki mavi <b>"Belgeyi Güncelle"</b> butonuna bas. (Hiçbir şey değiştirme.)<br>' +
+            '<b>3.</b> Kaydolunca casus şablonu <b>otomatik</b> yakalar → bu pencere "✅" der.<br>' +
+            '<b>4.</b> Sonra tekrar <b>📊 Z Raporu Gönder</b> → paketi yapıştır → 🚀 Gönder.</div>' +
+            '<div style="margin-top:12px;padding:8px 12px;background:#0b1020;border-radius:8px;color:#6ee7b7;font-size:13px" id="__zBekle">Durum: bir Z belgesinin "Belgeyi Güncelle" ile kaydedilmesi bekleniyor…</div>' +
+            '<div style="margin-top:8px;color:#64748b;font-size:11px">Teknik: ' + (learn.err || '?') + (learn.keys ? ' · alanlar: ' + learn.keys : '') + '</div>';
           const iv2 = setInterval(async () => { try { const st = await chrome.storage.local.get('zTemplate'); if (st && st.zTemplate) { clearInterval(iv2); const e = D.getElementById('__zBekle'); if (e) e.innerHTML = '✅ Şablon yakalandı! Pencereyi kapat, tekrar "Z Raporu Gönder" bas → 🚀 Gönder.'; } } catch (e) {} }, 1500);
           return;
         }
       }
-      if (false) {
-        bar.innerHTML =
-          '<div style="color:#fcd34d;font-size:15px;margin-bottom:10px"><b>ℹ️ Önce Z Raporu şablonu öğrenilmeli (tek seferlik)</b></div>' +
-          '<div style="color:#e8edf5;line-height:1.7">Güvenilir gönderim için Defter Beyan\'ın Z Raporu payload yapısını, senin <b>elle kaydettiğin bir Z raporundan</b> öğrenmem gerekiyor (kodlar sistemde gizli).<br><br>' +
-          '<b>Yapman gereken (1 kez):</b><br>1. <b>Gelir Ekle</b> → Belge Türü <b>Z Raporu</b> → bir Z raporunu elle gir → <b>Kaydet</b>.<br>2. Kaydolunca casus payload\'ı otomatik yakalar ve saklar.<br>3. Sonra tekrar <b>"📊 Z Raporu Gönder"</b> bas — kalan tüm Z\'leri (tüm firmalar) API ile otomatik basar.<br><br>' +
-          '<span style="color:#9aa6c0">Not: Bu şablon bir kez öğrenilince kalıcıdır; her ay/firma için tekrar gerekmez.</span></div>' +
-          '<div style="margin-top:12px;padding:8px 12px;background:#0b1020;border-radius:8px;color:#6ee7b7;font-size:12px">Durum: elle 1 Z raporu kaydedilmesi bekleniyor…</div>';
-        // Yakalanınca haber ver
-        const iv = setInterval(async () => { try { const st = await chrome.storage.local.get('zTemplate'); if (st && st.zTemplate) { clearInterval(iv); const b2 = D.getElementById('__gkb'); if (b2) b2.querySelector('div:last-child').innerHTML = '✅ Şablon yakalandı! Şimdi bu pencereyi kapatıp tekrar "Z Raporu Gönder" bas.'; } } catch (e) {} }, 1500);
+      // ── Şablon hazır. Şimdi paketi oku (pano veya elle yapıştır) ──
+      try {
+        const txt = (await navigator.clipboard.readText() || '').trim();
+        if (txt) { const p = JSON.parse(txt); if (p.tip === 'battal-zrapor-gonder' && Array.isArray(p.firmalar)) paket = p; }
+      } catch (e) {}
+      if (!paket) {
+        bar.innerHTML = '<div style="color:#6ee7b7;margin-bottom:8px">✅ Şablon hazır (Belge Türü kodu ' + tmpl.gelirBelgeTuruKodu + ').</div>' +
+          '<div style="color:#fca5a5;margin-bottom:8px">Panoda Z Raporu paketi yok.</div>' +
+          '<div style="margin-bottom:8px;color:#9aa6c0">Panelde <b>"Z Raporlarını Panoya Kopyala"</b>ya bas, buraya <b>Ctrl+V</b> yapıştır ve <b>Devam</b>a tıkla.</div>' +
+          '<textarea id="__zPaste" style="width:100%;height:120px;background:#0b1020;color:#e8edf5;border:1px solid #2a3550;border-radius:8px;padding:8px;font-family:Consolas,monospace;font-size:11px" placeholder="JSON paketini buraya yapıştır…"></textarea>' +
+          '<button id="__zGo" style="margin-top:8px;background:#7c3aed;color:#fff;border:0;padding:10px 18px;border-radius:8px;font-weight:800;cursor:pointer">Devam ▶</button>';
+        await new Promise(res => {
+          D.getElementById('__zGo').onclick = () => {
+            try { const p = JSON.parse((D.getElementById('__zPaste').value || '').trim()); if (p.tip === 'battal-zrapor-gonder' && Array.isArray(p.firmalar)) { paket = p; res(); } else alert('Geçersiz paket. Panelden kopyaladığın JSON\'u yapıştır.'); }
+            catch (e) { alert('JSON okunamadı: ' + e.message); }
+          };
+        });
+      }
+      firma = paket.firmalar.find(f => aktifN.includes(norm(f.ad).slice(0, 8)) || norm(f.ad).includes(aktifN.slice(0, 8)));
+      digerleri = paket.firmalar.filter(f => f !== firma).map(f => f.ad);
+      if (!firma) {
+        bar.innerHTML = '<div style="color:#fca5a5">⚠️ Aktif mükellef "<b>' + aktif + '</b>" paketteki firmalarla eşleşmedi.<br>Pakette: ' + paket.firmalar.map(f => f.ad).join(', ') + '</div>';
         return;
       }
 
