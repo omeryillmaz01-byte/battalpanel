@@ -143,6 +143,20 @@
       const norm = s => (s || '').toString().trim().toLocaleUpperCase('tr').replace(/İ/g, 'I').replace(/[ĞÜŞÖÇ]/g, c => ({ Ğ: 'G', Ü: 'U', Ş: 'S', Ö: 'O', Ç: 'C' }[c]));
       const setReact = (el, v) => { if (!el) return false; try { const p = el.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype; Object.getOwnPropertyDescriptor(p, 'value').set.call(el, v); el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); return true; } catch (e) { return false; } };
       const setTarih = async (el, val) => { if (!el || !val) return; el.focus(); await wait(150); setReact(el, val); await wait(200); el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true })); el.blur(); await wait(200); };
+      // react-widgets DropdownList seçici: base '_input' combobox, '_listbox' li'ler
+      const okuCombo = base => { const c = document.querySelector('#' + base + '_input .rw-input'); return c ? (c.innerText || '').trim() : ''; };
+      const pick = async (base, text, partial) => {
+        const combo = document.querySelector('#' + base + '_input');
+        if (!combo) return { ok: false, sebep: 'combobox yok' };
+        if (okuCombo(base) === text) return { ok: true };
+        combo.click(); await wait(650);
+        let opt = null; const opts = [];
+        document.querySelectorAll('#' + base + '_listbox li').forEach(el => { const t = (el.innerText || '').trim(); if (t) opts.push(t); if (!opt && t === text) opt = el; });
+        if (!opt && partial) document.querySelectorAll('#' + base + '_listbox li').forEach(el => { const t = (el.innerText || '').trim(); if (!opt && t.indexOf(text) === 0) opt = el; });
+        if (opt) { opt.click(); await wait(750); return { ok: true }; }
+        combo.click(); // menüyü kapat
+        return { ok: false, sebep: 'seçenek yok', opts };
+      };
 
       // Defter Beyan açık mı?
       const banner = D.querySelector('.dbs-navbar__content span');
@@ -231,15 +245,46 @@
             await setTarih(D.querySelector('#belgeTarihi'), b.tarih);
             const sira = D.querySelector('#siraNo, input[name="siraNo"]');
             if (sira) { sira.focus(); setReact(sira, String(b.zno)); sira.blur(); await wait(400); }
-            await wait(800);
+            await wait(400);
+
+            // Gelir Kalemleri — ZORUNLU alanlar (Z raporu: Normal Satışlar / Mal Satışı / Mal Satışı)
+            await pick('satisTuru', 'Normal Satışlar', true);
+            const rTur = await pick('gelirKayitTuru', 'Mal Satışı');
+            if (rTur.ok) zlog('  ✓ Gelir Kayıt Türü: Mal Satışı', '#10b981');
+            else zlog('  ⚠ Gelir Kayıt Türü "Mal Satışı" seçilemedi — seçenekler: ' + ((rTur.opts || []).join(' | ') || rTur.sebep), '#ef4444');
+            await wait(500);
+            const rAlt = await pick('gelirKayitAltTuru', 'Mal Satışı');
+            if (rAlt.ok) zlog('  ✓ Gelir Kayıt Alt Türü: Mal Satışı', '#10b981');
+            else zlog('  ⚠ Alt Tür "Mal Satışı" seçilemedi — seçenekler: ' + ((rAlt.opts || []).join(' | ') || rAlt.sebep), '#fbbf24');
+            await wait(500);
+
+            // KDV Oranı — türü seçilince gelir; olası id'leri dene
+            let kdvSecildi = false;
+            for (const kb of ['kdvOrani', 'kdvOran', 'gelirKdvOrani', 'kdv']) {
+              if (!D.querySelector('#' + kb + '_input')) continue;
+              const hedefler = s.oran === 0 ? ['%0', '0'] : ['%' + s.oran, '%0' + s.oran, String(s.oran), '% ' + s.oran];
+              for (const h of hedefler) { const rk = await pick(kb, h, true); if (rk.ok) { kdvSecildi = true; zlog('  ✓ KDV Oranı: %' + s.oran + ' (' + kb + ')', '#10b981'); break; } }
+              if (kdvSecildi) break;
+            }
+            if (!kdvSecildi) {
+              const combos = []; D.querySelectorAll('[id$="_input"][role="combobox"]').forEach(e => combos.push(e.id.replace('_input', '') + '=' + ((e.querySelector('.rw-input') || {}).innerText || '').trim().slice(0, 18)));
+              zlog('  🔍 KDV Oranı alanı otomatik bulunamadı. Formdaki menüler: ' + combos.join(' · '), '#fbbf24');
+            }
+
             const tutar = D.querySelector('div[name="tutarDiv"] input:not([disabled])');
             if (tutar) { tutar.focus(); setReact(tutar, String(s.tutar).replace('.', ',')); tutar.blur(); await wait(500); }
             else zlog('  ⚠ Tutar alanı yok (Z Raporu paneli açıldı mı?)', '#fbbf24');
             const acik = D.querySelector('input[name="aciklama"]:not([disabled])');
             if (acik) { acik.focus(); setReact(acik, s.aciklama || (b.zno + ' NL. Z RAPORU Mal Satışı')); acik.blur(); await wait(300); }
             const satirEkle = Array.from(D.querySelectorAll('button')).find(x => x.innerText && x.innerText.trim() === 'Satır Ekle' && !x.disabled);
-            if (satirEkle) { satirEkle.click(); await wait(1800); zlog('  ➕ Satır Ekle', '#6b7280'); }
+            if (satirEkle) { satirEkle.click(); await wait(1800); }
             else zlog('  ⚠ Satır Ekle pasif/yok', '#fbbf24');
+            // Satır gerçekten eklendi mi?
+            const kalemTablo = D.querySelector('.eklenen-kayitlar-table tbody');
+            const eklendi = kalemTablo && !/henüz kalem eklenmedi/i.test(kalemTablo.innerText || '');
+            if (eklendi) zlog('  ➕ Satır eklendi ✓', '#10b981');
+            else { zlog('  ❌ Satır EKLENMEDİ (zorunlu alan eksik: Gelir Kayıt Türü/KDV Oranı). Yukarıdaki uyarıları bana at.', '#ef4444'); fail++; continue; }
+
             const krd = D.querySelector('input[placeholder="Kredi Kartı"]');
             if (krd) { krd.focus(); setReact(krd, String(b.kredi).replace('.', ',')); krd.blur(); await wait(400); }
             const nkt = D.querySelector('input[placeholder="Nakit"]');
