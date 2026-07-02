@@ -196,10 +196,49 @@
         return;
       }
 
-      // Z Raporu şablonu (senin elle kaydettiğin bir Z'den casusla öğrenilmiş gerçek payload)
+      // Z Raporu şablonu — önce hafızadan, yoksa API'den (mevcut kayıtlı Z'den) otomatik öğren
       let tmpl = null;
       try { const st = await chrome.storage.local.get('zTemplate'); tmpl = st && st.zTemplate && st.zTemplate.req; } catch (e) {}
       if (!tmpl) {
+        bar.innerHTML = '<div style="color:#fcd34d">🔎 Şablon aranıyor — kayıtlı bir Z raporundan API ile öğreniliyor…</div>';
+        const learn = await (async () => {
+          const TK = tokenBul(); const H = { 'Content-Type': 'application/json; charset=utf-8' }; if (TK) H.Token = TK;
+          const yil = new Date().getFullYear();
+          let list = [];
+          try {
+            const sr = await fetch(B + '/gelirliste/search', { method: 'POST', headers: H, credentials: 'include', body: JSON.stringify({ attributes: { baslangicTarihi: yil + '-01-01 00:00:00', bitisTarihi: yil + '-12-31 23:59:59' }, pagingContext: { page: 1, limit: 100, orderContextMap: { 'date(kayit_tarihi)': 'DESC' } } }) });
+            const sj = await sr.json(); list = (sj.resultContainer && (sj.resultContainer.resultList || sj.resultContainer.list)) || [];
+          } catch (e) { return { err: 'liste-hata: ' + e.message }; }
+          if (!list.length) return { err: 'gelir listesi boş' };
+          // Z raporu kaydını bul
+          const zrec = list.find(r => /z\s*raporu/i.test(JSON.stringify(r))) || list[0];
+          const id = zrec.id || zrec.belgeId || zrec.gelirBelgeId || zrec.gelirId || zrec.belgeSiraId || zrec.key;
+          // Detay endpoint'lerini dene
+          for (const ep of ['/gelir/get', '/gelir/detay', '/gelir/getById', '/gelir/getbyid', '/gelir/read']) {
+            for (const bodyObj of [{ id }, { belgeId: id }, { gelirBelgeId: id }, id]) {
+              try {
+                const dr = await fetch(B + ep, { method: 'POST', headers: H, credentials: 'include', body: JSON.stringify(bodyObj) });
+                if (dr.status !== 200) continue;
+                const dj = await dr.json();
+                const belge = dj.resultContainer || dj.result || dj;
+                if (belge && belge.kayitlar && belge.kayitlar.length) return { tmpl: belge, ep };
+              } catch (e) {}
+            }
+          }
+          return { err: 'detay endpoint bulunamadı', id: id, ornek: JSON.stringify(zrec).slice(0, 400) };
+        })();
+        if (learn.tmpl) {
+          tmpl = learn.tmpl;
+          try { chrome.storage.local.set({ zTemplate: { req: tmpl, ts: Date.now(), kaynak: 'api:' + learn.ep } }); } catch (e) {}
+        } else {
+          bar.innerHTML =
+            '<div style="color:#fca5a5;font-size:14px;margin-bottom:8px"><b>Şablon API\'den otomatik öğrenilemedi.</b></div>' +
+            '<div style="color:#9aa6c0;font-size:12px;line-height:1.6">Sebep: ' + (learn.err || '?') + (learn.id ? '<br>Bulunan kayıt id: ' + learn.id : '') + (learn.ornek ? '<br>Kayıt örneği: <code style="color:#93c5fd">' + learn.ornek.replace(/</g, '&lt;') + '</code>' : '') + '</div>' +
+            '<div style="margin-top:10px;color:#fcd34d;font-size:12px">Bu ekranın görüntüsünü Claude\'a at — doğru endpoint\'i ekleyip tam otomatik yapayım. (Alternatif: 1 kez elle Z kaydet, casus yakalar.)</div>';
+          return;
+        }
+      }
+      if (false) {
         bar.innerHTML =
           '<div style="color:#fcd34d;font-size:15px;margin-bottom:10px"><b>ℹ️ Önce Z Raporu şablonu öğrenilmeli (tek seferlik)</b></div>' +
           '<div style="color:#e8edf5;line-height:1.7">Güvenilir gönderim için Defter Beyan\'ın Z Raporu payload yapısını, senin <b>elle kaydettiğin bir Z raporundan</b> öğrenmem gerekiyor (kodlar sistemde gizli).<br><br>' +
