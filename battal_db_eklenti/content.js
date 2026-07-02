@@ -337,6 +337,91 @@
       return { all, T };
     }
 
+    async function pullGelirDB(bar) {
+      const TK = tokenBul();
+      const H = { 'Content-Type': 'application/json; charset=utf-8' };
+      if (TK) H.Token = TK;
+      const yil = new Date().getFullYear();
+      const bas = yil + '-01-01 00:00:00', bit = yil + '-12-31 23:59:59';
+      let page = 1, all = [], size = Infinity, T = {};
+      while (all.length < size) {
+        const r = await fetch(B + '/gelirliste/search', {
+          method: 'POST', headers: H, credentials: 'include',
+          body: JSON.stringify({ attributes: { baslangicTarihi: bas, bitisTarihi: bit }, pagingContext: { page, limit: 200, orderContextMap: { 'date(kayit_tarihi)': 'DESC' } } })
+        });
+        const j = await r.json();
+        const rc = j.resultContainer || {};
+        const l = rc.resultList || rc.list || [];
+        size = rc.size || l.length;
+        T = { g: rc.toplamGelir, k: rc.toplamKdv || rc.toplamHesaplananKdv, s: rc.toplamStopajTutari };
+        all = all.concat(l);
+        if (bar) bar.textContent = 'Defter Beyan gelir çekiliyor… ' + all.length + '/' + size;
+        if (!l.length) break;
+        page++;
+        if (page > 100) break;
+      }
+      return { all, T };
+    }
+
+    async function gelirKontrol() {
+      const bar = overlayAc('📊 Defter Beyan · Gelir Kontrol');
+      let R;
+      try { R = await pullGelirDB(bar); }
+      catch (e) { bar.innerHTML = '<span style="color:#fca5a5">Hata: ' + e.message + '</span>'; return; }
+      const all = R.all, T = R.T;
+      const num = v => +v || 0;
+      const belgeNo = r => norm(r.belgeSiraNo || r.faturaNo || '');
+      const isoAy = r => { const t = (r.belgeTarihi || r.kayitTarihi || '') + ''; if (/^\d{4}-\d{2}/.test(t)) return t.slice(5, 7); const p = t.split('.'); return p[1] || '00'; };
+      // Mükerrer: aynı belge no + tarih + tutar
+      const seen = {}, dup = [];
+      all.forEach(r => { const k = belgeNo(r) + '|' + (r.belgeTarihi || '') + '|' + num(r.tutar); if (seen[k]) dup.push(r); else seen[k] = 1; });
+      // KDV tutarlılık
+      const kdvE = all.filter(r => { const b = Math.round(num(r.tutar) * num(r.kdvOrani)) / 100; return Math.abs(b - num(r.kdv)) > 0.05; });
+      const toplamMatrah = all.reduce((a, r) => a + num(r.tutar), 0);
+      const toplamKdv = all.reduce((a, r) => a + num(r.kdv), 0);
+
+      const adlar = { '01': 'Oca', '02': 'Şub', '03': 'Mar', '04': 'Nis', '05': 'May', '06': 'Haz', '07': 'Tem', '08': 'Ağu', '09': 'Eyl', '10': 'Eki', '11': 'Kas', '12': 'Ara' };
+      const mevcutAylar = [...new Set(all.map(isoAy))].sort();
+      const buAy = ('0' + (new Date().getMonth() + 1)).slice(-2);
+      const aktifAy = mevcutAylar.indexOf(buAy) >= 0 ? buAy : 'tum';
+
+      let h = '<div style="margin-bottom:12px">' +
+        chip('Kayıt', all.length, '#1f2937') +
+        chip('Toplam Gelir (matrah)', '₺' + fmt(T.g || toplamMatrah), '#1e3a2f') +
+        chip('Hes. KDV', '₺' + fmt(T.k || toplamKdv), '#1e2f3a') +
+        chip('Mükerrer', dup.length, dup.length ? '#5b1a1a' : '#1f2937') +
+        chip('KDV Uyumsuz', kdvE.length, kdvE.length ? '#5b3a1a' : '#1f2937') +
+        '</div>';
+      // Uyumsoft GİDEN çapraz kontrol (varsa)
+      try {
+        const store = await chrome.storage.local.get('uyumGiden');
+        const u = store && store.uyumGiden;
+        if (u && u.list && u.list.length) {
+          const yil = String(new Date().getFullYear());
+          const dbNos = new Set(all.map(belgeNo).filter(Boolean));
+          const buYil = u.list.filter(x => (x.tarih || '').indexOf(yil) >= 0);
+          const eksik = buYil.filter(x => { const n = norm(x.no); return n && !dbNos.has(n); });
+          h += '<div style="margin:6px 0 12px">' + chip('Uyumsoft Giden', buYil.length, '#1f2937') + chip('Deftere Girilmiş', buYil.length - eksik.length, '#1e3a2f') + chip('EKSİK', eksik.length, eksik.length ? '#5b1a1a' : '#1e3a2f') + '</div>';
+          if (eksik.length) { h += '<div style="margin-bottom:10px;padding:8px 12px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:8px;color:#fca5a5;font-size:12px">⚠️ ' + eksik.length + ' giden (satış) fatura deftere girilmemiş: ' + eksik.slice(0, 20).map(x => x.no).join(', ') + (eksik.length > 20 ? '…' : '') + '</div>'; }
+        }
+      } catch (e) {}
+
+      // Ay sekmeleri
+      h += '<div id="__glAy" style="margin:6px 0 10px;display:flex;flex-wrap:wrap;gap:6px">';
+      h += '<button class="glb" data-ay="tum" style="padding:6px 12px;border-radius:8px;border:1px solid #3a3550;background:' + (aktifAy === 'tum' ? '#d4af37' : 'transparent') + ';color:' + (aktifAy === 'tum' ? '#0b1224' : '#e8edf5') + ';font-weight:700;cursor:pointer">Tümü (' + all.length + ')</button>';
+      mevcutAylar.forEach(a => { const say = all.filter(r => isoAy(r) === a).length; h += '<button class="glb" data-ay="' + a + '" style="padding:6px 12px;border-radius:8px;border:1px solid #3a3550;background:' + (aktifAy === a ? '#d4af37' : 'transparent') + ';color:' + (aktifAy === a ? '#0b1224' : '#e8edf5') + ';font-weight:700;cursor:pointer">' + (adlar[a] || a) + ' (' + say + ')</button>'; });
+      h += '</div>';
+      const flag = r => { const a = []; if (dup.indexOf(r) >= 0) a.push('MÜKERRER'); if (kdvE.indexOf(r) >= 0) a.push('KDV?'); return a.length ? '<span style="color:#fca5a5;font-weight:700">' + a.join(' ') + '</span>' : '<span style="color:#6ee7b7">✓</span>'; };
+      const cols = ['Belge Tarihi', 'Belge No', 'Açıklama', 'Matrah', 'KDV%', 'KDV', 'Kontrol'];
+      h += '<div style="margin:6px 0"><b style="font-size:14px">📒 Deftere Kayıtlı Gelirler</b>' + (aktifAy !== 'tum' ? ' <span style="font-size:11px;color:#9aa6c0">(seçili ay)</span>' : '') + '</div>';
+      h += '<div style="overflow:auto;border:1px solid #2a3550;border-radius:8px"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#141c2e;text-align:left">' + cols.map(x => '<th style="padding:8px">' + x + '</th>').join('') + '</tr></thead><tbody>';
+      all.forEach(r => { const a = isoAy(r); const gizli = (aktifAy !== 'tum' && a !== aktifAy); h += '<tr class="glRow" data-ay="' + a + '" style="border-top:1px solid #1f2840;' + (gizli ? 'display:none' : '') + '"><td style="padding:7px">' + ((r.belgeTarihi || '') + '').slice(0, 10) + '</td><td style="padding:7px">' + (r.belgeSiraNo || '') + '</td><td style="padding:7px">' + ((r.aciklama || '').slice(0, 55)) + '</td><td style="padding:7px;text-align:right">' + fmt(r.tutar) + '</td><td style="padding:7px;text-align:right">' + (r.kdvOrani || 0) + '</td><td style="padding:7px;text-align:right">' + fmt(r.kdv) + '</td><td style="padding:7px">' + flag(r) + '</td></tr>'; });
+      h += '</tbody></table></div>';
+      bar.innerHTML = h;
+      const ayBar = document.getElementById('__glAy');
+      if (ayBar) ayBar.querySelectorAll('.glb').forEach(b => { b.onclick = () => { const sec = b.getAttribute('data-ay'); ayBar.querySelectorAll('.glb').forEach(x => { x.style.background = 'transparent'; x.style.color = '#e8edf5'; }); b.style.background = '#d4af37'; b.style.color = '#0b1224'; document.querySelectorAll('.glRow').forEach(tr => { tr.style.display = (sec === 'tum' || tr.getAttribute('data-ay') === sec) ? '' : 'none'; }); }; });
+    }
+
     async function calistir() {
       const bar = overlayAc('📊 Defter Beyan · Gider Kontrol');
       let R;
@@ -453,12 +538,13 @@
       }
     }
 
-    butonEkle('📊 Gider Kontrol', calistir, null, '__gkBtn', 20);
-    butonEkle('📥 Panodan Gider Gönder', panodanGonder, 'linear-gradient(135deg,#3b82f6,#1d4ed8)', '__gonderBtn', 76);
-    setInterval(() => {
+    const kur = () => {
       butonEkle('📊 Gider Kontrol', calistir, null, '__gkBtn', 20);
       butonEkle('📥 Panodan Gider Gönder', panodanGonder, 'linear-gradient(135deg,#3b82f6,#1d4ed8)', '__gonderBtn', 76);
-    }, 2000);
+      butonEkle('📊 Gelir Kontrol', gelirKontrol, 'linear-gradient(135deg,#d4af37,#b8941f)', '__glBtn', 132);
+    };
+    kur();
+    setInterval(kur, 2000);
   }
 
   /* ════════════════════ UYUMSOFT ════════════════════ */
@@ -518,7 +604,64 @@
       if (ayBar) ayBar.querySelectorAll('.uyb').forEach(b => { b.onclick = () => { const sec = b.getAttribute('data-ay'); ayBar.querySelectorAll('.uyb').forEach(x => { x.style.background = 'transparent'; x.style.color = '#e8edf5'; }); b.style.background = '#10b981'; b.style.color = '#04140d'; document.querySelectorAll('#__uyBody .uyRow').forEach(tr => { tr.style.display = (sec === 'tum' || tr.getAttribute('data-ay') === sec) ? '' : 'none'; }); }; });
     }
 
-    butonEkle('📥 Gelen Faturaları Al', calistir, 'linear-gradient(135deg,#6ee7b7,#10b981)');
-    setInterval(() => butonEkle('📥 Gelen Faturaları Al', calistir, 'linear-gradient(135deg,#6ee7b7,#10b981)'), 2000);
+    // ── GİDEN (satış / e-Arşiv) faturaları çek ──
+    async function pullUyumGiden(bar) {
+      let start = 0, len = 100, total = Infinity, all = [];
+      const epler = ['/Invoicebox/GetOutboxInvoiceJsonList', '/Outbox/GetOutboxInvoiceJsonList', '/Invoicebox/GetOutgoingInvoiceJsonList'];
+      let ep = null;
+      while (start < total) {
+        const body = 'sEcho=1&iColumns=11&iDisplayStart=' + start + '&iDisplayLength=' + len +
+          '&mDataProp_1=InvoiceNumber&mDataProp_2=ExecutionDate&mDataProp_3=CreateDateUtc&mDataProp_4=Title&mDataProp_5=PayableAmount&mDataProp_6=TaxTotal&mDataProp_7=Type&mDataProp_8=Status&mDataProp_9=IsNew&mDataProp_10=InvoiceActions' +
+          '&IsNewFilter=3&IsSeenFilter=None&ShowOlderThanOneYear=true&iSortCol_0=0&sSortDir_0=asc&iSortingCols=1';
+        let j = null;
+        if (ep === null) {
+          for (const e of epler) { try { const r = await fetch(e, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8', 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'include', body }); if (r.status === 200) { const jj = await r.json(); if (jj && (jj.aaData || jj.iTotalRecords != null)) { ep = e; j = jj; break; } } } catch (x) {} }
+          if (!ep) throw new Error('Giden fatura endpoint bulunamadı (Uyumsoft Giden sayfasında olduğundan emin ol). Denenen: ' + epler.join(', '));
+        } else {
+          const r = await fetch(ep, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8', 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'include', body });
+          j = await r.json();
+        }
+        total = j.iTotalRecords || (j.aaData || []).length;
+        (j.aaData || []).forEach(d => all.push({ no: d.InvoiceNumber, tarih: d.ExecutionDate, vkn: d.TargetVknTckn || d.ReceiverVknTckn || d.VknTckn, unvan: d.Title, status: d.Status, type: d.Type }));
+        if (bar) bar.textContent = 'Uyumsoft giden faturalar çekiliyor… ' + all.length + '/' + total;
+        if (!(j.aaData || []).length) break;
+        start += len;
+        if (start > 50000) break;
+      }
+      return all;
+    }
+
+    async function calistirGiden() {
+      const bar = overlayAc('📤 Uyumsoft · Giden (Satış) Faturalar');
+      let all;
+      try { all = await pullUyumGiden(bar); }
+      catch (e) { bar.innerHTML = '<span style="color:#fca5a5">' + e.message + '</span>'; return; }
+      try { await chrome.storage.local.set({ uyumGiden: { ts: Date.now(), list: all } }); } catch (e) {}
+      const ayOf = x => { const p = (x.tarih || '').split('.'); return p[1] || '00'; };
+      const adlar = { '01': 'Oca', '02': 'Şub', '03': 'Mar', '04': 'Nis', '05': 'May', '06': 'Haz', '07': 'Tem', '08': 'Ağu', '09': 'Eyl', '10': 'Eki', '11': 'Kas', '12': 'Ara' };
+      const mevcutAylar = [...new Set(all.map(ayOf))].sort();
+      const buAy = ('0' + (new Date().getMonth() + 1)).slice(-2);
+      const aktifAy = mevcutAylar.indexOf(buAy) >= 0 ? buAy : 'tum';
+      let h = '<div style="margin-bottom:12px">' + chip('Giden Fatura', all.length, '#1e2f3a') + '</div>';
+      h += '<div style="margin:8px 0;padding:12px 14px;background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.3);border-radius:10px;color:#93c5fd;font-size:12.5px">✓ ' + all.length + ' giden (satış) fatura kaydedildi. <b>Defter Beyan</b> → 📊 Gelir Kontrol\'e bas → hangileri deftere girilmemiş göreceksin.</div>';
+      h += '<div id="__gdAy" style="margin-bottom:10px;display:flex;flex-wrap:wrap;gap:6px">';
+      h += '<button class="gdb" data-ay="tum" style="padding:6px 12px;border-radius:8px;border:1px solid #3a3550;background:' + (aktifAy === 'tum' ? '#3b82f6' : 'transparent') + ';color:' + (aktifAy === 'tum' ? '#fff' : '#e8edf5') + ';font-weight:700;cursor:pointer">Tümü (' + all.length + ')</button>';
+      mevcutAylar.forEach(a => { const say = all.filter(x => ayOf(x) === a).length; h += '<button class="gdb" data-ay="' + a + '" style="padding:6px 12px;border-radius:8px;border:1px solid #3a3550;background:' + (aktifAy === a ? '#3b82f6' : 'transparent') + ';color:' + (aktifAy === a ? '#fff' : '#e8edf5') + ';font-weight:700;cursor:pointer">' + (adlar[a] || a) + ' (' + say + ')</button>'; });
+      h += '</div>';
+      const cols = ['Fatura No', 'Tarih', 'Alıcı', 'VKN/TC', 'Durum'];
+      h += '<div style="overflow:auto;border:1px solid #2a3550;border-radius:8px"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#141c2e;text-align:left">' + cols.map(x => '<th style="padding:8px">' + x + '</th>').join('') + '</tr></thead><tbody id="__gdBody">';
+      all.forEach(x => { const a = ayOf(x); const gizli = (aktifAy !== 'tum' && a !== aktifAy); h += '<tr class="gdRow" data-ay="' + a + '" style="border-top:1px solid #1f2840;' + (gizli ? 'display:none' : '') + '"><td style="padding:7px">' + (x.no || '') + '</td><td style="padding:7px">' + (x.tarih || '').slice(0, 10) + '</td><td style="padding:7px">' + ((x.unvan || '').slice(0, 50)) + '</td><td style="padding:7px">' + (x.vkn || '') + '</td><td style="padding:7px">' + (x.status || '') + '</td></tr>'; });
+      h += '</tbody></table></div>';
+      bar.innerHTML = h;
+      const ayBar = document.getElementById('__gdAy');
+      if (ayBar) ayBar.querySelectorAll('.gdb').forEach(b => { b.onclick = () => { const sec = b.getAttribute('data-ay'); ayBar.querySelectorAll('.gdb').forEach(x => { x.style.background = 'transparent'; x.style.color = '#e8edf5'; }); b.style.background = '#3b82f6'; b.style.color = '#fff'; document.querySelectorAll('#__gdBody .gdRow').forEach(tr => { tr.style.display = (sec === 'tum' || tr.getAttribute('data-ay') === sec) ? '' : 'none'; }); }; });
+    }
+
+    const kurUy = () => {
+      butonEkle('📥 Gelen Faturaları Al', calistir, 'linear-gradient(135deg,#6ee7b7,#10b981)', '__uyGelenBtn', 20);
+      butonEkle('📤 Giden Faturaları Al', calistirGiden, 'linear-gradient(135deg,#60a5fa,#2563eb)', '__uyGidenBtn', 76);
+    };
+    kurUy();
+    setInterval(kurUy, 2000);
   }
 })();
