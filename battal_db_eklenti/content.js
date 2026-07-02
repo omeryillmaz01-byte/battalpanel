@@ -43,6 +43,23 @@
   if (/defterbeyan\.gov\.tr/.test(host)) {
     const B = 'https://backend-p.defterbeyan.gov.tr/rs';
 
+    /* CASUS: /gelir/create isteklerini yakala (istek gövdesi + sunucu cevabı).
+       Z raporu DOM otomasyonu Kaydet'e bastığında gerçekten kaydoldu mu / hata ne
+       görebilmek için. window.__zcap'e son cevabı yazar. */
+    (function () {
+      if (window.__zcapHook) return; window.__zcapHook = true;
+      const of = window.fetch;
+      window.fetch = function (u, o) {
+        const url = (u && u.url) || u || '';
+        const isGelir = /\/gelir\/(create|update)/.test(String(url));
+        const body = o && o.body;
+        return of.apply(this, arguments).then(r => {
+          if (isGelir) { try { r.clone().json().then(j => { window.__zcap = { url: String(url), req: (() => { try { return JSON.parse(body); } catch (e) { return body; } })(), status: r.status, res: j, ts: Date.now() }; }).catch(() => {}); } catch (e) {} }
+          return r;
+        });
+      };
+    })();
+
     function tokenBul() {
       for (const S of [window.sessionStorage, window.localStorage]) {
         try {
@@ -293,7 +310,24 @@
 
             if (test) { zlog('  🧪 Form dolduruldu — KAYDET BASILMADI. Kontrol et; doğruysa test modunu kapat, tekrar bas.', '#fbbf24'); ok++; break; }
             const kaydet = Array.from(D.querySelectorAll('button')).find(x => (x.innerText || '').trim() === 'Kaydet' && !x.disabled);
-            if (kaydet) { kaydet.click(); await wait(3000); zlog('  ✅ Z ' + b.zno + ' KAYDEDİLDİ (' + s.tutar.toFixed(2) + ' TL)', '#10b981'); ok++; const g2 = D.querySelector('#muhasebeGelirEkle'); if (g2) { g2.click(); await wait(2000); } }
+            if (kaydet) {
+              window.__zcap = null;
+              kaydet.click();
+              // Sunucu cevabını bekle (casus)
+              let cap = null;
+              for (let w = 0; w < 20; w++) { await wait(300); if (window.__zcap) { cap = window.__zcap; break; } }
+              // Toastr mesajı (yedek)
+              let toast = ''; D.querySelectorAll('.redux-toastr .toastr .rrt-text, .redux-toastr .rrt-text, .redux-toastr .toastr').forEach(t => { const x = (t.innerText || '').trim(); if (x) toast = x; });
+              if (cap) {
+                const basarili = cap.status === 200 && cap.res && (cap.res.resultContainer || cap.res.success) && !cap.res.errorMessage;
+                if (basarili) { zlog('  ✅ Z ' + b.zno + ' KAYDEDİLDİ (' + s.tutar.toFixed(2) + ' TL)', '#10b981'); ok++; }
+                else { const msg = (cap.res && (cap.res.errorMessage || cap.res.statusMessage)) || ('HTTP ' + cap.status); zlog('  ❌ Z ' + b.zno + ' KAYDEDİLMEDİ — sunucu: ' + String(msg).slice(0, 120), '#ef4444'); fail++; }
+              } else {
+                zlog('  ⚠ Z ' + b.zno + ' — sunucu cevabı yakalanamadı. ' + (toast ? 'Ekran mesajı: ' + toast : 'Kaydet /gelir/create isteği görülmedi (buton işlem yapmadı olabilir).'), '#fbbf24');
+                fail++;
+              }
+              const g2 = D.querySelector('#muhasebeGelirEkle'); if (g2) { g2.click(); await wait(2000); }
+            }
             else { zlog('  ⚠ Kaydet butonu pasif/yok', '#fbbf24'); fail++; }
           } catch (err) { zlog('  ❌ ' + err.message, '#ef4444'); fail++; }
         }
