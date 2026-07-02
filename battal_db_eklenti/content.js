@@ -166,11 +166,11 @@
         const combo = document.querySelector('#' + base + '_input');
         if (!combo) return { ok: false, sebep: 'combobox yok' };
         if (okuCombo(base) === text) return { ok: true };
-        combo.click(); await wait(650);
+        combo.click(); await wait(320);
         let opt = null; const opts = [];
         document.querySelectorAll('#' + base + '_listbox li').forEach(el => { const t = (el.innerText || '').trim(); if (t) opts.push(t); if (!opt && t === text) opt = el; });
         if (!opt && partial) document.querySelectorAll('#' + base + '_listbox li').forEach(el => { const t = (el.innerText || '').trim(); if (!opt && t.indexOf(text) === 0) opt = el; });
-        if (opt) { opt.click(); await wait(750); return { ok: true }; }
+        if (opt) { opt.click(); await wait(380); return { ok: true }; }
         combo.click(); // menüyü kapat
         return { ok: false, sebep: 'seçenek yok', opts };
       };
@@ -240,7 +240,7 @@
               if (dd) {
                 (dd.querySelector('.rw-widget-picker, [role="combobox"], input') || dd).click();
                 dd.click();
-                await wait(900);
+                await wait(500);
               } else {
                 zlog('  🔍 Belge Türü menüsü bulunamadı. Sayfadaki combobox id\'leri:', '#fbbf24');
                 const ids = []; D.querySelectorAll('[id*="elge"], .rw-dropdown-list, [role="combobox"]').forEach(e => { if (e.id) ids.push(e.id); });
@@ -249,7 +249,7 @@
               // Açılan listede "Z Raporu"yu ara (tüm olası konumlar)
               let zOpt = null;
               D.querySelectorAll('[role="option"], .rw-list-option, ul[role="listbox"] li, .rw-list li, li').forEach(el => { if (!zOpt && (el.innerText || '').trim() === 'Z Raporu') zOpt = el; });
-              if (zOpt) { zOpt.click(); await wait(1500); zlog('  ✓ Belge Türü: Z Raporu', '#10b981'); }
+              if (zOpt) { zOpt.click(); await wait(700); zlog('  ✓ Belge Türü: Z Raporu', '#10b981'); }
               else {
                 // Diagnostik: açılan menüde hangi seçenekler var?
                 const opts = []; D.querySelectorAll('[role="option"], .rw-list-option, ul[role="listbox"] li, .rw-list li').forEach(el => { const t = (el.innerText || '').trim(); if (t && t.length < 40) opts.push(t); });
@@ -261,19 +261,19 @@
             await setTarih(D.querySelector('#kayitTarihi'), b.tarih);
             await setTarih(D.querySelector('#belgeTarihi'), b.tarih);
             const sira = D.querySelector('#siraNo, input[name="siraNo"]');
-            if (sira) { sira.focus(); setReact(sira, String(b.zno)); sira.blur(); await wait(400); }
-            await wait(400);
+            if (sira) { sira.focus(); setReact(sira, String(b.zno)); sira.blur(); await wait(200); }
+            await wait(200);
 
             // Gelir Kalemleri — ZORUNLU alanlar (Z raporu: Normal Satışlar / Mal Satışı / Mal Satışı)
             await pick('satisTuru', 'Normal Satışlar', true);
             const rTur = await pick('gelirKayitTuru', 'Mal Satışı');
             if (rTur.ok) zlog('  ✓ Gelir Kayıt Türü: Mal Satışı', '#10b981');
             else zlog('  ⚠ Gelir Kayıt Türü "Mal Satışı" seçilemedi — seçenekler: ' + ((rTur.opts || []).join(' | ') || rTur.sebep), '#ef4444');
-            await wait(500);
+            await wait(300);
             const rAlt = await pick('gelirKayitAltTuru', 'Mal Satışı');
             if (rAlt.ok) zlog('  ✓ Gelir Kayıt Alt Türü: Mal Satışı', '#10b981');
             else zlog('  ⚠ Alt Tür "Mal Satışı" seçilemedi — seçenekler: ' + ((rAlt.opts || []).join(' | ') || rAlt.sebep), '#fbbf24');
-            await wait(500);
+            await wait(300);
 
             // KDV Oranı — türü seçilince gelir; olası id'leri dene
             let kdvSecildi = false;
@@ -289,12 +289,12 @@
             }
 
             const tutar = D.querySelector('div[name="tutarDiv"] input:not([disabled])');
-            if (tutar) { tutar.focus(); setReact(tutar, String(s.tutar).replace('.', ',')); tutar.blur(); await wait(500); }
+            if (tutar) { tutar.focus(); setReact(tutar, String(s.tutar).replace('.', ',')); tutar.blur(); await wait(300); }
             else zlog('  ⚠ Tutar alanı yok (Z Raporu paneli açıldı mı?)', '#fbbf24');
             const acik = D.querySelector('input[name="aciklama"]:not([disabled])');
-            if (acik) { acik.focus(); setReact(acik, s.aciklama || (b.zno + ' NL. Z RAPORU Mal Satışı')); acik.blur(); await wait(300); }
+            if (acik) { acik.focus(); setReact(acik, s.aciklama || (b.zno + ' NL. Z RAPORU Mal Satışı')); acik.blur(); await wait(150); }
             const satirEkle = Array.from(D.querySelectorAll('button')).find(x => x.innerText && x.innerText.trim() === 'Satır Ekle' && !x.disabled);
-            if (satirEkle) { satirEkle.click(); await wait(1800); }
+            if (satirEkle) { satirEkle.click(); await wait(900); }
             else zlog('  ⚠ Satır Ekle pasif/yok', '#fbbf24');
             // Satır gerçekten eklendi mi?
             const kalemTablo = D.querySelector('.eklenen-kayitlar-table tbody');
@@ -303,9 +303,9 @@
             else { zlog('  ❌ Satır EKLENMEDİ (zorunlu alan eksik: Gelir Kayıt Türü/KDV Oranı). Yukarıdaki uyarıları bana at.', '#ef4444'); fail++; continue; }
 
             const krd = D.querySelector('input[placeholder="Kredi Kartı"]');
-            if (krd) { krd.focus(); setReact(krd, String(b.kredi).replace('.', ',')); krd.blur(); await wait(400); }
+            if (krd) { krd.focus(); setReact(krd, String(b.kredi).replace('.', ',')); krd.blur(); await wait(200); }
             const nkt = D.querySelector('input[placeholder="Nakit"]');
-            if (nkt) { nkt.focus(); setReact(nkt, String(b.nakit).replace('.', ',')); nkt.blur(); await wait(500); }
+            if (nkt) { nkt.focus(); setReact(nkt, String(b.nakit).replace('.', ',')); nkt.blur(); await wait(250); }
             zlog('  💰 Tutar ' + s.tutar.toFixed(2) + ' · 💳 Kredi ' + b.kredi.toFixed(2) + ' · 💵 Nakit ' + b.nakit.toFixed(2), '#6b7280');
 
             if (test) { zlog('  🧪 Form dolduruldu — KAYDET BASILMADI. Kontrol et; doğruysa test modunu kapat, tekrar bas.', '#fbbf24'); ok++; break; }
@@ -326,7 +326,7 @@
                 zlog('  ⚠ Z ' + b.zno + ' — sunucu cevabı yakalanamadı. ' + (toast ? 'Ekran mesajı: ' + toast : 'Kaydet /gelir/create isteği görülmedi (buton işlem yapmadı olabilir).'), '#fbbf24');
                 fail++;
               }
-              const g2 = D.querySelector('#muhasebeGelirEkle'); if (g2) { g2.click(); await wait(2000); }
+              const g2 = D.querySelector('#muhasebeGelirEkle'); if (g2) { g2.click(); await wait(1200); }
             }
             else { zlog('  ⚠ Kaydet butonu pasif/yok', '#fbbf24'); fail++; }
           } catch (err) { zlog('  ❌ ' + err.message, '#ef4444'); fail++; }
