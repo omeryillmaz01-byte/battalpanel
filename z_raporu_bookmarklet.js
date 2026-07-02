@@ -23,7 +23,6 @@
   const kTmpl=tmpl.kayitlar[0];const kdvDahil=kTmpl.isKdvDahil!==false;
   const nakitKey=Object.keys(tmpl).find(k=>/nakit/i.test(k));const krediKey=Object.keys(tmpl).find(k=>/krediKarti/i.test(k))||'krediKartiTutari';
   let ok=0,f=0,atla=0;const hata=[];
-  // MUKERRER KORUMASI: Z raporunda sunucu ayni Z No'yu reddetmiyor; onceden kayitli Z No'lari cekip atla
   const mevcut=new Set();
   try{const yil=new Date().getFullYear();const sr=await fetch(B+'/gelirliste/search',{method:'POST',headers:H,credentials:'include',body:JSON.stringify({attributes:{baslangicTarihi:yil+'-01-01 00:00:00',bitisTarihi:yil+'-12-31 23:59:59'},pagingContext:{page:1,limit:1000,orderContextMap:{'date(kayit_tarihi)':'DESC'}}})});const sj=await sr.json();((sj.resultContainer&&(sj.resultContainer.resultList||sj.resultContainer.list))||[]).forEach(r=>{if(r.belgeSiraNo!=null)mevcut.add(String(r.belgeSiraNo).trim());});}catch(e){}
   console.log('%c🚀 '+firma.ad+' - '+firma.belgeler.length+' Z gonderiliyor... (kayitli: '+mevcut.size+')','color:#7c3aed;font-size:16px');
