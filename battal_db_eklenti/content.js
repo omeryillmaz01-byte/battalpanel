@@ -189,15 +189,43 @@
           const b = tekil[i], s = b.satirlar[0];
           zlog('[' + (i + 1) + '/' + tekil.length + '] Z ' + b.zno + ' işleniyor…', '#3b82f6');
           try {
-            // Belge Türü = Z Raporu
-            const btText = D.querySelector('#gelirBelgeTuru_input .rw-input');
-            if ((btText ? btText.innerText.trim() : '') !== 'Z Raporu') {
-              const dd = D.querySelector('#gelirBelgeTuru_input');
-              if (dd) { dd.click(); await wait(700); }
+            // Belge Türü = Z Raporu — açılır menüyü sağlam bul (react-widgets)
+            // Mevcut değeri oku (birden çok olası konum)
+            const okuBelge = () => {
+              const c = D.querySelector('#gelirBelgeTuru_input .rw-input, #gelirBelgeTuru .rw-input, #gelirBelgeTuru_input, [id^="gelirBelgeTuru"] .rw-input');
+              return c ? (c.innerText || c.value || '').trim() : '';
+            };
+            if (okuBelge() !== 'Z Raporu') {
+              // Combobox'ı bul: önce bilinen id'ler, sonra "Belge Türü" etiketi yanındaki react-widget
+              let dd = D.querySelector('#gelirBelgeTuru_input, #gelirBelgeTuru, [id^="gelirBelgeTuru"] .rw-widget-picker, [id^="gelirBelgeTuru"]');
+              if (!dd) {
+                D.querySelectorAll('label, .form-label, span, div').forEach(l => {
+                  if (!dd && /belge\s*t[üu]r[üu]/i.test((l.innerText || '').trim()) && (l.innerText || '').trim().length < 20) {
+                    const scope = l.closest('.form-group, .field, .row, div') || l.parentElement;
+                    dd = scope && (scope.querySelector('.rw-dropdown-list, .rw-widget-picker, [role="combobox"]'));
+                  }
+                });
+              }
+              if (dd) {
+                (dd.querySelector('.rw-widget-picker, [role="combobox"], input') || dd).click();
+                dd.click();
+                await wait(900);
+              } else {
+                zlog('  🔍 Belge Türü menüsü bulunamadı. Sayfadaki combobox id\'leri:', '#fbbf24');
+                const ids = []; D.querySelectorAll('[id*="elge"], .rw-dropdown-list, [role="combobox"]').forEach(e => { if (e.id) ids.push(e.id); });
+                zlog('     ' + (ids.slice(0, 15).join(' · ') || '(hiç bulunamadı)'), '#9aa6c0');
+              }
+              // Açılan listede "Z Raporu"yu ara (tüm olası konumlar)
               let zOpt = null;
-              D.querySelectorAll('#gelirBelgeTuru_listbox li, .rw-list-option, [role="option"], li').forEach(el => { if (!zOpt && el.innerText && el.innerText.trim() === 'Z Raporu') zOpt = el; });
+              D.querySelectorAll('[role="option"], .rw-list-option, ul[role="listbox"] li, .rw-list li, li').forEach(el => { if (!zOpt && (el.innerText || '').trim() === 'Z Raporu') zOpt = el; });
               if (zOpt) { zOpt.click(); await wait(1500); zlog('  ✓ Belge Türü: Z Raporu', '#10b981'); }
-              else { zlog('  ⚠ Z Raporu seçeneği bulunamadı', '#ef4444'); fail++; continue; }
+              else {
+                // Diagnostik: açılan menüde hangi seçenekler var?
+                const opts = []; D.querySelectorAll('[role="option"], .rw-list-option, ul[role="listbox"] li, .rw-list li').forEach(el => { const t = (el.innerText || '').trim(); if (t && t.length < 40) opts.push(t); });
+                zlog('  ⚠ "Z Raporu" seçeneği bulunamadı. Menüdeki seçenekler: ' + (opts.slice(0, 20).join(' | ') || '(menü açılmadı)'), '#ef4444');
+                zlog('  ℹ Bu listeyi ekran görüntüsüyle bana at — doğru seçiciyi eklerim.', '#fcd34d');
+                fail++; continue;
+              }
             }
             await setTarih(D.querySelector('#kayitTarihi'), b.tarih);
             await setTarih(D.querySelector('#belgeTarihi'), b.tarih);
