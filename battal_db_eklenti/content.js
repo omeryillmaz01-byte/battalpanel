@@ -51,14 +51,22 @@
       if (window.__zPageInjected) return; window.__zPageInjected = true;
       const code = '(' + function () {
         if (window.__zPageHook) return; window.__zPageHook = true;
+        const isC = u => /\/gelir\/create/.test('' + u);
+        const emit = (req, status, res) => { let rq = null; try { rq = typeof req === 'string' ? JSON.parse(req) : req; } catch (e) {} let rs = null; try { rs = typeof res === 'string' ? JSON.parse(res) : res; } catch (e) {} window.postMessage({ __zcapReal: 1, req: rq, status: status, res: rs }, '*'); };
+        // fetch hook
         const of = window.fetch;
         window.fetch = function (u, o) {
-          const url = (u && u.url) || u || '';
-          const isC = /\/gelir\/create/.test('' + url);
-          const body = o && o.body;
+          const url = (u && u.url) || u || ''; const body = o && o.body;
           const p = of.apply(this, arguments);
-          if (isC) { p.then(r => { r.clone().json().then(j => { let req = null; try { req = JSON.parse(body); } catch (e) {} window.postMessage({ __zcapReal: 1, req: req, status: r.status, res: j }, '*'); }).catch(() => {}); }).catch(() => {}); }
+          if (isC(url)) { p.then(r => { r.clone().text().then(t => emit(body, r.status, t)).catch(() => {}); }).catch(() => {}); }
           return p;
+        };
+        // XMLHttpRequest hook (Defter Beyan bunu kullanıyor olabilir)
+        const oOpen = XMLHttpRequest.prototype.open, oSend = XMLHttpRequest.prototype.send;
+        XMLHttpRequest.prototype.open = function (m, u) { this.__zurl = u; return oOpen.apply(this, arguments); };
+        XMLHttpRequest.prototype.send = function (b) {
+          if (isC(this.__zurl)) { this.addEventListener('load', function () { emit(b, this.status, this.responseText); }); }
+          return oSend.apply(this, arguments);
         };
       } + ')();';
       const sc = document.createElement('script');
@@ -69,10 +77,9 @@
         const d = e.data;
         if (!d || !d.__zcapReal) return;
         window.__zLastCap = d;
-        // Başarılı bir Z Raporu create'i şablon olarak sakla
-        if (d.status === 200 && d.req && d.req.gelirBelgeTuruKodu && d.res && d.res.resultContainer && !d.res.errorMessage) {
-          try { chrome.storage.local.set({ zTemplate: { req: d.req, ts: Date.now() } }); } catch (x) {}
-        }
+        // Başarılı bir gelir create'i şablon olarak sakla (alan adı ne olursa olsun)
+        const ok = d.status === 200 && d.req && d.req.kayitlar && d.res && (d.res.resultContainer || d.res.success) && !d.res.errorMessage;
+        if (ok) { try { chrome.storage.local.set({ zTemplate: { req: d.req, ts: Date.now() } }); } catch (x) {} }
       });
     })();
 
