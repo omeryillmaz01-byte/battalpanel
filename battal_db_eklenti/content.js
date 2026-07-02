@@ -496,17 +496,26 @@
 
       try { await chrome.storage.local.set({ uyumGelen: { ts: Date.now(), list: all } }); } catch (e) {}
 
-      let h = '<div style="margin-bottom:12px">' +
-        chip('Gelen Fatura', all.length, '#1e3a2f') +
-        '</div>';
+      const ayOf = x => { const p = (x.tarih || '').split('.'); return p[1] || '00'; };
+      const adlar = { '01': 'Oca', '02': 'Şub', '03': 'Mar', '04': 'Nis', '05': 'May', '06': 'Haz', '07': 'Tem', '08': 'Ağu', '09': 'Eyl', '10': 'Eki', '11': 'Kas', '12': 'Ara' };
+      const mevcutAylar = [...new Set(all.map(ayOf))].sort();
+      const buAy = ('0' + (new Date().getMonth() + 1)).slice(-2);
+      const aktifAy = mevcutAylar.indexOf(buAy) >= 0 ? buAy : 'tum';
+
+      let h = '<div style="margin-bottom:12px">' + chip('Gelen Fatura', all.length, '#1e3a2f') + '</div>';
       h += '<div style="margin:8px 0;padding:12px 14px;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:10px;color:#6ee7b7;font-size:12.5px">✓ ' + all.length + ' gelen fatura kaydedildi. Şimdi <b>Defter Beyan</b> sekmesine geç → 📊 Gider Kontrol\'e bas → hangileri deftere girilmemiş göreceksin.</div>';
+      // Ay sekmeleri
+      h += '<div id="__uyAy" style="margin-bottom:10px;display:flex;flex-wrap:wrap;gap:6px">';
+      h += '<button class="uyb" data-ay="tum" style="padding:6px 12px;border-radius:8px;border:1px solid #3a3550;background:' + (aktifAy === 'tum' ? '#10b981' : 'transparent') + ';color:' + (aktifAy === 'tum' ? '#04140d' : '#e8edf5') + ';font-weight:700;cursor:pointer">Tümü (' + all.length + ')</button>';
+      mevcutAylar.forEach(a => { const say = all.filter(x => ayOf(x) === a).length; h += '<button class="uyb" data-ay="' + a + '" style="padding:6px 12px;border-radius:8px;border:1px solid #3a3550;background:' + (aktifAy === a ? '#10b981' : 'transparent') + ';color:' + (aktifAy === a ? '#04140d' : '#e8edf5') + ';font-weight:700;cursor:pointer">' + (adlar[a] || a) + ' (' + say + ')</button>'; });
+      h += '</div>';
       const cols = ['Fatura No', 'Tarih', 'Gönderen', 'VKN/TC', 'Durum'];
-      h += '<div style="overflow:auto;border:1px solid #2a3550;border-radius:8px"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#141c2e;text-align:left">' + cols.map(x => '<th style="padding:8px">' + x + '</th>').join('') + '</tr></thead><tbody>';
-      all.forEach(x => {
-        h += '<tr style="border-top:1px solid #1f2840"><td style="padding:7px">' + (x.no || '') + '</td><td style="padding:7px">' + (x.tarih || '').slice(0, 10) + '</td><td style="padding:7px">' + ((x.unvan || '').slice(0, 50)) + '</td><td style="padding:7px">' + (x.vkn || '') + '</td><td style="padding:7px">' + (x.status || '') + '</td></tr>';
-      });
+      h += '<div style="overflow:auto;border:1px solid #2a3550;border-radius:8px"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#141c2e;text-align:left">' + cols.map(x => '<th style="padding:8px">' + x + '</th>').join('') + '</tr></thead><tbody id="__uyBody">';
+      all.forEach(x => { const a = ayOf(x); const gizli = (aktifAy !== 'tum' && a !== aktifAy); h += '<tr class="uyRow" data-ay="' + a + '" style="border-top:1px solid #1f2840;' + (gizli ? 'display:none' : '') + '"><td style="padding:7px">' + (x.no || '') + '</td><td style="padding:7px">' + (x.tarih || '').slice(0, 10) + '</td><td style="padding:7px">' + ((x.unvan || '').slice(0, 50)) + '</td><td style="padding:7px">' + (x.vkn || '') + '</td><td style="padding:7px">' + (x.status || '') + '</td></tr>'; });
       h += '</tbody></table></div>';
       bar.innerHTML = h;
+      const ayBar = document.getElementById('__uyAy');
+      if (ayBar) ayBar.querySelectorAll('.uyb').forEach(b => { b.onclick = () => { const sec = b.getAttribute('data-ay'); ayBar.querySelectorAll('.uyb').forEach(x => { x.style.background = 'transparent'; x.style.color = '#e8edf5'; }); b.style.background = '#10b981'; b.style.color = '#04140d'; document.querySelectorAll('#__uyBody .uyRow').forEach(tr => { tr.style.display = (sec === 'tum' || tr.getAttribute('data-ay') === sec) ? '' : 'none'; }); }; });
     }
 
     butonEkle('📥 Gelen Faturaları Al', calistir, 'linear-gradient(135deg,#6ee7b7,#10b981)');
