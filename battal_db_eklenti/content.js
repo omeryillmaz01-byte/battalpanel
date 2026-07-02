@@ -80,8 +80,11 @@
         // İstek gövdesinden (create/update) VEYA cevaptan (detay görüntüleme) tam belgeyi yakala
         const belgeSec = o => (o && o.gelirBelgeTuruKodu && o.kayitlar && o.kayitlar.length) ? o : null;
         const cand = belgeSec(d.req) || belgeSec(d.res && (d.res.resultContainer || d.res.result)) || belgeSec(d.res);
-        if (d.status === 200 && cand && /z.?raporu/i.test(JSON.stringify(cand).toLowerCase()) || (d.status === 200 && cand && cand.gelirBelgeTuruKodu)) {
-          try { chrome.storage.local.set({ zTemplate: { req: cand, ts: Date.now() } }); } catch (x) {}
+        if (d.status === 200 && cand && cand.gelirBelgeTuruKodu) {
+          // Z Raporu mu, satış e-Fatura/e-Arşiv mi ayır (belge türü koduna göre)
+          const isZ = /z.?raporu/i.test(JSON.stringify(cand.kayitlar || []) + ' ' + (cand.aciklama || ''));
+          const key = isZ ? 'zTemplate' : 'satisTemplate';
+          try { chrome.storage.local.set({ [key]: { req: cand, ts: Date.now() } }); } catch (x) {}
         }
       });
     })();
@@ -422,6 +425,75 @@
       if (ayBar) ayBar.querySelectorAll('.glb').forEach(b => { b.onclick = () => { const sec = b.getAttribute('data-ay'); ayBar.querySelectorAll('.glb').forEach(x => { x.style.background = 'transparent'; x.style.color = '#e8edf5'; }); b.style.background = '#d4af37'; b.style.color = '#0b1224'; document.querySelectorAll('.glRow').forEach(tr => { tr.style.display = (sec === 'tum' || tr.getAttribute('data-ay') === sec) ? '' : 'none'; }); }; });
     }
 
+    // ── Giden (satış e-Fatura/e-Arşiv) Gönder: Uyumsoft giden verisi + casus-öğrenimli e-Arşiv şablonu → /gelir/create
+    async function gidenGonder() {
+      const bar = overlayAc('📤 Giden (Satış) Fatura Gönder');
+      const D = document, r2 = v => Math.round(v * 100) / 100;
+      const iso = t => { const a = String(t).split('.'); return a.length === 3 ? a[2] + '-' + a[1] + '-' + a[0] + ' 00:00:00' : t; };
+      let tmpl = null, giden = null;
+      try { const s = await chrome.storage.local.get(['satisTemplate', 'uyumGiden']); tmpl = s.satisTemplate && s.satisTemplate.req; giden = s.uyumGiden && s.uyumGiden.list; } catch (e) {}
+      if (!giden || !giden.length) { bar.innerHTML = '<div style="color:#fcd34d">📤 Önce <b>Uyumsoft</b> Giden sayfasında <b>"📤 Giden Faturaları Al"</b>a bas (satış faturaları çekilsin), sonra buraya dön.</div>'; return; }
+      if (!tmpl || !tmpl.gelirBelgeTuruKodu) {
+        bar.innerHTML = '<div style="color:#fcd34d;font-size:15px;margin-bottom:8px"><b>🎯 Önce satış şablonu öğrenilmeli (tek seferlik)</b></div>' +
+          '<div style="color:#e8edf5;font-size:13px;line-height:1.8">Gelir Listele → kayıtlı bir <b>satış e-Fatura/e-Arşiv</b> (ör. RESUL ÇEVİK) satırına tıkla → <b>"Belgeyi Güncelle"</b> bas (değiştirme yok). Casus e-Arşiv şablonunu yakalar → tekrar bu butona bas.</div>' +
+          '<div id="__stBek" style="margin-top:10px;color:#6ee7b7;font-size:12px">Durum: satış belgesinin "Belgeyi Güncelle" ile kaydı bekleniyor…</div>';
+        const iv = setInterval(async () => { try { const s = await chrome.storage.local.get('satisTemplate'); if (s && s.satisTemplate) { clearInterval(iv); const e = D.getElementById('__stBek'); if (e) e.innerHTML = '✅ Şablon yakalandı! Pencereyi kapat, tekrar "Giden Gönder" bas.'; } } catch (e) {} }, 1500);
+        return;
+      }
+      const TK = tokenBul(); const H = { 'Content-Type': 'application/json; charset=utf-8' }; if (TK) H.Token = TK;
+      // İptal/red hariç + sadece bu yıl
+      const yil = String(new Date().getFullYear());
+      const gec = giden.filter(x => (x.tarih || '').indexOf(yil) >= 0 && !/iptal|red/i.test(x.status || '') && x.tutar > 0);
+      // Mevcut gelir belge nolar (mükerrer)
+      const mevcut = new Set();
+      try { const R = await pullGelirDB(null); R.all.forEach(r => { if (r.belgeSiraNo) mevcut.add(norm(r.belgeSiraNo)); }); } catch (e) {}
+      const kTmpl = (tmpl.kayitlar && tmpl.kayitlar[0]) || {};
+
+      bar.innerHTML = '<div style="margin-bottom:8px">' + gec.length + ' satış faturası · Şablon belge türü <b>' + tmpl.gelirBelgeTuruKodu + '</b></div>' +
+        '<label style="display:block;margin-bottom:10px"><input type="checkbox" id="__stTest" checked> 🧪 Test modu (sadece 1 fatura, kaydetmeden sonuç göster)</label>' +
+        '<button id="__stStart" style="background:#2563eb;color:#fff;border:0;padding:11px 20px;border-radius:8px;font-weight:800;cursor:pointer">🚀 Gönder</button>' +
+        '<div id="__stLog" style="margin-top:12px;font-family:Consolas,monospace;font-size:12px;max-height:340px;overflow:auto;background:#0b1020;padding:10px;border-radius:8px"></div>';
+      const logEl = D.getElementById('__stLog');
+      const slog = (t, c) => { const d = document.createElement('div'); d.style.color = c || '#9aa6c0'; d.textContent = t; logEl.appendChild(d); logEl.scrollTop = logEl.scrollHeight; };
+
+      D.getElementById('__stStart').onclick = async () => {
+        const test = D.getElementById('__stTest').checked;
+        D.getElementById('__stStart').disabled = true;
+        let ok = 0, f = 0, atla = 0;
+        slog('🚀 ' + gec.length + ' satış faturası · Test: ' + (test ? 'AÇIK' : 'KAPALI'), '#2563eb');
+        for (const x of gec) {
+          const no = (x.no || '').toString();
+          if (mevcut.has(norm(no))) { atla++; slog('⏭ ' + no + ' zaten kayıtlı', '#9aa6c0'); continue; }
+          const tutar = x.tutar, kdv = x.kdv, matrah = r2(tutar - kdv);
+          const oran = matrah > 0 ? Math.round(kdv / matrah * 100) : 0;
+          if ([0, 1, 8, 10, 18, 20].indexOf(oran) < 0) { slog('⚠ ' + no + ' KDV oranı belirsiz (%' + oran + ') — karışık oranlı olabilir, ELLE gir', '#fbbf24'); atla++; continue; }
+          try {
+            const t = iso((x.tarih || '').slice(0, 10));
+            const P = JSON.parse(JSON.stringify(tmpl));
+            P.kayitTarihi = t; P.belgeTarihi = t; P.belgeSiraNo = no;
+            // Alıcı bilgisi
+            if (x.vkn) {
+              try { const lj = await (await fetch(B + '/adresdefteri/findbytckn/' + x.vkn, { method: 'POST', headers: H, body: '{}', credentials: 'include' })).json(); const rc = lj.resultContainer; if (rc) { P.tcknVkn = x.vkn; P.ad = rc.ad; P.soyad = rc.soyad; P.vergiDairesiKodu = rc.vergiDairesiKodu; if (rc.subeNo) P.subeNo = rc.subeNo; P.nihaiTuketici = false; } } catch (e) {}
+            }
+            const k = JSON.parse(JSON.stringify(kTmpl));
+            k.tutar = matrah; k.isKdvDahil = false; if ('kdv' in k) k.kdv = kdv; k.kdvOrani = oran;
+            k.aciklama = (x.unvan || '').toLocaleUpperCase('tr') + ' - MAL SATIŞI';
+            delete k.id; delete k.gelirBelgeId; delete k.key;
+            P.kayitlar = [k]; P.belgeTutari = r2(tutar);
+            delete P.id; delete P.gelirBelgeId; delete P.key;
+            if (test) { slog('🧪 ' + no + ' hazırlandı: matrah ' + matrah.toFixed(2) + ' · KDV ' + kdv.toFixed(2) + ' (%' + oran + ') · alıcı ' + (x.vkn || 'nihai') + ' — KAYDEDİLMEDİ', '#fbbf24'); ok++; break; }
+            const cr = await fetch(B + '/gelir/create', { method: 'POST', headers: H, body: JSON.stringify(P), credentials: 'include' });
+            const cj = await cr.json();
+            if (cr.status === 200 && cj.resultContainer && !cj.errorMessage) { ok++; mevcut.add(norm(no)); slog('✅ ' + no + ' (' + tutar.toFixed(2) + ')', '#10b981'); }
+            else { const m = (cj.errorMessage || cj.statusMessage || cr.status).toString(); if (/aynı|mükerrer|zaten/i.test(m)) { atla++; slog('⏭ ' + no + ' zaten var', '#9aa6c0'); } else { f++; slog('❌ ' + no + ' — ' + m.slice(0, 100), '#ef4444'); } }
+          } catch (e) { f++; slog('❌ ' + no + ' — ' + e.message, '#ef4444'); }
+        }
+        slog('🎉 Bitti — ✅ Yeni: ' + ok + ' · ⏭ Atlanan: ' + atla + (f ? ' · ❌ Hata: ' + f : ''), f ? '#fbbf24' : '#10b981');
+        if (test) slog('🧪 Test bitti. Doğruysa test modunu kapatıp tekrar bas.', '#fbbf24');
+        D.getElementById('__stStart').disabled = false;
+      };
+    }
+
     async function calistir() {
       const bar = overlayAc('📊 Defter Beyan · Gider Kontrol');
       let R;
@@ -542,6 +614,7 @@
       butonEkle('📊 Gider Kontrol', calistir, null, '__gkBtn', 20);
       butonEkle('📥 Panodan Gider Gönder', panodanGonder, 'linear-gradient(135deg,#3b82f6,#1d4ed8)', '__gonderBtn', 76);
       butonEkle('📊 Gelir Kontrol', gelirKontrol, 'linear-gradient(135deg,#d4af37,#b8941f)', '__glBtn', 132);
+      butonEkle('📤 Giden (Satış) Gönder', gidenGonder, 'linear-gradient(135deg,#60a5fa,#2563eb)', '__gdGonderBtn', 188);
     };
     kur();
     setInterval(kur, 2000);
@@ -622,7 +695,8 @@
           j = await r.json();
         }
         total = j.iTotalRecords || (j.aaData || []).length;
-        (j.aaData || []).forEach(d => all.push({ no: d.InvoiceNumber, tarih: d.ExecutionDate, vkn: d.TargetVknTckn || d.ReceiverVknTckn || d.VknTckn, unvan: d.Title, status: d.Status, type: d.Type }));
+        const say = s => { s = ('' + (s == null ? '' : s)).replace(/[^\d,.\-]/g, ''); if (s.includes(',') && s.includes('.')) s = s.replace(/\./g, '').replace(',', '.'); else if (s.includes(',')) s = s.replace(',', '.'); return parseFloat(s) || 0; };
+        (j.aaData || []).forEach(d => all.push({ no: d.InvoiceNumber, tarih: d.ExecutionDate, vkn: d.TargetVknTckn || d.ReceiverVknTckn || d.VknTckn, unvan: d.Title, status: d.Status, type: d.Type, tutar: say(d.PayableAmount), kdv: say(d.TaxTotal) }));
         if (bar) bar.textContent = 'Uyumsoft giden faturalar çekiliyor… ' + all.length + '/' + total;
         if (!(j.aaData || []).length) break;
         start += len;
