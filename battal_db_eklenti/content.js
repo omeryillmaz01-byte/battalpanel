@@ -150,7 +150,8 @@
        (MUSAVIR_PRO_PANEL'deki test edilmiş akış — artık DB sayfasına doğrudan
        enjekte oldugu icin iframe/window.parent gerekmez.) */
     async function zRaporGonder() {
-      const bar = overlayAc('📊 Z Raporu Gönder');
+      let __v = ''; try { __v = chrome.runtime.getManifest().version; } catch (e) {}
+      const bar = overlayAc('📊 Z Raporu Gönder (API) · v' + __v);
       let paket = null;
       // 1) Panodan otomatik oku
       try {
