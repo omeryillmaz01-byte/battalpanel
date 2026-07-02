@@ -118,11 +118,25 @@
        enjekte oldugu icin iframe/window.parent gerekmez.) */
     async function zRaporGonder() {
       const bar = overlayAc('📊 Z Raporu Gönder');
-      let paket;
+      let paket = null;
+      // 1) Panodan otomatik oku
       try {
-        paket = JSON.parse(await navigator.clipboard.readText());
-        if (paket.tip !== 'battal-zrapor-gonder' || !Array.isArray(paket.firmalar)) throw new Error('Panoda geçerli bir Z Raporu paketi yok. Önce panelde "Z Raporlarını Panoya Kopyala" butonuna bas.');
-      } catch (e) { bar.innerHTML = '<span style="color:#fca5a5">Hata: ' + e.message + '</span>'; return; }
+        const txt = (await navigator.clipboard.readText() || '').trim();
+        if (txt) { const p = JSON.parse(txt); if (p.tip === 'battal-zrapor-gonder' && Array.isArray(p.firmalar)) paket = p; }
+      } catch (e) {}
+      // 2) Pano boş/geçersizse elle yapıştırma kutusu göster
+      if (!paket) {
+        bar.innerHTML = '<div style="color:#fca5a5;margin-bottom:8px">Panoda geçerli Z Raporu paketi bulunamadı.</div>' +
+          '<div style="margin-bottom:8px;color:#9aa6c0">Panelde <b>"Z Raporlarını Panoya Kopyala"</b>ya bas, sonra buraya <b>Ctrl+V</b> yapıştır ve <b>Devam</b>a tıkla.</div>' +
+          '<textarea id="__zPaste" style="width:100%;height:120px;background:#0b1020;color:#e8edf5;border:1px solid #2a3550;border-radius:8px;padding:8px;font-family:Consolas,monospace;font-size:11px" placeholder="JSON paketini buraya yapıştır…"></textarea>' +
+          '<button id="__zGo" style="margin-top:8px;background:#7c3aed;color:#fff;border:0;padding:10px 18px;border-radius:8px;font-weight:800;cursor:pointer">Devam ▶</button>';
+        await new Promise(res => {
+          document.getElementById('__zGo').onclick = () => {
+            try { const p = JSON.parse((document.getElementById('__zPaste').value || '').trim()); if (p.tip === 'battal-zrapor-gonder' && Array.isArray(p.firmalar)) { paket = p; res(); } else alert('Geçersiz paket. Panelden kopyaladığın JSON\'u yapıştır.'); }
+            catch (e) { alert('JSON okunamadı: ' + e.message); }
+          };
+        });
+      }
 
       const D = document;
       const wait = ms => new Promise(r => setTimeout(r, ms));
