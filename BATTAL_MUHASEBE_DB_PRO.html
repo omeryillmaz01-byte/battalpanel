@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<title>Battal Muhasebe · Defter Beyan Pro · v10.0</title>
+<title>Battal Muhasebe · Defter Beyan Pro · v10.1</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{
@@ -332,7 +332,7 @@ footer.btmbar b{color:var(--acc-2)}
     <div class="logo-icon">⚡</div>
     <div class="logo-text">
       <div class="t1">BATTAL MUHASEBE · DB PRO</div>
-      <div class="t2">DEFTER BEYAN OTOMASYONU · v10.0</div>
+      <div class="t2">DEFTER BEYAN OTOMASYONU · v10.1</div>
     </div>
   </div>
   <div class="spc"></div>
@@ -367,7 +367,7 @@ footer.btmbar b{color:var(--acc-2)}
   </div>
 
   <div class="tabs">
-    <button class="tab active" data-tab="gelir" onclick="App.tab('gelir')">💰 Gelir / e-SMM</button>
+    <button class="tab active" data-tab="gelir" id="tabGelirBtn" onclick="App.tab('gelir')">💰 Gelir / e-SMM</button>
     <button class="tab" data-tab="gider" onclick="App.tab('gider')">📥 Gider / e-Fatura</button>
     <button class="tab" data-tab="sabit" onclick="App.tab('sabit')">🏛️ Sabit Kıymet</button>
     <button class="tab" data-tab="vuk" onclick="App.tab('vuk')">📚 VUK 333 & Levha</button>
@@ -377,8 +377,8 @@ footer.btmbar b{color:var(--acc-2)}
   <div class="tab-content active" id="tab-gelir">
     <div class="dropzone" id="dz-gelir" onclick="document.getElementById('f-gelir').click()">
       <div class="dz-icon">📥</div>
-      <div class="dz-title">Uyumsoft Gelir (e-SMM) CSV/Excel'ini buraya bırak</div>
-      <div class="dz-sub">Tüm dönem gelse de filtreliyorum · İptaller otomatik elenir</div>
+      <div class="dz-title" id="dzGelirTitle">Uyumsoft Gelir (e-SMM) CSV/Excel'ini buraya bırak</div>
+      <div class="dz-sub" id="dzGelirSub">Tüm dönem gelse de filtreliyorum · İptaller otomatik elenir</div>
       <input type="file" id="f-gelir" accept=".csv,.xlsx,.xls">
     </div>
 
@@ -533,7 +533,7 @@ footer.btmbar b{color:var(--acc-2)}
     <ol style="margin-left:22px;color:var(--txt-soft);line-height:2;font-size:13px">
       <li>Üst yeşil "🔑 Token" butonuna tıkla, Defter Beyan'a giriş yapıp token'ı al ve yapıştır (bir kez)</li>
       <li>Mükellef kartlarından seç</li>
-      <li>"Gelir / e-SMM" veya "Gider / e-Fatura" sekmesinden Uyumsoft Excel/CSV bırak</li>
+      <li>"Gelir" (e-SMM veya E-Fatura·E-Arşiv satış) ya da "Gider / e-Fatura" sekmesinden Uyumsoft Excel/CSV bırak</li>
       <li>Dönem (ay/yıl) seç → otomatik mevcut ay seçili</li>
       <li>Tabloda kontrol et: ✅ temiz / ⚠️ uyarı / ❌ iptal-mükerrer</li>
       <li>"🚀 Defter Beyan Scripti Üret + Kopyala" butonuna tıkla</li>
@@ -548,7 +548,7 @@ footer.btmbar b{color:var(--acc-2)}
 </div>
 
 <footer class="btmbar">
-  <span>v10.0 · 15 mükellef · Defter Beyan API · VUK 333</span>
+  <span>v10.1 · 15 mükellef · Defter Beyan API · VUK 333</span>
   <div style="flex:1"></div>
   <span id="ftrInfo">Hazır</span>
 </footer>
@@ -813,6 +813,15 @@ const App = {
     document.getElementById('levha-info').innerHTML = m.levha?
       `<b>${m.vd} Vergi Dairesi</b><br>${m.levha}<br><small style="color:var(--txt-dim)">Kaynak: 78 levha PDF okuması (IS_VERILERI/vergi_levhalari.json)</small>`:
       '<i style="color:var(--txt-dim)">Levha bilgisi yok</i>';
+    // Gelir sekmesi etiketleri — mükellef türüne göre (SMM=e-SMM makbuz / İşletme=E-Fatura·E-Arşiv satış)
+    const isl = (m.tip==='ISL');
+    document.getElementById('tabGelirBtn').innerHTML = isl ? '💰 Gelir / E-Fatura · E-Arşiv' : '💰 Gelir / e-SMM';
+    document.getElementById('dzGelirTitle').textContent = isl
+      ? 'Uyumsoft Satış (E-Fatura / E-Arşiv · GİDEN) CSV/Excel\'ini buraya bırak'
+      : 'Uyumsoft Gelir (e-SMM) CSV/Excel\'ini buraya bırak';
+    document.getElementById('dzGelirSub').textContent = isl
+      ? 'Giden satış faturaları · İptaller otomatik elenir · Z raporları ayrıca girilir'
+      : 'Tüm dönem gelse de filtreliyorum · İptaller otomatik elenir';
     // Reset
     this.gelirData=[];
     this.giderData=[];
