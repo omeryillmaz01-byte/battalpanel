@@ -455,11 +455,9 @@
 
     butonEkle('📊 Gider Kontrol', calistir, null, '__gkBtn', 20);
     butonEkle('📥 Panodan Gider Gönder', panodanGonder, 'linear-gradient(135deg,#3b82f6,#1d4ed8)', '__gonderBtn', 76);
-    butonEkle('📊 Z Raporu Gönder', zRaporGonder, 'linear-gradient(135deg,#7c3aed,#5b21b6)', '__zBtn', 132);
     setInterval(() => {
       butonEkle('📊 Gider Kontrol', calistir, null, '__gkBtn', 20);
       butonEkle('📥 Panodan Gider Gönder', panodanGonder, 'linear-gradient(135deg,#3b82f6,#1d4ed8)', '__gonderBtn', 76);
-      butonEkle('📊 Z Raporu Gönder', zRaporGonder, 'linear-gradient(135deg,#7c3aed,#5b21b6)', '__zBtn', 132);
     }, 2000);
   }
 
