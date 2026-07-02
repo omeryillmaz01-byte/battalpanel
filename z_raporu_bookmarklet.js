@@ -37,5 +37,5 @@
       else{const m=(cj.errorMessage||cj.statusMessage||cr.status).toString();if(/aynı|mükerrer|zaten/i.test(m)){atla++;console.log('⏭ Z '+b.zno+' zaten var');}else{f++;hata.push(b.zno+': '+m);console.log('❌ Z '+b.zno+' - '+m);}}
     }catch(e){f++;hata.push(b.zno+': '+e.message);}
   }
-  alert('🎉 '+firma.ad+' bitti\n✅ Yeni: '+ok+'\n⏭ Zaten kayitli (atlandi): '+atla+(f?'\n❌ Hata: '+f+'\n'+hata.slice(0,8).join('\n'):''));
+  alert('🎉 '+firma.ad+' bitti  [v3-KDVDahil]\n✅ Yeni: '+ok+'\n⏭ Zaten kayitli (atlandi): '+atla+(f?'\n❌ Hata: '+f+'\n'+hata.slice(0,8).join('\n'):''));
 })();
