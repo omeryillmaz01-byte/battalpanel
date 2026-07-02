@@ -51,7 +51,7 @@
       if (window.__zPageInjected) return; window.__zPageInjected = true;
       const code = '(' + function () {
         if (window.__zPageHook) return; window.__zPageHook = true;
-        const isC = u => /\/gelir\/create/.test('' + u);
+        const isC = u => /\/gelir\//.test('' + u) && !/\/gelirliste\//.test('' + u);
         const emit = (req, status, res) => { let rq = null; try { rq = typeof req === 'string' ? JSON.parse(req) : req; } catch (e) {} let rs = null; try { rs = typeof res === 'string' ? JSON.parse(res) : res; } catch (e) {} window.postMessage({ __zcapReal: 1, req: rq, status: status, res: rs }, '*'); };
         // fetch hook
         const of = window.fetch;
@@ -77,9 +77,12 @@
         const d = e.data;
         if (!d || !d.__zcapReal) return;
         window.__zLastCap = d;
-        // Başarılı bir gelir create'i şablon olarak sakla (alan adı ne olursa olsun)
-        const ok = d.status === 200 && d.req && d.req.kayitlar && d.res && (d.res.resultContainer || d.res.success) && !d.res.errorMessage;
-        if (ok) { try { chrome.storage.local.set({ zTemplate: { req: d.req, ts: Date.now() } }); } catch (x) {} }
+        // İstek gövdesinden (create/update) VEYA cevaptan (detay görüntüleme) tam belgeyi yakala
+        const belgeSec = o => (o && o.gelirBelgeTuruKodu && o.kayitlar && o.kayitlar.length) ? o : null;
+        const cand = belgeSec(d.req) || belgeSec(d.res && (d.res.resultContainer || d.res.result)) || belgeSec(d.res);
+        if (d.status === 200 && cand && /z.?raporu/i.test(JSON.stringify(cand).toLowerCase()) || (d.status === 200 && cand && cand.gelirBelgeTuruKodu)) {
+          try { chrome.storage.local.set({ zTemplate: { req: cand, ts: Date.now() } }); } catch (x) {}
+        }
       });
     })();
 
@@ -211,30 +214,40 @@
           } catch (e) { return { err: 'liste-hata: ' + e.message }; }
           if (!list.length) return { err: 'gelir listesi boş' };
           // Z raporu kaydını bul
+          // Eğer liste kaydı zaten tam belge ise (kayitlar+kod) direkt kullan
+          const zBelge = list.find(r => r && r.gelirBelgeTuruKodu && r.kayitlar && r.kayitlar.length && /z.?raporu/i.test(JSON.stringify(r)))
+            || list.find(r => r && r.gelirBelgeTuruKodu && r.kayitlar && r.kayitlar.length);
+          if (zBelge) return { tmpl: zBelge, ep: 'liste' };
           const zrec = list.find(r => /z\s*raporu/i.test(JSON.stringify(r))) || list[0];
-          const id = zrec.id || zrec.belgeId || zrec.gelirBelgeId || zrec.gelirId || zrec.belgeSiraId || zrec.key;
-          // Detay endpoint'lerini dene
-          for (const ep of ['/gelir/get', '/gelir/detay', '/gelir/getById', '/gelir/getbyid', '/gelir/read']) {
-            for (const bodyObj of [{ id }, { belgeId: id }, { gelirBelgeId: id }, id]) {
-              try {
-                const dr = await fetch(B + ep, { method: 'POST', headers: H, credentials: 'include', body: JSON.stringify(bodyObj) });
-                if (dr.status !== 200) continue;
-                const dj = await dr.json();
-                const belge = dj.resultContainer || dj.result || dj;
-                if (belge && belge.kayitlar && belge.kayitlar.length) return { tmpl: belge, ep };
-              } catch (e) {}
+          const rawId = zrec.id || zrec.belgeId || zrec.gelirBelgeId || zrec.gelirId || zrec.belgeSiraId || zrec.key || zrec.gelirBelgeKey;
+          let decId = rawId; try { decId = atob(rawId); } catch (e) {}
+          const ids = [rawId, decId].filter(Boolean);
+          for (const ep of ['/gelir/get', '/gelir/detay', '/gelir/getById', '/gelir/getbyid', '/gelir/read', '/gelir/getGelir', '/gelir/getGelirBelge', '/gelirbelge/get', '/gelir/belgeDetay', '/gelir/find']) {
+            for (const idv of ids) {
+              for (const bodyObj of [{ id: idv }, { belgeId: idv }, { gelirBelgeId: idv }, { key: idv }, idv]) {
+                try {
+                  const dr = await fetch(B + ep, { method: 'POST', headers: H, credentials: 'include', body: JSON.stringify(bodyObj) });
+                  if (dr.status !== 200) continue;
+                  const dj = await dr.json();
+                  const belge = dj.resultContainer || dj.result || dj;
+                  if (belge && belge.kayitlar && belge.kayitlar.length) return { tmpl: belge, ep };
+                } catch (e) {}
+              }
             }
           }
-          return { err: 'detay endpoint bulunamadı', id: id, ornek: JSON.stringify(zrec).slice(0, 400) };
+          return { err: 'detay endpoint bulunamadı', id: rawId, keys: Object.keys(zrec).join(', '), ornek: JSON.stringify(zrec).slice(0, 300) };
         })();
         if (learn.tmpl) {
           tmpl = learn.tmpl;
           try { chrome.storage.local.set({ zTemplate: { req: tmpl, ts: Date.now(), kaynak: 'api:' + learn.ep } }); } catch (e) {}
         } else {
           bar.innerHTML =
-            '<div style="color:#fca5a5;font-size:14px;margin-bottom:8px"><b>Şablon API\'den otomatik öğrenilemedi.</b></div>' +
-            '<div style="color:#9aa6c0;font-size:12px;line-height:1.6">Sebep: ' + (learn.err || '?') + (learn.id ? '<br>Bulunan kayıt id: ' + learn.id : '') + (learn.ornek ? '<br>Kayıt örneği: <code style="color:#93c5fd">' + learn.ornek.replace(/</g, '&lt;') + '</code>' : '') + '</div>' +
-            '<div style="margin-top:10px;color:#fcd34d;font-size:12px">Bu ekranın görüntüsünü Claude\'a at — doğru endpoint\'i ekleyip tam otomatik yapayım. (Alternatif: 1 kez elle Z kaydet, casus yakalar.)</div>';
+            '<div style="color:#fcd34d;font-size:15px;margin-bottom:8px"><b>🎯 EN KOLAY: Gelir Listele\'de bir Z\'ye tıkla</b></div>' +
+            '<div style="color:#e8edf5;font-size:13px;line-height:1.7">Detay endpoint\'ini bulamadım ama casus artık Defter Beyan\'ın <b>kendi çağrısını</b> dinliyor.<br>' +
+            '<b>Yap (elle giriş DEĞİL, sadece bakma):</b><br>1. Sol menü → <b>Gelir Listele</b> → herhangi bir <b>Z Raporu</b> satırına / <b>"Tüm Belgeyi Görüntüle"</b>ye tıkla (belgeyi aç).<br>2. Belge açılınca casus şablonu otomatik yakalar.<br>3. Tekrar <b>📊 Z Raporu Gönder</b> → 🚀 Gönder.</div>' +
+            '<div style="margin-top:10px;color:#6ee7b7;font-size:12px" id="__zBekle">Durum: bir Z belgesinin açılması bekleniyor…</div>' +
+            '<div style="margin-top:10px;color:#64748b;font-size:11px">Teknik: ' + (learn.err || '?') + (learn.keys ? ' · alanlar: ' + learn.keys : '') + '</div>';
+          const iv2 = setInterval(async () => { try { const st = await chrome.storage.local.get('zTemplate'); if (st && st.zTemplate) { clearInterval(iv2); const e = D.getElementById('__zBekle'); if (e) e.innerHTML = '✅ Şablon yakalandı! Pencereyi kapat, tekrar "Z Raporu Gönder" bas → 🚀 Gönder.'; } } catch (e) {} }, 1500);
           return;
         }
       }
