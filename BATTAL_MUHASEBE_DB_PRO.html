@@ -1200,14 +1200,13 @@ const App = {
       const iade=/iade/i.test(g('faturaTipi'))||/iade/i.test(g('durum'));
       const oranlar=[{oran:20,matrah:k20,kdv:v20},{oran:10,matrah:k10,kdv:v10},{oran:18,matrah:k18,kdv:v18},{oran:8,matrah:k8,kdv:v8},{oran:1,matrah:k1,kdv:v1}].filter(x=>x.matrah>0);
       if(!oranlar.length && haricToplam>0) oranlar.push({oran:toplamKdv>0?Math.round(toplamKdv/haricToplam*100):0,matrah:haricToplam,kdv:toplamKdv});
-      oranlar.forEach(x=>{
-        out.push({belgeNo:bn,tarih:tar,vkn,unvan,matrah:x.matrah,kdv:x.kdv,oran:x.oran,oiv:0,odenecek,iptal,iade});
-      });
-      // ÖİV: ödenecek, TÜM oranların toplamından fazlaysa gerçek fark ÖİV'dir — ayrı satır
+      // ÖİV: ödenecek, oran toplamından fazlaysa gerçek fark ÖİV'dir.
+      // ÖİV'i AYRI satır/belge yapma — ana (ilk oran) satırına iliştir; gönderimde AYNI belgeye
+      // 2. kayıt olarak eklenir (turKod 5, altKod 218). Böylece mükerrer belge-no ve GVK40 hatası önlenir.
       const oivFark = this.r2(odenecek - haricToplam - toplamKdv);
-      if(oivFark>1){
-        out.push({belgeNo:bn,tarih:tar,vkn,unvan,matrah:0,kdv:0,oran:0,oiv:oivFark,odenecek,iptal,iade,isOivRow:true});
-      }
+      oranlar.forEach((x,idx)=>{
+        out.push({belgeNo:bn,tarih:tar,vkn,unvan,matrah:x.matrah,kdv:x.kdv,oran:x.oran,oiv:(idx===0 && oivFark>1)?oivFark:0,odenecek,iptal,iade});
+      });
     }
     this.giderData = out;
     this.giderFilter();
