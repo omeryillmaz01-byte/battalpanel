@@ -135,23 +135,33 @@
 
     // Defter Beyan hesabının KAYITLI adresini çek (adres defterinden kendi VKN'siyle).
     // Dönen: { adres, raw } veya null. Salt-okuma.
-    async function hesapAdresiCek(vkn) {
-      if (!/defterbeyan\.gov\.tr/.test(location.hostname)) return null;
-      const B = 'https://backend-p.defterbeyan.gov.tr/rs';
-      const TK = (function () { for (const S of [sessionStorage, localStorage]) { try { for (let i = 0; i < S.length; i++) { const v = S.getItem(S.key(i)); if (v && /^ey[\w-]+\.[\w-]+\./.test(v)) return v; } } catch (e) {} } return ''; })();
-      const H = { 'Content-Type': 'application/json; charset=utf-8' }; if (TK) H.Token = TK;
+    // Sicil Bilgileri sayfasındaki "İş Yeri Adresi"ni oku, aktif mükellefin altına hafızaya al.
+    // (Defter Beyan adres defteri API'si kendi adresini vermiyor; adres yalnız bu sayfada.)
+    function sicilAdresYakala() {
       try {
-        const r = await fetch(B + '/adresdefteri/findbytckn/' + vkn, { method: 'POST', headers: H, body: '{}', credentials: 'include' });
-        const j = await r.json();
-        const rc = j && (j.resultContainer || j.result || j);
-        if (!rc) return null;
-        // Olası adres alanlarını topla
-        const alanlar = ['adres', 'acikAdres', 'adresBilgisi', 'tamAdres', 'adresi', 'mahalle', 'caddeSokak', 'cadde', 'sokak', 'disKapiNo', 'icKapiNo', 'bulvar', 'site', 'apartman', 'ilce', 'il', 'sehir'];
-        const parca = [];
-        alanlar.forEach(k => { if (rc[k] && typeof rc[k] === 'string') parca.push(rc[k]); });
-        let adres = rc.adres || rc.acikAdres || rc.adresBilgisi || rc.tamAdres || parca.join(' ');
-        return { adres: (adres || '').trim(), raw: rc };
-      } catch (e) { return { hata: e.message }; }
+        if (!/mukellef\/sicil-bilgileri/.test(location.pathname) && !/İş Yeri Adresi/i.test(document.body.innerText || '')) return;
+        const up = trAscii(document.body.innerText || '');
+        const mm = up.match(/IS YERI ADRESI\s*:?\s*([\s\S]{6,220}?)\s*(IS YERI TELEFON|CEP TELEFON|E ?POSTA|VERGI KODU|GELIR UNSURU)/);
+        if (!mm) return;
+        const adres = mm[1].replace(/\s+/g, ' ').trim();
+        if (adres.length < 8) return;
+        const m = aktifMukellef();
+        if (!m) return;
+        chrome.storage.local.get('hesapAdres', s => {
+          const h = (s && s.hesapAdres) || {};
+          if (!h[m.vkn] || h[m.vkn].adres !== adres) { h[m.vkn] = { adres: adres, ts: Date.now() }; chrome.storage.local.set({ hesapAdres: h }); }
+        });
+      } catch (e) {}
+    }
+
+    // Aktif hesabın KAYITLI adresini getir: önce Sicil'den yakalanmış (storage), yoksa API.
+    async function hesapAdresiCek(vkn) {
+      try {
+        const s = await chrome.storage.local.get('hesapAdres');
+        const h = s && s.hesapAdres && s.hesapAdres[vkn];
+        if (h && h.adres) return { adres: h.adres, kaynak: 'sicil' };
+      } catch (e) {}
+      return { yok: true };
     }
 
     // 🔒 Kimlik/Adres Kontrol ekranı (ortak — DB + Uyumsoft)
@@ -192,12 +202,10 @@
       if (m && /defterbeyan\.gov\.tr/.test(location.hostname)) {
         hesapAdresiCek(m.vkn).then(ha => {
           const box = document.getElementById('__hesapKarsi'); if (!box) return;
-          if (!ha || ha.hata || !ha.adres) {
-            const rawKeys = ha && ha.raw ? Object.keys(ha.raw).join(', ') : '(cevap yok)';
+          if (!ha || !ha.adres) {
             box.style.borderColor = '#f59e0b'; box.style.color = '#fcd34d';
-            box.innerHTML = '⚠️ <b>Hesap adresi okunamadı.</b> ' + (ha && ha.hata ? 'Hata: ' + ha.hata : 'Adres alanı bulunamadı.') +
-              '<br><span style="font-size:11px;color:#9aa6c0">Dönen alanlar: ' + rawKeys + '</span>' +
-              '<br><span style="font-size:11px;color:#9aa6c0">Bu ekran görüntüsünü Ömer\'e gönder → doğru alanı bağlasın.</span>';
+            box.innerHTML = '⚠️ <b>Hesap adresi henüz hafızada yok.</b> Bu mükellefin adresini okumak için ' +
+              '<b>Mükellef Bilgileri → Sicil Bilgileri</b> sayfasını bir kez aç (adres oradan otomatik alınır), sonra buraya dön.';
             return;
           }
           const s = adresBenzer(m.rec.adres, ha.adres);
@@ -828,6 +836,7 @@
     }
 
     const kur = () => {
+      sicilAdresYakala(); // Sicil sayfasındaysak hesap adresini yakala
       butonEkle('📊 Gider Kontrol', calistir, null, '__gkBtn', 20);
       butonEkle('📥 Panodan Gider Gönder', panodanGonder, 'linear-gradient(135deg,#3b82f6,#1d4ed8)', '__gonderBtn', 76);
       butonEkle('📊 Gelir Kontrol', gelirKontrol, 'linear-gradient(135deg,#d4af37,#b8941f)', '__glBtn', 132);
