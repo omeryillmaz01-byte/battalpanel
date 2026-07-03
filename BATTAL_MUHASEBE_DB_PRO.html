@@ -775,7 +775,7 @@ const SINIF_KURALLAR = [
   {p:/i.?g.?d.?a.?ş|igdaş|gaz dağıt/i, sinif:'Doğalgaz', altKod:84, altAd:'Doğalgaz Giderleri (GVK 40/1)'},
   {p:/enerjisa|bedaş|ayedaş|boğaziçi elektrik|elektrik perakende|elektrik dağıt/i, sinif:'Elektrik', altKod:0, altAd:'Elektrik Giderleri (GVK 40/1)'},
   {p:/iski|aski|su dağıt|su şebek/i, sinif:'Su', altKod:83, altAd:'Su Giderleri (GVK 40/1)'},
-  {p:/turkcell|vodafone|türk ?telekom|ttnet|superonline|millennium|net|telefon/i, sinif:'Telefon+ÖİV', altKod:87, altAd:'Telefon Giderleri (GVK 40/1)', oiv:true},
+  {p:/turkcell|vodafone|türk ?telekom|ttnet|superonline|millennium|net|telefon|tt ?mob[iı]l|andromeda|dijital platform|d.?smart|digiturk|turksat|kablonet|haberleşme|iletişim hizmet/i, sinif:'Telefon+ÖİV', altKod:87, altAd:'Telefon Giderleri (GVK 40/1)', oiv:true},
   {p:/kargo|aras|mng|yurtiçi kargo|ptt kargo|sürat|hepsijet|sendeo|trendyol express/i, sinif:'Kargo', altKod:193, altAd:'Kargo Posta ve Kurye Giderleri (GVK 40/1)'},
   {p:/google ireland|meta platforms|facebook|instagram reklam/i, sinif:'İnternet Reklam', altKod:0, altAd:'İnternet Reklam Hizmet Alım Giderleri (GVK 40/1)'},
   {p:/dsm grup|d-market|hepsiburada komisyon|trendyol komisyon|n11|amazon komisyon|gittigid|pttavm|çiçek ?sepeti|pos komis/i, sinif:'Komisyon/POS', altKod:0, altAd:'Komisyon ve Pos Giderleri (GVK 40/1)'},
@@ -801,8 +801,10 @@ const SINIF_KURALLAR = [
    ════════════════════════════════════════════════════════════════════ */
 const SMM_TUR_KODU = '3'; // Serbest Meslek Kazancına Ait Giderler (GVK Md. 68)
 const SMM_GIDER_KOD = {
-  'Elektrik': {altKod:2, altAd:'Elektrik Giderleri (GVK 68/1)'}
-  // Öğrenilecek: Doğalgaz, Telefon+ÖİV, Diğer Hizmet, Su, Kira, Ofis (Temizlik), Ulaşım...
+  'Elektrik': {altKod:2, altAd:'Elektrik Giderleri (GVK 68/1)'},
+  'Telefon+ÖİV': {altKod:7, altAd:'Telefon, Faks, İnternet ve Diğer Haberleşme Giderleri (GVK 68/1)'},
+  'Özel İletişim Vergisi': {altKod:218, turKod:'5', altAd:'Özel İletişim Vergisi'}
+  // Öğrenilecek: Doğalgaz, Diğer Hizmet, Su, Kira, Ofis (Temizlik), Ulaşım...
 };
 try{ Object.assign(SMM_GIDER_KOD, JSON.parse(localStorage.getItem('smmGiderKodlari')||'{}')); }catch(e){}
 
