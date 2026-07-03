@@ -139,12 +139,20 @@
     // (Defter Beyan adres defteri API'si kendi adresini vermiyor; adres yalnız bu sayfada.)
     function sicilAdresYakala() {
       try {
-        if (!/mukellef\/sicil-bilgileri/.test(location.pathname) && !/İş Yeri Adresi/i.test(document.body.innerText || '')) return;
-        const up = trAscii(document.body.innerText || '');
-        const mm = up.match(/IS YERI ADRESI\s*:?\s*([\s\S]{6,220}?)\s*(IS YERI TELEFON|CEP TELEFON|E ?POSTA|VERGI KODU|GELIR UNSURU)/);
-        if (!mm) return;
-        const adres = mm[1].replace(/\s+/g, ' ').trim();
-        if (adres.length < 8) return;
+        const body = document.body.innerText || '';
+        if (!/mukellef\/sicil-bilgileri/.test(location.pathname) && !/İş Yeri Adresi/i.test(body)) return;
+        // Etiket/değer ayrı sütunda olabildiği için adresi İÇERİĞİNDEN bul:
+        // "... MAH ... (SK/CAD/SOKAK/CADDE/BULVAR) ..." içeren en uzun satır.
+        const lines = body.split(/\n+/).map(s => s.trim()).filter(Boolean);
+        let adres = '';
+        lines.forEach(ln => {
+          const u = trAscii(ln);
+          const mahVar = /\bMAH\b|\bMAHALLE/.test(u);
+          const yolVar = /\bSK\b|\bSOKAK\b|\bCAD\b|\bCADDE\b|\bBULV|\bBLOK\b|\bSITE\b|\bAPT\b|\bMERKEZI\b|\bNO\b/.test(u);
+          if (mahVar && yolVar && ln.length > 15 && ln.length > adres.length && !/İŞ YERİ|TELEFON|E-?POSTA/i.test(ln)) adres = ln;
+        });
+        adres = adres.replace(/\s+/g, ' ').trim();
+        if (adres.length < 12) return;
         const m = aktifMukellef();
         if (!m) return;
         chrome.storage.local.get('hesapAdres', s => {
