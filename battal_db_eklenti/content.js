@@ -168,6 +168,10 @@
       const btn = document.getElementById('__adrBtn');
       if (btn && m) btn.onclick = () => {
         const val = document.getElementById('__adrTest').value;
+        if (/^\s*[\[{]/.test(val)) {
+          document.getElementById('__adrSonuc').innerHTML = '<div style="padding:12px;background:rgba(245,158,11,.12);border:1px solid #f59e0b;border-radius:8px;color:#fcd34d">⚠️ Bu bir <b>adres</b> değil, JSON paketi yapıştırmışsın. Buraya sadece <b>faturadaki açık adres metnini</b> yapıştır (örn: "İCADİYE MAH. CEMİL MERİÇ SK. ...").</div>';
+          return;
+        }
         const s = adresBenzer(m.rec.adres, val);
         const kr = adresKarar(s.skor);
         document.getElementById('__adrSonuc').innerHTML =
@@ -190,7 +194,7 @@
       if (window.__zPageInjected) return; window.__zPageInjected = true;
       const code = '(' + function () {
         if (window.__zPageHook) return; window.__zPageHook = true;
-        const isC = u => /\/gelir\//.test('' + u) && !/\/gelirliste\//.test('' + u);
+        const isC = u => (/\/gelir\//.test('' + u) && !/\/gelirliste\//.test('' + u)) || (/\/gider\//.test('' + u) && !/\/giderliste\//.test('' + u));
         const emit = (req, status, res) => { let rq = null; try { rq = typeof req === 'string' ? JSON.parse(req) : req; } catch (e) {} let rs = null; try { rs = typeof res === 'string' ? JSON.parse(res) : res; } catch (e) {} window.postMessage({ __zcapReal: 1, req: rq, status: status, res: rs }, '*'); };
         // fetch hook
         const of = window.fetch;
@@ -224,6 +228,32 @@
           const isZ = /z.?raporu/i.test(JSON.stringify(cand.kayitlar || []) + ' ' + (cand.aciklama || ''));
           const key = isZ ? 'zTemplate' : 'satisTemplate';
           try { chrome.storage.local.set({ [key]: { req: cand, ts: Date.now() } }); } catch (x) {}
+        }
+        // ── GİDER kodu yakala: elle girilen gider kaydından alt tür kodunu öğren ──
+        const gsec = o => (o && o.giderBelgeTuruKodu && Array.isArray(o.kayitlar) && o.kayitlar.length) ? o : null;
+        const gcand = gsec(d.req) || gsec(d.res && (d.res.resultContainer || d.res.result)) || gsec(d.res);
+        if (d.status === 200 && gcand) {
+          const yakalanan = [];
+          gcand.kayitlar.forEach(k => {
+            const kod = k.giderKayitAltTuruKodu, ad = (k.aciklama || '').trim();
+            if (kod != null && kod !== '') yakalanan.push({ kod: String(kod), ad: ad, tur: String(k.giderKayitTuruKodu || '') });
+          });
+          if (yakalanan.length) {
+            chrome.storage.local.get('giderKodYakala', s => {
+              const harita = (s && s.giderKodYakala) || {};
+              yakalanan.forEach(y => { harita[y.kod] = { ad: y.ad, tur: y.tur, ts: Date.now() }; });
+              chrome.storage.local.set({ giderKodYakala: harita });
+            });
+            // Ekranda görünür bildirim
+            const toast = document.createElement('div');
+            toast.style.cssText = 'position:fixed;bottom:20px;left:20px;z-index:2147483647;background:#0f1830;border:2px solid #10b981;color:#e8edf5;padding:14px 18px;border-radius:12px;font:13px Segoe UI,sans-serif;max-width:420px;box-shadow:0 8px 30px rgba(0,0,0,.5)';
+            toast.innerHTML = '<b style="color:#6ee7b7;font-size:14px">✅ GİDER KODU YAKALANDI</b><br>' +
+              yakalanan.map(y => '<span style="color:#d4af37;font-weight:800;font-size:16px">Kod: ' + y.kod + '</span> — ' + (y.ad || '(açıklama yok)') + ' <span style="color:#9aa6c0">[tür ' + y.tur + ']</span>').join('<br>') +
+              '<br><span style="color:#9aa6c0;font-size:11px">Bu kodu Ömer\'e söyle → panele sabitlensin.</span>' +
+              '<button style="margin-top:8px;background:#af0003;color:#fff;border:0;padding:5px 12px;border-radius:6px;cursor:pointer" onclick="this.parentNode.remove()">Kapat</button>';
+            document.body.appendChild(toast);
+            setTimeout(() => { try { toast.remove(); } catch (e) {} }, 30000);
+          }
         }
       });
     })();
