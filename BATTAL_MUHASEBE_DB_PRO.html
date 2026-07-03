@@ -1314,9 +1314,9 @@ const App = {
       // ── SMM (Serbest Meslek) GVK 68 dönüşümü ──
       // Serbest meslekte gider türü GVK Md.40 değil GVK Md.68'dir → tür kodu 3, alt kodlar farklı.
       // İşletme (GVK 40) kodunu, öğrenilmiş SMM (GVK 68) karşılığıyla değiştir; yoksa gönderme.
-      if(m && m.tip==='SMM' && !r.malAlisRow && !sabitKiymet && sinif!=='Özel İletişim Vergisi' && !/elle kontrol/i.test(sinif)){
+      if(m && m.tip==='SMM' && !r.malAlisRow && !sabitKiymet && !/elle kontrol/i.test(sinif)){
         const sk = SMM_GIDER_KOD[sinif];
-        r.giderTuruKodu = SMM_TUR_KODU;
+        r.giderTuruKodu = (sinif==='Özel İletişim Vergisi') ? (sk&&sk.turKod||'5') : SMM_TUR_KODU;
         if(sk && sk.altKod>0){ r.altKod=sk.altKod; r.altAd=sk.altAd; altKod=sk.altKod; }
         else { r.altKod=0; altKod=0; r.smmKodYok=sinif; } // GVK 68 karşılığı öğrenilmedi → atla
       }
