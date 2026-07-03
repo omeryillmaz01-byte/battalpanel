@@ -59,7 +59,10 @@
       '2610511823': { ad: 'Yakup Çoruh', tckn: '37900621974', vd: 'MERTER', nace: '683101', adres: 'BAHÇELİEVLER MAH. RESSAM HALİM SK. KADİR HAS NO: 7 İÇ KAPI NO: 33 BAHÇELİEVLER/ İSTANBUL' },
       '3460330305': { ad: 'Altuğ Erden', tckn: '14558014020', vd: 'ÜSKÜDAR', nace: '472704', adres: 'İCADİYE MAH. CEMİL MERİÇ SK. KOC NO: 23 A ÜSKÜDAR/ İSTANBUL' },
       '2640193570': { ad: 'Muzaffer Murat Çubukçuoğlu', tckn: '41167543450', vd: 'ÜSKÜDAR', nace: '472704', adres: 'SELİMİYE MAH. HAREM İSKELESİ CAD. HERA APT. NO: 13 İÇ KAPI NO: 1 ÜSKÜDAR/ İSTANBUL' },
-      '7680418539': { ad: 'Dilek Öztürk', tckn: '43684215698', vd: 'ÜSKÜDAR', nace: '479114', adres: 'ACIBADEM MAH. ÇEÇEN SK. B 10 BLOK NO: 19 H İÇ KAPI NO: 8 ÜSKÜDAR/ İSTANBUL' }
+      '7680418539': { ad: 'Dilek Öztürk', tckn: '43684215698', vd: 'ÜSKÜDAR', nace: '479114', adres: 'ACIBADEM MAH. ÇEÇEN SK. B 10 BLOK NO: 19 H İÇ KAPI NO: 8 ÜSKÜDAR/ İSTANBUL' },
+      '7850427089': { ad: 'Devran Süer', tckn: '59275233118', vd: 'KARTAL', nace: '691003', adres: 'ORHANTEPE MAH. SARAYLAR CAD. TUFANOĞLU PLAZA NO: 80 İÇ KAPI NO: 6 KARTAL/ İSTANBUL' },
+      '0960155134': { ad: 'Sinan Atalay', tckn: '10097926060', vd: 'BEYLİKDÜZÜ', nace: '479114', adres: 'YAKUPLU MAH. KANUNİ CAD. MENEKŞE EVLERİ B BLOK NO: 16 A İÇ KAPI NO: 19 BEYLİKDÜZÜ/ İSTANBUL' },
+      '0250587861': { ad: 'Kadir Akıllı', tckn: '34562272988', vd: 'KÜÇÜKKÖY', nace: '472105', adres: 'FEVZİ ÇAKMAK MAH. İSTANBUL CAD. NO: 61 A GAZİOSMANPAŞA/ İSTANBUL' }
     };
     // Kimlik (VKN veya TCKN) -> kayıt. Hem anahtar hem tckn üzerinden erişim.
     const LEVHA_BY_ID = {};
