@@ -172,6 +172,22 @@
       return { yok: true };
     }
 
+    // 🔒 SERT KİLİT: gönderimden önce hesap↔levha adresini doğrula.
+    // Dönen: { gecer:bool, mesaj, m, skor }. gecer=false ise gönderim YAPILMAMALI.
+    async function adresKilidi() {
+      const m = aktifMukellef();
+      if (!m) return { gecer: false, mesaj: '⛔ AKTİF HESAP TANINAMADI\n\nSayfadaki mükellef kayıtlı levhalardan biriyle eşleşmedi. Güvenlik için işlem durduruldu — bu hesabın levhasını ekletmeden gönderim yapılmaz.' };
+      const ha = await hesapAdresiCek(m.vkn);
+      if (!ha || !ha.adres) return { gecer: false, m: m, mesaj: '⚠️ HESAP ADRESİ DOĞRULANMADI: ' + m.rec.ad + '\n\nBu mükellefin Defter Beyan adresi henüz okunmadı. Önce sol menüden "Mükellef Bilgileri → Sicil Bilgileri" sayfasını AÇ (adres oradan otomatik alınır), sonra tekrar gönder.' };
+      const s = adresBenzer(m.rec.adres, ha.adres);
+      if (s.skor < 0.85) return { gecer: false, m: m, skor: s.skor, mesaj: '⛔ ADRES TUTMUYOR (%' + Math.round(s.skor * 100) + ') — ' + m.rec.ad + ' İŞLENMEYECEK\n\nHesap adresi: ' + ha.adres + '\nLevha adresi: ' + m.rec.adres + '\n\nGüvenlik kilidi: adres levhayla tutmadığı için gönderim durduruldu.' };
+      return { gecer: true, m: m, skor: s.skor, hesapAdres: ha.adres };
+    }
+    // Kilit reddini overlay'de göster
+    function kilitRed(bar, mesaj) {
+      bar.innerHTML = '<div style="padding:18px;background:rgba(239,68,68,.12);border:2px solid #ef4444;border-radius:12px;color:#fca5a5;font-size:14px;white-space:pre-wrap;line-height:1.6">' + mesaj.replace(/</g, '&lt;') + '</div>';
+    }
+
     // 🔒 Kimlik/Adres Kontrol ekranı (ortak — DB + Uyumsoft)
     function kimlikKontrol() {
       const bar = overlayAc('🔒 Kimlik / Adres Kontrol');
@@ -315,6 +331,9 @@
        Kodlar (altKod/turKod) panelde API'den doğrulanmış olarak gelir — burada tahmin yok. */
     async function panodanGonder() {
       const bar = overlayAc('📥 Panodan Gider Gönder');
+      // 🔒 SERT KİLİT — adres tutmuyorsa gönderim başlamaz
+      const kilit = await adresKilidi();
+      if (!kilit.gecer) { kilitRed(bar, kilit.mesaj); return; }
       let paket;
       try {
         const txt = await navigator.clipboard.readText();
@@ -637,6 +656,9 @@
     // ── Giden (satış e-Fatura/e-Arşiv) Gönder: Uyumsoft giden verisi + casus-öğrenimli e-Arşiv şablonu → /gelir/create
     async function gidenGonder() {
       const bar = overlayAc('📤 Giden (Satış) Fatura Gönder');
+      // 🔒 SERT KİLİT — adres tutmuyorsa gönderim başlamaz
+      const kilitG = await adresKilidi();
+      if (!kilitG.gecer) { kilitRed(bar, kilitG.mesaj); return; }
       const D = document, r2 = v => Math.round(v * 100) / 100;
       const iso = t => { const a = String(t).split('.'); return a.length === 3 ? a[2] + '-' + a[1] + '-' + a[0] + ' 00:00:00' : t; };
       let tmpl = null, giden = null;
