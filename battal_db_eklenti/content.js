@@ -192,30 +192,11 @@
        chrome.storage'a yazarız → sonra Z raporlarını AYNI yapıyla API ile göndeririz. */
     (function () {
       if (window.__zPageInjected) return; window.__zPageInjected = true;
-      const code = '(' + function () {
-        if (window.__zPageHook) return; window.__zPageHook = true;
-        const isC = u => (/\/gelir\//.test('' + u) && !/\/gelirliste\//.test('' + u)) || (/\/gider\//.test('' + u) && !/\/giderliste\//.test('' + u));
-        const emit = (req, status, res) => { let rq = null; try { rq = typeof req === 'string' ? JSON.parse(req) : req; } catch (e) {} let rs = null; try { rs = typeof res === 'string' ? JSON.parse(res) : res; } catch (e) {} window.postMessage({ __zcapReal: 1, req: rq, status: status, res: rs }, '*'); };
-        // fetch hook
-        const of = window.fetch;
-        window.fetch = function (u, o) {
-          const url = (u && u.url) || u || ''; const body = o && o.body;
-          const p = of.apply(this, arguments);
-          if (isC(url)) { p.then(r => { r.clone().text().then(t => emit(body, r.status, t)).catch(() => {}); }).catch(() => {}); }
-          return p;
-        };
-        // XMLHttpRequest hook (Defter Beyan bunu kullanıyor olabilir)
-        const oOpen = XMLHttpRequest.prototype.open, oSend = XMLHttpRequest.prototype.send;
-        XMLHttpRequest.prototype.open = function (m, u) { this.__zurl = u; return oOpen.apply(this, arguments); };
-        XMLHttpRequest.prototype.send = function (b) {
-          if (isC(this.__zurl)) { this.addEventListener('load', function () { emit(b, this.status, this.responseText); }); }
-          return oSend.apply(this, arguments);
-        };
-      } + ')();';
+      // CSP inline script'i engelliyor → hook'u ayrı dosyadan (web_accessible_resources) yükle.
       const sc = document.createElement('script');
-      sc.textContent = code;
+      sc.src = chrome.runtime.getURL('injected.js');
+      sc.onload = function () { this.remove(); };
       (document.head || document.documentElement).appendChild(sc);
-      sc.remove();
       window.addEventListener('message', e => {
         const d = e.data;
         if (!d || !d.__zcapReal) return;
