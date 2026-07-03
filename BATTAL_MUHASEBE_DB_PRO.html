@@ -803,8 +803,9 @@ const SMM_TUR_KODU = '3'; // Serbest Meslek Kazancına Ait Giderler (GVK Md. 68)
 const SMM_GIDER_KOD = {
   'Elektrik': {altKod:2, altAd:'Elektrik Giderleri (GVK 68/1)'},
   'Telefon+ÖİV': {altKod:7, altAd:'Telefon, Faks, İnternet ve Diğer Haberleşme Giderleri (GVK 68/1)'},
-  'Özel İletişim Vergisi': {altKod:218, turKod:'5', altAd:'Özel İletişim Vergisi'}
-  // Öğrenilecek: Doğalgaz, Diğer Hizmet, Su, Kira, Ofis (Temizlik), Ulaşım...
+  'Özel İletişim Vergisi': {altKod:218, turKod:'5', altAd:'Özel İletişim Vergisi'},
+  'Doğalgaz': {altKod:30, altAd:'Yakıt, Doğalgaz ve Isı Giderleri (GVK 68/1)'}
+  // Öğrenilecek: Diğer Hizmet, Su, Kira, Ofis (Temizlik), Ulaşım...
 };
 try{ Object.assign(SMM_GIDER_KOD, JSON.parse(localStorage.getItem('smmGiderKodlari')||'{}')); }catch(e){}
 
