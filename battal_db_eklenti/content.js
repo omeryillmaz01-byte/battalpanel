@@ -133,6 +133,27 @@
       return { renk: '#ef4444', bg: 'rgba(239,68,68,.12)', et: '⛔ TUTMUYOR — İŞLEME', islenir: false };
     }
 
+    // Defter Beyan hesabının KAYITLI adresini çek (adres defterinden kendi VKN'siyle).
+    // Dönen: { adres, raw } veya null. Salt-okuma.
+    async function hesapAdresiCek(vkn) {
+      if (!/defterbeyan\.gov\.tr/.test(location.hostname)) return null;
+      const B = 'https://backend-p.defterbeyan.gov.tr/rs';
+      const TK = (function () { for (const S of [sessionStorage, localStorage]) { try { for (let i = 0; i < S.length; i++) { const v = S.getItem(S.key(i)); if (v && /^ey[\w-]+\.[\w-]+\./.test(v)) return v; } } catch (e) {} } return ''; })();
+      const H = { 'Content-Type': 'application/json; charset=utf-8' }; if (TK) H.Token = TK;
+      try {
+        const r = await fetch(B + '/adresdefteri/findbytckn/' + vkn, { method: 'POST', headers: H, body: '{}', credentials: 'include' });
+        const j = await r.json();
+        const rc = j && (j.resultContainer || j.result || j);
+        if (!rc) return null;
+        // Olası adres alanlarını topla
+        const alanlar = ['adres', 'acikAdres', 'adresBilgisi', 'tamAdres', 'adresi', 'mahalle', 'caddeSokak', 'cadde', 'sokak', 'disKapiNo', 'icKapiNo', 'bulvar', 'site', 'apartman', 'ilce', 'il', 'sehir'];
+        const parca = [];
+        alanlar.forEach(k => { if (rc[k] && typeof rc[k] === 'string') parca.push(rc[k]); });
+        let adres = rc.adres || rc.acikAdres || rc.adresBilgisi || rc.tamAdres || parca.join(' ');
+        return { adres: (adres || '').trim(), raw: rc };
+      } catch (e) { return { hata: e.message }; }
+    }
+
     // 🔒 Kimlik/Adres Kontrol ekranı (ortak — DB + Uyumsoft)
     function kimlikKontrol() {
       const bar = overlayAc('🔒 Kimlik / Adres Kontrol');
@@ -152,6 +173,8 @@
           '<b>Levha Adresi:</b> ' + r.adres + '<br>' +
           '<span style="color:#9aa6c0;font-size:11px">Tespit yolu: ' + m.yol + (m.skor ? ' (%' + Math.round(m.skor * 100) + ')' : '') + '</span>' +
           '</div></div>';
+        // Hesap adresi vs Levha adresi (otomatik çekilir)
+        h += '<div id="__hesapKarsi" style="padding:14px;background:#0f1830;border:1px solid #2a3550;border-radius:10px;margin-bottom:14px;font-size:12.5px;color:#9aa6c0">🏛️ Defter Beyan hesap adresi çekiliyor…</div>';
         // Adres test aracı — örnek fatura gelmeden normalizer'ı kalibre etmek için
         h += '<div style="padding:14px;background:#0f1830;border:1px solid #2a3550;border-radius:10px">' +
           '<div style="font-weight:700;color:#d4af37;margin-bottom:8px">🧪 Adres Karşılaştırma Testi</div>' +
@@ -165,6 +188,26 @@
       Object.keys(LEVHA).forEach(k => { const r = LEVHA[k]; const akt = m && m.vkn === k; h += '<tr style="border-top:1px solid #1f2840;' + (akt ? 'background:rgba(16,185,129,.08)' : '') + '"><td style="padding:6px">' + (akt ? '▶ ' : '') + r.ad + '</td><td style="padding:6px">' + k + '</td><td style="padding:6px">' + (r.tckn || '-') + '</td><td style="padding:6px">' + r.vd + '</td><td style="padding:6px;color:#9aa6c0">' + r.adres + '</td></tr>'; });
       h += '</tbody></table></div>';
       bar.innerHTML = h;
+      // Hesap adresini çek → levhayla karşılaştır (salt-okuma, henüz bloklamaz)
+      if (m && /defterbeyan\.gov\.tr/.test(location.hostname)) {
+        hesapAdresiCek(m.vkn).then(ha => {
+          const box = document.getElementById('__hesapKarsi'); if (!box) return;
+          if (!ha || ha.hata || !ha.adres) {
+            const rawKeys = ha && ha.raw ? Object.keys(ha.raw).join(', ') : '(cevap yok)';
+            box.style.borderColor = '#f59e0b'; box.style.color = '#fcd34d';
+            box.innerHTML = '⚠️ <b>Hesap adresi okunamadı.</b> ' + (ha && ha.hata ? 'Hata: ' + ha.hata : 'Adres alanı bulunamadı.') +
+              '<br><span style="font-size:11px;color:#9aa6c0">Dönen alanlar: ' + rawKeys + '</span>' +
+              '<br><span style="font-size:11px;color:#9aa6c0">Bu ekran görüntüsünü Ömer\'e gönder → doğru alanı bağlasın.</span>';
+            return;
+          }
+          const s = adresBenzer(m.rec.adres, ha.adres);
+          const kr = adresKarar(s.skor);
+          box.style.borderColor = kr.renk; box.style.background = kr.bg;
+          box.innerHTML = '<div style="font-size:15px;font-weight:800;color:' + kr.renk + '">🏛️ HESAP ↔ LEVHA: ' + kr.et + ' (%' + Math.round(s.skor * 100) + ')</div>' +
+            '<div style="margin-top:8px;color:#cbd5e1;font-size:12px"><b>Hesap adresi:</b> ' + ha.adres + '<br><b>Levha adresi:</b> ' + m.rec.adres + '</div>' +
+            '<div style="margin-top:6px;font-size:11px;color:#9aa6c0">Eşleşen: ' + s.eslesen + '/' + s.toplam + ' kelime · ' + (kr.islenir ? 'Bu mükellef İŞLENEBİLİR' : '⛔ Adres tutmuyor — İŞLENMEMELİ') + '</div>';
+        });
+      }
       const btn = document.getElementById('__adrBtn');
       if (btn && m) btn.onclick = () => {
         const val = document.getElementById('__adrTest').value;
