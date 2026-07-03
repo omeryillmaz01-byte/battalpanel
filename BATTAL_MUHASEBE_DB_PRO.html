@@ -793,6 +793,20 @@ const SINIF_KURALLAR = [
 ];
 
 /* ════════════════════════════════════════════════════════════════════
+   SMM (SERBEST MESLEK) — GVK Md. 68 GİDER ALT KODLARI
+   İşletme mükellefleri GVK Md. 40 (tür kodu 4) kullanır; serbest meslek
+   erbabı GVK Md. 68 (tür kodu 3) kullanır ve alt kodları FARKLIDIR.
+   Sınıf adı (SINIF_KURALLAR'daki 'sinif') -> GVK 68 alt kodu eşlemesi.
+   Öğrenildikçe eklenir (eklentide "Belgeyi Güncelle" ile yakalanan kod).
+   ════════════════════════════════════════════════════════════════════ */
+const SMM_TUR_KODU = '3'; // Serbest Meslek Kazancına Ait Giderler (GVK Md. 68)
+const SMM_GIDER_KOD = {
+  'Elektrik': {altKod:2, altAd:'Elektrik Giderleri (GVK 68/1)'}
+  // Öğrenilecek: Doğalgaz, Telefon+ÖİV, Diğer Hizmet, Su, Kira, Ofis (Temizlik), Ulaşım...
+};
+try{ Object.assign(SMM_GIDER_KOD, JSON.parse(localStorage.getItem('smmGiderKodlari')||'{}')); }catch(e){}
+
+/* ════════════════════════════════════════════════════════════════════
    TEDARİKÇİ ÖZEL EŞLEŞTİRME (VKN bazlı)
    Genel regex kurallarının yanılabileceği durumlar için — kullanıcı
    tarafından doğrulanmış gerçek bilgi, tahmin/varsayım DEĞİL.
@@ -1297,7 +1311,17 @@ const App = {
         sinif='Sarf Malzeme'; altKod=0; altAd='Diğer Sarf Malzeme Giderleri (GVK 40/1)';
       }
       r.sinif=sinif; r.altKod=altKod; r.altAd=altAd; r.stopajGider=stopajGider; r.hasOIV=hasOIV; r.sabitKiymet=sabitKiymet;
-      if(altKod===0 && !sabitKiymet && !r.malAlisRow && sinif!=='🚗 ARAÇ (elle kontrol)' && sinif!=='🔞 ÖZEL ÜRÜN (elle kontrol)')u.push('Kod henüz yok — Defter Beyan\'da Gider Ekle\'de dropdown\'dan seç');
+      // ── SMM (Serbest Meslek) GVK 68 dönüşümü ──
+      // Serbest meslekte gider türü GVK Md.40 değil GVK Md.68'dir → tür kodu 3, alt kodlar farklı.
+      // İşletme (GVK 40) kodunu, öğrenilmiş SMM (GVK 68) karşılığıyla değiştir; yoksa gönderme.
+      if(m && m.tip==='SMM' && !r.malAlisRow && !sabitKiymet && sinif!=='Özel İletişim Vergisi' && !/elle kontrol/i.test(sinif)){
+        const sk = SMM_GIDER_KOD[sinif];
+        r.giderTuruKodu = SMM_TUR_KODU;
+        if(sk && sk.altKod>0){ r.altKod=sk.altKod; r.altAd=sk.altAd; altKod=sk.altKod; }
+        else { r.altKod=0; altKod=0; r.smmKodYok=sinif; } // GVK 68 karşılığı öğrenilmedi → atla
+      }
+      if(r.smmKodYok)u.push('SMM (GVK 68) kodu yok: "'+r.smmKodYok+'" — Defter Beyan\'da 1 kez elle gir, kod yakalansın');
+      else if(altKod===0 && !sabitKiymet && !r.malAlisRow && sinif!=='🚗 ARAÇ (elle kontrol)' && sinif!=='🔞 ÖZEL ÜRÜN (elle kontrol)')u.push('Kod henüz yok — Defter Beyan\'da Gider Ekle\'de dropdown\'dan seç');
       if(sinif==='🚗 ARAÇ (elle kontrol)')u.push('🚗 ARAÇ — otomatik gönderilmez, elle kontrol et');
       if(sinif==='🔞 ÖZEL ÜRÜN (elle kontrol)')u.push('🔞 ALKOL/SİGARA/KİŞİSEL BAKIM — otomatik gönderilmez, elle kontrol et');
       if(sabitKiymet)u.push('🏛️ SABİT KIYMET (>12.000) — Aktifleştirme menüsünden elle işlenmeli, otomatik gönderilmez');
