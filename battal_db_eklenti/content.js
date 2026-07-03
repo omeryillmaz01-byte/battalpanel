@@ -39,6 +39,142 @@
 
   const chip = (t, n, c) => '<span style="display:inline-block;background:' + c + ';padding:6px 12px;border-radius:20px;margin:0 8px 8px 0;font-weight:700">' + t + ': ' + n + '</span>';
 
+  /* ════════════════════════════════════════════════════════════
+     LEVHA REGISTRY + ADRES/KİMLİK KARŞILAŞTIRMA MOTORU
+     Vergi levhalarından okunan kayıtlı adres + VKN/TCKN.
+     Amaç: çekilen faturanın kimlik/adresi levhayla tutmuyorsa UYAR,
+     işleme sokma. "birebir tutmasın lazım — tutmayanları işlemeyeceğiz"
+     ──────────────────────────────────────────────────────────── */
+    const LEVHA = {
+      '1500138444': { ad: 'Taner Battal', tckn: '24679499156', vd: 'BAYRAMPAŞA', nace: '692001', adres: 'TERAZİDERE MAH. TAŞ SK. BATTAL AP NO: 5 İÇ KAPI NO: 2 BAYRAMPAŞA/ İSTANBUL' },
+      '1500360006': { ad: 'Emir Battal', tckn: '27286976096', vd: 'BEŞİKTAŞ', nace: '691003', adres: 'ABBASAĞA MAH. KEŞŞAF SK. ŞATIROĞLU IS MERKEZI NO: 4 İÇ KAPI NO: 10 BEŞİKTAŞ/ İSTANBUL' },
+      '6630177279': { ad: 'Müge Özarmağan', tckn: '47707497320', vd: 'MECİDİYEKÖY', nace: '691003', adres: 'MEŞRUTİYET MAH. VALİ KONAĞI CAD. POLAT APT NO: 99 İÇ KAPI NO: 10 YOK/ ŞİŞLİ/ İSTANBUL' },
+      '1500459508': { ad: 'Mert Tufan Battal', tckn: '26929736554', vd: 'MECİDİYEKÖY', nace: '862303', adres: 'TEŞVİKİYE MAH. NİŞANTAŞI IHLAMUR YOLU SK. BELDE APT. NO: 1 İÇ KAPI NO: 5 ŞİŞLİ/ İSTANBUL' },
+      '3750072366': { ad: 'Cihan Güneş Ertürk', tckn: '40402335348', vd: 'GÖZTEPE', nace: '862202', adres: 'GÖZTEPE MAH. TEPEGÖZ SK. IKAR IŞ MERKEZI NO: 1 İÇ KAPI NO: 7 KADIKÖY/ İSTANBUL' },
+      '1500127919': { ad: 'İskender Mehmet Nuri Battal', tckn: '26968735242', vd: 'MECİDİYEKÖY', nace: '862202', adres: 'MEŞRUTİYET MAH VALİKONAĞI CAD NO: 83 İÇ KAPI NO: 5 ŞİŞLİ/ İSTANBUL' },
+      '8520482776': { ad: 'Aylin Topçu Erdinç', tckn: '11681662708', vd: 'BAKIRKÖY', nace: '869300', adres: 'KARTALTEPE MAH. ŞEHİT ER RIDVAN MERT SK. GURSESLI SITESI A1BLOK NO: 4/2 İÇ KAPI NO: 4 BAKIRKÖY/ İSTANBUL' },
+      '32893788086': { ad: 'Serra Hekimoğlu', tckn: '32893788086', vd: 'MECİDİYEKÖY', nace: '862303', adres: 'TEŞVİKİYE MAH. NİŞANTAŞI IHLAMUR YOLU SK. BELDE APT. NO: 1 İÇ KAPI NO: 5 ŞİŞLİ/ İSTANBUL' },
+      '32635597426': { ad: 'Suyum Bige Tilkici', tckn: '32635597426', vd: 'GÖZTEPE', nace: '691003', adres: 'GÖZTEPE MAH. TAŞMEKTEP SK. NUR NO: 21 İÇ KAPI NO: 17 KADIKÖY/ İSTANBUL' },
+      '3750384725': { ad: 'Çağrı Ertürk', tckn: '40396335508', vd: 'GÖZTEPE', nace: '742027', adres: 'ZÜHTÜPAŞA MAH. KOLEJ SK. KISMET APT NO: 11 İÇ KAPI NO: 5 KADIKÖY/ İSTANBUL' },
+      '2610511823': { ad: 'Yakup Çoruh', tckn: '37900621974', vd: 'MERTER', nace: '683101', adres: 'BAHÇELİEVLER MAH. RESSAM HALİM SK. KADİR HAS NO: 7 İÇ KAPI NO: 33 BAHÇELİEVLER/ İSTANBUL' },
+      '3460330305': { ad: 'Altuğ Erden', tckn: '14558014020', vd: 'ÜSKÜDAR', nace: '472704', adres: 'İCADİYE MAH. CEMİL MERİÇ SK. KOC NO: 23 A ÜSKÜDAR/ İSTANBUL' },
+      '2640193570': { ad: 'Muzaffer Murat Çubukçuoğlu', tckn: '41167543450', vd: 'ÜSKÜDAR', nace: '472704', adres: 'SELİMİYE MAH. HAREM İSKELESİ CAD. HERA APT. NO: 13 İÇ KAPI NO: 1 ÜSKÜDAR/ İSTANBUL' },
+      '7680418539': { ad: 'Dilek Öztürk', tckn: '43684215698', vd: 'ÜSKÜDAR', nace: '479114', adres: 'ACIBADEM MAH. ÇEÇEN SK. B 10 BLOK NO: 19 H İÇ KAPI NO: 8 ÜSKÜDAR/ İSTANBUL' }
+    };
+    // Kimlik (VKN veya TCKN) -> kayıt. Hem anahtar hem tckn üzerinden erişim.
+    const LEVHA_BY_ID = {};
+    Object.keys(LEVHA).forEach(k => { LEVHA_BY_ID[k] = LEVHA[k]; const t = LEVHA[k].tckn; if (t) LEVHA_BY_ID[t] = LEVHA[k]; });
+
+    // Türkçe adres normalizasyonu: TR->ASCII, kısaltma açımı, noktalama temizliği.
+    const trAscii = s => (s || '').toString()
+      .toLocaleUpperCase('tr')
+      .replace(/İ/g, 'I').replace(/Ş/g, 'S').replace(/Ğ/g, 'G').replace(/Ü/g, 'U').replace(/Ö/g, 'O').replace(/Ç/g, 'C');
+    const KIS = [
+      [/\bMAHALLESI\b|\bMAH\b|\bMH\b/g, 'MAHALLE'],
+      [/\bCADDESI\b|\bCAD\b|\bCD\b/g, 'CADDE'],
+      [/\bSOKAK\b|\bSOKAGI\b|\bSOK\b|\bSK\b/g, 'SOKAK'],
+      [/\bBULVARI\b|\bBULV\b|\bBLV\b/g, 'BULVAR'],
+      [/\bAPARTMANI\b|\bAPARTMAN\b|\bAPT\b|\bAP\b/g, 'APARTMAN'],
+      [/\bSITESI\b|\bSIT\b/g, 'SITE'],
+      [/\bIS\s*MERKEZI\b|\bISMERKEZI\b|\bIS\s*MRK\b/g, 'ISMERKEZI'],
+      [/\bNUMARA\b|\bNO\b/g, 'NO'],
+      [/\bIC\s*KAPI\b|\bDAIRE\b|\bDAIRESI\b|\bDS\b|\bDR\b/g, 'ICKAPI'],
+      [/\bBLOK\b|\bBLK\b/g, 'BLOK'],
+      [/\bISTANBUL\b|\bIST\b/g, 'ISTANBUL']
+    ];
+    const DUR = new Set(['NO', 'ICKAPI', 'BLOK', 'A', 'B', 'C', 'D', 'YOK', 'VE', 'ISTANBUL']); // gürültü/az ayırt edici
+    function adresNorm(a) {
+      let s = trAscii(a).replace(/[.,;:/\\()\-]/g, ' ').replace(/\s+/g, ' ').trim();
+      KIS.forEach(([re, to]) => { s = s.replace(re, to); });
+      return s.replace(/\s+/g, ' ').trim();
+    }
+    // Anlamlı token kümesi (kısa/gürültü at, ama numaraları KORU — no/kapı önemli)
+    function anlamliTokens(a) {
+      const raw = adresNorm(a).split(' ').filter(Boolean);
+      return raw.filter(t => (t.length > 1 && !DUR.has(t)) || /^\d/.test(t));
+    }
+    // İki adres benzerliği: 0..1 (levha token'larının faturada bulunma oranı, ağırlıklı).
+    function adresBenzer(levhaAdres, faturaAdres) {
+      const L = anlamliTokens(levhaAdres), F = new Set(anlamliTokens(faturaAdres));
+      if (!L.length || !F.size) return { skor: 0, eslesen: 0, toplam: L.length };
+      let hit = 0; L.forEach(t => { if (F.has(t)) hit++; });
+      return { skor: hit / L.length, eslesen: hit, toplam: L.length };
+    }
+    // Sayfadaki metinden aktif mükellefi (banner/isim) tespit et.
+    function aktifMukellef() {
+      const alanlar = [];
+      ['.dbs-navbar__content', '.navbar', 'header', '#header', '.user-info', '.top-bar', '.page-header'].forEach(sel => {
+        document.querySelectorAll(sel).forEach(e => { const t = (e.innerText || '').trim(); if (t && t.length < 400) alanlar.push(t); });
+      });
+      alanlar.push((document.title || ''));
+      const metin = trAscii(alanlar.join(' | '));
+      // 1) Kimlik no eşleşmesi (en güvenilir)
+      const idler = metin.match(/\b\d{10,11}\b/g) || [];
+      for (const id of idler) { if (LEVHA_BY_ID[id]) return { vkn: id, rec: LEVHA_BY_ID[id], yol: 'kimlik-no' }; }
+      // 2) İsim token eşleşmesi
+      let best = null, bestSkor = 0;
+      Object.keys(LEVHA).forEach(k => {
+        const adT = trAscii(LEVHA[k].ad).split(' ').filter(x => x.length > 2);
+        if (!adT.length) return;
+        let hit = 0; adT.forEach(t => { if (metin.includes(t)) hit++; });
+        const skor = hit / adT.length;
+        if (skor > bestSkor) { bestSkor = skor; best = { vkn: k, rec: LEVHA[k], yol: 'isim', skor: skor }; }
+      });
+      return (best && bestSkor >= 0.6) ? best : null;
+    }
+
+    // Skoru renge/etikete çevir. birebir≈1, tolerans var ama düşükse RED.
+    function adresKarar(skor) {
+      if (skor >= 0.85) return { renk: '#10b981', bg: 'rgba(16,185,129,.12)', et: '✅ TUTUYOR', islenir: true };
+      if (skor >= 0.6) return { renk: '#f59e0b', bg: 'rgba(245,158,11,.12)', et: '⚠️ ŞÜPHELİ — KONTROL ET', islenir: false };
+      return { renk: '#ef4444', bg: 'rgba(239,68,68,.12)', et: '⛔ TUTMUYOR — İŞLEME', islenir: false };
+    }
+
+    // 🔒 Kimlik/Adres Kontrol ekranı (ortak — DB + Uyumsoft)
+    function kimlikKontrol() {
+      const bar = overlayAc('🔒 Kimlik / Adres Kontrol');
+      const m = aktifMukellef();
+      let h = '';
+      if (!m) {
+        h += '<div style="padding:14px;background:rgba(239,68,68,.12);border:1px solid #ef4444;border-radius:10px;color:#fca5a5;font-size:13px">' +
+          '⛔ <b>Aktif hesap tanınamadı.</b> Sayfadaki isim/kimlik no kayıtlı 14 levhadan biriyle eşleşmedi. ' +
+          'Bu hesap panelde yoksa <b>işlem yapma</b> — önce levhasını ekle.</div>';
+      } else {
+        const r = m.rec;
+        h += '<div style="padding:14px;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.4);border-radius:10px;margin-bottom:14px">' +
+          '<div style="font-size:15px;color:#6ee7b7;font-weight:800;margin-bottom:8px">✅ TANINDI: ' + r.ad + '</div>' +
+          '<div style="font-size:12.5px;color:#cbd5e1;line-height:1.8">' +
+          '<b>VKN/Anahtar:</b> ' + m.vkn + ' &nbsp;·&nbsp; <b>TCKN:</b> ' + (r.tckn || '-') + '<br>' +
+          '<b>Vergi Dairesi:</b> ' + r.vd + ' &nbsp;·&nbsp; <b>NACE:</b> ' + r.nace + '<br>' +
+          '<b>Levha Adresi:</b> ' + r.adres + '<br>' +
+          '<span style="color:#9aa6c0;font-size:11px">Tespit yolu: ' + m.yol + (m.skor ? ' (%' + Math.round(m.skor * 100) + ')' : '') + '</span>' +
+          '</div></div>';
+        // Adres test aracı — örnek fatura gelmeden normalizer'ı kalibre etmek için
+        h += '<div style="padding:14px;background:#0f1830;border:1px solid #2a3550;border-radius:10px">' +
+          '<div style="font-weight:700;color:#d4af37;margin-bottom:8px">🧪 Adres Karşılaştırma Testi</div>' +
+          '<div style="font-size:12px;color:#9aa6c0;margin-bottom:8px">Faturadaki adresi buraya yapıştır → levha ile birebir tutuyor mu göreceksin.</div>' +
+          '<textarea id="__adrTest" style="width:100%;height:70px;background:#0b1224;color:#e8edf5;border:1px solid #2a3550;border-radius:8px;padding:10px;font-size:12px;box-sizing:border-box" placeholder="Fatura adresini yapıştır…"></textarea>' +
+          '<button id="__adrBtn" style="margin-top:8px;background:#d4af37;color:#0b1224;border:0;padding:9px 16px;border-radius:8px;font-weight:800;cursor:pointer">Karşılaştır</button>' +
+          '<div id="__adrSonuc" style="margin-top:10px"></div></div>';
+      }
+      // Tüm registry özeti
+      h += '<div style="margin-top:16px;overflow:auto;border:1px solid #2a3550;border-radius:8px"><table style="width:100%;border-collapse:collapse;font-size:11.5px"><thead><tr style="background:#141c2e;text-align:left"><th style="padding:7px">Mükellef</th><th style="padding:7px">VKN/Anahtar</th><th style="padding:7px">TCKN</th><th style="padding:7px">VD</th><th style="padding:7px">Levha Adresi</th></tr></thead><tbody>';
+      Object.keys(LEVHA).forEach(k => { const r = LEVHA[k]; const akt = m && m.vkn === k; h += '<tr style="border-top:1px solid #1f2840;' + (akt ? 'background:rgba(16,185,129,.08)' : '') + '"><td style="padding:6px">' + (akt ? '▶ ' : '') + r.ad + '</td><td style="padding:6px">' + k + '</td><td style="padding:6px">' + (r.tckn || '-') + '</td><td style="padding:6px">' + r.vd + '</td><td style="padding:6px;color:#9aa6c0">' + r.adres + '</td></tr>'; });
+      h += '</tbody></table></div>';
+      bar.innerHTML = h;
+      const btn = document.getElementById('__adrBtn');
+      if (btn && m) btn.onclick = () => {
+        const val = document.getElementById('__adrTest').value;
+        const s = adresBenzer(m.rec.adres, val);
+        const kr = adresKarar(s.skor);
+        document.getElementById('__adrSonuc').innerHTML =
+          '<div style="padding:12px;background:' + kr.bg + ';border:1px solid ' + kr.renk + ';border-radius:8px">' +
+          '<div style="font-size:15px;font-weight:800;color:' + kr.renk + '">' + kr.et + ' &nbsp; (%' + Math.round(s.skor * 100) + ')</div>' +
+          '<div style="font-size:11.5px;color:#9aa6c0;margin-top:6px">Eşleşen: ' + s.eslesen + '/' + s.toplam + ' anlamlı kelime<br>' +
+          'Levha (norm): ' + adresNorm(m.rec.adres) + '<br>Fatura (norm): ' + adresNorm(val) + '</div></div>';
+      };
+    }
+
   /* ════════════════════ DEFTER BEYAN ════════════════════ */
   if (/defterbeyan\.gov\.tr/.test(host)) {
     const B = 'https://backend-p.defterbeyan.gov.tr/rs';
@@ -640,6 +776,7 @@
       butonEkle('📊 Gelir Kontrol', gelirKontrol, 'linear-gradient(135deg,#d4af37,#b8941f)', '__glBtn', 132);
       butonEkle('📤 Giden (Satış) Gönder', gidenGonder, 'linear-gradient(135deg,#60a5fa,#2563eb)', '__gdGonderBtn', 188);
       butonEkle('📋 e-SMM Eksik Bul', esmmEksik, 'linear-gradient(135deg,#34d399,#059669)', '__esmmBtn', 244);
+      butonEkle('🔒 Kimlik/Adres Kontrol', kimlikKontrol, 'linear-gradient(135deg,#a78bfa,#7c3aed)', '__kimlikBtn', 300);
     };
     kur();
     setInterval(kur, 2000);
@@ -759,6 +896,7 @@
     const kurUy = () => {
       butonEkle('📥 Gelen Faturaları Al', calistir, 'linear-gradient(135deg,#6ee7b7,#10b981)', '__uyGelenBtn', 20);
       butonEkle('📤 Giden Faturaları Al', calistirGiden, 'linear-gradient(135deg,#60a5fa,#2563eb)', '__uyGidenBtn', 76);
+      butonEkle('🔒 Kimlik/Adres Kontrol', kimlikKontrol, 'linear-gradient(135deg,#a78bfa,#7c3aed)', '__kimlikBtn', 132);
     };
     kurUy();
     setInterval(kurUy, 2000);
