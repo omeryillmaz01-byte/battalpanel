@@ -1159,8 +1159,12 @@
           if (document.body && document.querySelector('.dbs-navbar__content, .navbar, header')) {
             clearInterval(iv);
             sessionStorage.setItem('__sihirbazDBRun', '1');
-            try { chrome.storage.local.set({ sihirbaz: { asama: 'ozet', ts: Date.now() } }); } catch(e){}
-            eksikGiderGonder();
+            chrome.storage.local.get('sihirbaz', ss => {
+              const asama = (ss && ss.sihirbaz && ss.sihirbaz.tip) || 'alis';
+              try { chrome.storage.local.set({ sihirbaz: { asama: 'ozet', ts: Date.now() } }); } catch(e){}
+              if (asama === 'gelir') gelirKontrol();
+              else eksikGiderGonder();
+            });
           }
         }, 1000);
       });
@@ -1560,10 +1564,26 @@
       document.getElementById('__sihIptal').onclick = () => { try{ chrome.storage.local.remove('sihirbaz'); }catch(e){}; bar3.remove(); };
     }
 
+    // 🧙 GELİR SİHİRBAZI (portal.uyumsoft) — Giden faturalar bu portalda yok,
+    // sadece kullanıcıyı doğru sayfaya yönlendirir + DB'ye geç.
+    async function sihirbazGelirPortal() {
+      const bar = overlayAc('🧙 Gelir Sihirbazı');
+      bar.innerHTML =
+        '<div style="padding:12px;background:rgba(252,211,77,.1);border:1px solid rgba(252,211,77,.3);border-radius:10px;color:#fcd34d;font-size:13px;line-height:1.7;margin-bottom:14px">'+
+        'Giden faturalar bu portalda görüntülenmiyor. Uyumsoft <b>edonusum.uyum.com.tr</b> sayfasında <b>Giden Fatura</b> listesine geç, oradaki <b>🧙 Tam Otomatik (Gelir)</b> butonuna bas.<br><br>'+
+        'Alternatif: Direkt Defter Beyan\'da Gelir Kontrol\'ü açabilirim.</div>'+
+        '<button id="__sihGoDBGP" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8);color:#fff;border:0;padding:12px 24px;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer">▶️ Defter Beyan · Gelir Kontrol</button>';
+      document.getElementById('__sihGoDBGP').onclick = async () => {
+        try { await chrome.storage.local.set({ sihirbaz: { asama:'db', tip:'gelir', ts:Date.now() } }); } catch(e){}
+        window.open('https://portal.defterbeyan.gov.tr/#sihirbaz=gelir', '_blank');
+      };
+    }
+
     const kurPortal = () => {
       butonEkle('🧙 Tam Otomatik (Alış)', sihirbazAlisPortal, 'linear-gradient(135deg,#a855f7,#7c3aed)', '__sihPortalBtn', 20);
-      butonEkle('🔎 Alıcı Bilgi Kontrol', aliciKontrol, 'linear-gradient(135deg,#a78bfa,#7c3aed)', '__akBtn', 76);
-      butonEkle('📦 Fatura Detay + Sınıfla', faturaDetayCekVeSinifla, 'linear-gradient(135deg,#f59e0b,#d97706)', '__fdBtn', 132);
+      butonEkle('🧙 Gelir Sihirbazı', sihirbazGelirPortal, 'linear-gradient(135deg,#3b82f6,#1d4ed8)', '__sihPortalGelBtn', 76);
+      butonEkle('🔎 Alıcı Bilgi Kontrol', aliciKontrol, 'linear-gradient(135deg,#a78bfa,#7c3aed)', '__akBtn', 132);
+      butonEkle('📦 Fatura Detay + Sınıfla', faturaDetayCekVeSinifla, 'linear-gradient(135deg,#f59e0b,#d97706)', '__fdBtn', 188);
     };
     kurPortal();
     setInterval(kurPortal, 2000);
@@ -1726,11 +1746,31 @@
       document.getElementById('__sihIptal').onclick = () => { try{ chrome.storage.local.remove('sihirbaz'); }catch(e){}; bar3.remove(); };
     }
 
+    // 🧙 GELİR SİHİRBAZI · Uyumsoft giden fatura sayfası için
+    async function sihirbazGelir() {
+      const bar = overlayAc('🧙 Tam Otomatik Gelir Kontrol Sihirbazı');
+      bar.innerHTML = '<div style="font-size:13.5px;line-height:1.9;color:#93c5fd"><b>Adım 1/2:</b> Giden (satış) faturalar çekiliyor…</div>';
+      try { await calistirGiden(); } catch(e){ bar.innerHTML='<span style="color:#fca5a5">Giden fatura çekilemedi: '+e.message+'</span>'; return; }
+      const bar2 = overlayAc('🧙 Gelir Sihirbazı · Adım 2/2');
+      bar2.innerHTML =
+        '<div style="padding:14px;background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.35);border-radius:10px;color:#93c5fd;font-size:14px;font-weight:700;margin-bottom:14px">'+
+        '✅ Uyumsoft giden faturalar alındı.</div>'+
+        '<div style="font-size:13px;color:#e8edf5;line-height:1.7;margin-bottom:16px">Şimdi <b>Defter Beyan</b>\'a geçilecek. Orada <b>Gelir Kontrol</b> paneli otomatik açılacak; Uyumsoft ↔ DB gelir karşılaştırması ve eksik satış faturaları görünecek.</div>'+
+        '<button id="__sihGoDBG" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8);color:#fff;border:0;padding:14px 28px;border-radius:10px;font-size:15px;font-weight:800;cursor:pointer">▶️ Defter Beyan · Gelir Kontrol</button>'+
+        ' <button id="__sihIptalG" style="background:transparent;color:#9aa6c0;border:1px solid #3a3550;padding:14px 20px;border-radius:10px;font-size:13px;cursor:pointer;margin-left:8px">İptal</button>';
+      document.getElementById('__sihGoDBG').onclick = async () => {
+        try { await chrome.storage.local.set({ sihirbaz: { asama:'db', tip:'gelir', ts:Date.now() } }); } catch(e){}
+        window.open('https://portal.defterbeyan.gov.tr/#sihirbaz=gelir', '_blank');
+      };
+      document.getElementById('__sihIptalG').onclick = () => { try{ chrome.storage.local.remove('sihirbaz'); }catch(e){}; bar2.remove(); };
+    }
+
     const kurUy = () => {
       butonEkle('🧙 Tam Otomatik (Alış)', sihirbazAlis, 'linear-gradient(135deg,#a855f7,#7c3aed)', '__uySihBtn', 20);
-      butonEkle('📥 Gelen Faturaları Al', calistir, 'linear-gradient(135deg,#6ee7b7,#10b981)', '__uyGelenBtn', 76);
-      butonEkle('📤 Giden Faturaları Al', calistirGiden, 'linear-gradient(135deg,#60a5fa,#2563eb)', '__uyGidenBtn', 132);
-      butonEkle('🔒 Kimlik/Adres Kontrol', kimlikKontrol, 'linear-gradient(135deg,#a78bfa,#7c3aed)', '__kimlikBtn', 188);
+      butonEkle('🧙 Tam Otomatik (Gelir)', sihirbazGelir, 'linear-gradient(135deg,#3b82f6,#1d4ed8)', '__uySihGelBtn', 76);
+      butonEkle('📥 Gelen Faturaları Al', calistir, 'linear-gradient(135deg,#6ee7b7,#10b981)', '__uyGelenBtn', 132);
+      butonEkle('📤 Giden Faturaları Al', calistirGiden, 'linear-gradient(135deg,#60a5fa,#2563eb)', '__uyGidenBtn', 188);
+      butonEkle('🔒 Kimlik/Adres Kontrol', kimlikKontrol, 'linear-gradient(135deg,#a78bfa,#7c3aed)', '__kimlikBtn', 244);
     };
     kurUy();
     setInterval(kurUy, 2000);
