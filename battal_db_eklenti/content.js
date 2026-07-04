@@ -570,10 +570,11 @@
           }).join('<br>') + '</div>';
       }
 
-      // 📅 Tarih üzerine yaz — geçmiş dönem KDV'si beyan edildiyse cari döneme çekmek için.
-      // Varsayılan: cari ayın 1'i.
+      // 📅 Tarih üzerine yaz — geçmiş dönem KDV'si beyan edildiyse henüz beyan edilmemiş
+      // (bir önceki) döneme çekmek için. Varsayılan: bir önceki ayın 1'i.
       const bugun = new Date();
-      const cariAyIlk = bugun.getFullYear() + '-' + ('0'+(bugun.getMonth()+1)).slice(-2) + '-01';
+      const oncekiAy = new Date(bugun.getFullYear(), bugun.getMonth() - 1, 1);
+      const cariAyIlk = oncekiAy.getFullYear() + '-' + ('0'+(oncekiAy.getMonth()+1)).slice(-2) + '-01';
       h += '<div style="margin-bottom:12px;padding:10px 14px;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.3);border-radius:8px;color:#93c5fd;font-size:12.5px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">'+
         '<label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="__tarihEz" checked style="width:16px;height:16px;cursor:pointer"> Tüm fatura tarihlerini şu tarihle üzerine yaz:</label>'+
         '<input type="date" id="__tarihEzVal" value="'+cariAyIlk+'" style="background:#0b1020;color:#e8edf5;border:1px solid #3a3550;padding:6px 10px;border-radius:6px;font-size:13px">'+
