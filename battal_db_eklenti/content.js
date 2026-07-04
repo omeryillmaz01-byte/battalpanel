@@ -1007,41 +1007,116 @@
       bar.innerHTML = '<div id="__akDurum">🔎 ' + list.length + ' fatura kontrol ediliyor… 0/' + list.length + '</div><div id="__akRows" style="margin-top:10px"></div>';
       const sonuc = [];
       let bitti = 0;
+      // Uyumsoft sayfasındaki downloadInvoice fonksiyonunun kaynak kodundan
+      // gerçek XML indirme URL kalıbını bul (dinamik keşif).
+      let _xmlEndpoint = null;
+      function kesfetXmlEndpoint() {
+        if (_xmlEndpoint) return _xmlEndpoint;
+        // 1) Sayfadaki script etiketlerinde downloadInvoice fonksiyonunu ara
+        const scripts = document.querySelectorAll('script');
+        for (const sc of scripts) {
+          const src = sc.textContent || '';
+          // downloadInvoice veya DownloadInvoice içeren URL kalıpları
+          const m = src.match(/["'](\/[^"']*?[Dd]ownload[^"']*?[Ii]nvoice[^"']*?)["']/);
+          if (m) { _xmlEndpoint = m[1]; return _xmlEndpoint; }
+        }
+        // 2) href/onclick attribute'larında ara
+        document.querySelectorAll('[onclick*="download" i], a[href*="download" i]').forEach(el => {
+          if (_xmlEndpoint) return;
+          const t = (el.getAttribute('onclick') || '') + (el.getAttribute('href') || '');
+          const m2 = t.match(/["'](\/[^"']*?[Dd]ownload[^"']*?)["']/);
+          if (m2) _xmlEndpoint = m2[1];
+        });
+        // 3) Harici JS dosyalarını tara (sayfa yüklenirken cachelenen)
+        if (!_xmlEndpoint && typeof performance !== 'undefined') {
+          const jsDosyalar = performance.getEntriesByType('resource').filter(e => /\.js(\?|$)/i.test(e.name));
+          // Harici dosyaları çekmek maliyetli, sadece en kısa birkaçını dene
+          // (bu senkron olmak zorunda değil ama endpoint'i bulmak kritik)
+        }
+        return _xmlEndpoint;
+      }
+
+      // Endpoint'i keşfedip UUID ile URL oluştur
+      function xmlUrl(uuid) {
+        const ep = kesfetXmlEndpoint();
+        if (ep) {
+          // /Invoicebox/DownloadInvoice kalıbı → uuid ve isInbox parametrelerini ekle
+          if (ep.includes('{') || ep.includes('invoiceId')) {
+            return ep.replace(/\{[^}]+\}/g, uuid);
+          }
+          // /Something/DownloadInvoice → /Something/DownloadInvoice/uuid/True
+          return ep.replace(/\/+$/, '') + '/' + uuid + '/True';
+        }
+        return null;
+      }
+
       // XML'i birden fazla yoldan çekmeyi dene — hangisi AccountingCustomerParty içeriyorsa onu kullan
+      let _bulunanYol = null; // İlk başarılı yolu hatırla, sonrakilerde direkt onu kullan
+      window.__akDebug = []; // Debug: her denemeyi logla
       async function xmlCek(uuid) {
-        const yollar = [
-          '/GelenFaturaGoruntule/' + uuid + '/false',
+        const dinamikUrl = xmlUrl(uuid);
+        const yollar = _bulunanYol ? [_bulunanYol] : [
+          // Dinamik keşiften gelen URL (varsa) en başa
+          ...(dinamikUrl ? [dinamikUrl] : []),
+          // Uyumsoft portal standart yolları
           '/Invoicebox/DownloadInvoiceXml/' + uuid + '/True',
           '/Invoicebox/DownloadInvoice/' + uuid + '/True',
-          '/InvoiceBox/DownloadInvoiceXml?invoiceId=' + uuid + '&isInbox=True',
-          '/InvoiceBox/DownloadInvoice?invoiceId=' + uuid + '&isInbox=True',
-          '/Invoicebox/GetInvoiceContent/' + uuid + '/True',
-          '/api/Invoice/GetInvoiceXml/' + uuid
+          '/Common/DownloadInvoice/' + uuid + '/True',
+          '/InvoiceBox/DownloadInvoiceXml/' + uuid + '/True',
+          '/InvoiceBox/DownloadInvoice/' + uuid + '/True',
+          // Eski versiyon yolları
+          '/Invoicebox/GetInvoiceXml/' + uuid,
+          '/Invoice/DownloadXml/' + uuid + '?isInbox=true',
+          // Görüntüleme sayfası (XML gömülü olabilir)
+          '/GelenFaturaGoruntule/' + uuid + '/false'
         ];
-        for (const yol of yollar) {
+        // Mükerrer URL'leri at
+        const benzersiz = [...new Set(yollar.filter(Boolean))];
+        for (const yol of benzersiz) {
           try {
             const ctrl = new AbortController();
-            const tmr = setTimeout(() => ctrl.abort(), 12000);
+            const tmr = setTimeout(() => ctrl.abort(), 15000);
             const r = await fetch(yol, { credentials: 'include', signal: ctrl.signal });
             clearTimeout(tmr);
-            if (r.status !== 200) continue;
-            const txt = await r.text();
+            if (r.status === 404 || r.status === 405) { window.__akDebug.push({ uuid: uuid.slice(0,8), yol, durum: r.status }); continue; }
+            if (r.status !== 200) { window.__akDebug.push({ uuid: uuid.slice(0,8), yol, durum: r.status }); continue; }
+            const ct = (r.headers.get('content-type') || '').toLowerCase();
+            // Binary/dosya indirmeyse blob olarak oku ve text'e çevir
+            let txt;
+            if (ct.includes('octet-stream') || ct.includes('zip') || ct.includes('application/xml')) {
+              const blob = await r.blob();
+              txt = await blob.text();
+            } else {
+              txt = await r.text();
+            }
+            if (!txt || txt.length < 100) { window.__akDebug.push({ uuid: uuid.slice(0,8), yol, durum: r.status, boy: (txt||'').length, icerik: (txt||'').slice(0,200) }); continue; }
             const a = aliciAyikla(txt);
-            if (a && (a.tckn || a.vkn)) return { a, yol };
-          } catch (e) {}
+            if (a && (a.tckn || a.vkn)) {
+              _bulunanYol = yol;
+              window.__akDebug.push({ uuid: uuid.slice(0,8), yol, durum: 'BASARILI', alici: a.tckn || a.vkn });
+              return { a, yol };
+            }
+            window.__akDebug.push({ uuid: uuid.slice(0,8), yol, durum: r.status, boy: txt.length, xmlVar: txt.includes('Invoice'), acpVar: txt.includes('AccountingCustomerParty'), ilk200: txt.slice(0,200) });
+          } catch (e) { window.__akDebug.push({ uuid: uuid.slice(0,8), yol, hata: e.message }); continue; }
         }
         return null;
       }
 
       async function tekKontrol(f) {
         try {
+          // Önceki başarılı yol varsa UUID'yi güncelle
+          if (_bulunanYol) {
+            const uyarlanmis = _bulunanYol.replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i, f.uuid);
+            if (uyarlanmis !== _bulunanYol) _bulunanYol = uyarlanmis;
+          }
           const sonuc = await xmlCek(f.uuid);
-          if (!sonuc) return { f, uygun: false, sebep: 'XML/alıcı bloğu okunamadı (tüm yollar denendi)', detay: '' };
+          if (!sonuc) return { f, uygun: false, sebep: 'XML okunamadı — F12 Console\'da __akDebug yazıp sonucu at', detay: '' };
           const k = aliciKiyasla(sonuc.a);
           return { f, a: sonuc.a, uygun: k.uygun, sebep: k.sebep, detay: k.detay };
         } catch (e) { return { f, uygun: false, sebep: 'Hata: ' + e.message, detay: '' }; }
       }
-      for (let i = 0; i < list.length; i += 2) {
+      // Seri çalış (paralel yük portalı boğabilir)
+      for (let i = 0; i < list.length; i += 1) {
         const res = await Promise.all(list.slice(i, i + 2).map(tekKontrol));
         res.forEach(r => sonuc.push(r));
         bitti = Math.min(i + 4, list.length);
