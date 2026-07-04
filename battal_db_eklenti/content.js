@@ -1,5 +1,5 @@
 /* ════════════════════════════════════════════════════════════
-   BATTAL · Defter Beyan + Uyumsoft Kontrol — v2
+   BATTAL · Defter Beyan + Uyumsoft Kontrol — v3
    - Defter Beyan: gider kontrol (mukerrer/KDV/OIV) + Uyumsoft capraz eslestirme
    - Uyumsoft: gelen faturalari cek, eklenti hafizasina kaydet
    Salt-okuma: hicbir kayit eklenmez/silinmez.
@@ -67,6 +67,64 @@
     // Kimlik (VKN veya TCKN) -> kayıt. Hem anahtar hem tckn üzerinden erişim.
     const LEVHA_BY_ID = {};
     Object.keys(LEVHA).forEach(k => { LEVHA_BY_ID[k] = LEVHA[k]; const t = LEVHA[k].tckn; if (t) LEVHA_BY_ID[t] = LEVHA[k]; });
+
+    /* ═══ SINIFLANDIRMA KURALLARI (fatura açıklamasına/unvana göre gider alt türü) ═══ */
+    const SINIF_KURALLAR = [
+      {p:/i.?g.?d.?a.?ş|igdaş|gaz dağıt/i, sinif:'Doğalgaz', altKod:84, altAd:'Doğalgaz Giderleri (GVK 40/1)'},
+      {p:/enerjisa|bedaş|ayedaş|boğaziçi elektrik|elektrik perakende|elektrik dağıt/i, sinif:'Elektrik', altKod:0, altAd:'Elektrik Giderleri (GVK 40/1)'},
+      {p:/iski|aski|su dağıt|su şebek/i, sinif:'Su', altKod:83, altAd:'Su Giderleri (GVK 40/1)'},
+      {p:/turkcell|vodafone|türk ?telekom|ttnet|superonline|millennium|net|telefon|tt ?mob[iı]l|andromeda|dijital platform|d.?smart|digiturk|turksat|kablonet|haberleşme|iletişim hizmet/i, sinif:'Telefon+ÖİV', altKod:87, altAd:'Telefon Giderleri (GVK 40/1)', oiv:true},
+      {p:/kargo|aras|mng|yurtiçi kargo|ptt kargo|sürat|hepsijet|sendeo|trendyol express/i, sinif:'Kargo', altKod:193, altAd:'Kargo Posta ve Kurye Giderleri (GVK 40/1)'},
+      {p:/google ireland|meta platforms|facebook|instagram reklam/i, sinif:'İnternet Reklam', altKod:0, altAd:'İnternet Reklam Hizmet Alım Giderleri (GVK 40/1)'},
+      {p:/dsm grup|d-market|hepsiburada komisyon|trendyol komisyon|n11|amazon komisyon|gittigid|pttavm|çiçek ?sepeti|pos komis/i, sinif:'Komisyon/POS', altKod:0, altAd:'Komisyon ve Pos Giderleri (GVK 40/1)'},
+      {p:/kira gideri|kiraladığı|gayrimenkul kira|işyeri kira/i, sinif:'Kira', altKod:0, altAd:'Kira Gideri (GVK 40/1)'},
+      {p:/enuygun|biletbank|biletall|seyahat|otobüs|uçak bileti|oto kiralama|taksi|uber|bitaksi|martı|hava yolu|airlines/i, sinif:'Ulaşım', altKod:0, altAd:'Seyahat ve Ulaşım Giderleri (GVK 40/4-5)'},
+      {p:/muhasebe|mali müşavir|smmm|ymm|battal taner/i, sinif:'Muhasebe', altKod:0, altAd:'Muhasebe/Mali Müşavirlik Giderleri (GVK 40/1)', stopaj:20},
+      {p:/avukat|hukuk büro|hukuk müşavir/i, sinif:'Avukatlık', altKod:0, altAd:'Avukatlık, Hukuk ve Müşavirlik Giderleri (GVK 40/1)', stopaj:20},
+      {p:/teknik servis|bakım onarım|tamir|servis hizmet/i, sinif:'Bakım/Onarım', altKod:0, altAd:'Normal Bakım Onarım Giderleri (GVK 40/1)'},
+      {p:/temizlik|hijyen/i, sinif:'Ofis (Temizlik)', altKod:0, altAd:'Ofis Giderleri (Çay, Kahve, Şeker, Temizlik vb.) (GVK 40/1)'},
+      {p:/yemek sepeti|getir\b|personel yemeği/i, sinif:'Yemek', altKod:90, altAd:'Gıda ve Yemek Harcamaları (GVK 40/1-40/2)'},
+      {p:/iş yemeği|ağırlama|temsil/i, sinif:'Temsil ve Ağırlama Gideri', altKod:97, altAd:'Temsil ve Ağırlama Gideri (İş yemeği vb.) (GVK 40/1)'},
+      {p:/akaryakıt|benzin|motorin|opet|shell|petrol ofisi|po petrol|aytemiz/i, sinif:'Akaryakıt', altKod:0, altAd:'Taşıt Akaryakıt Giderleri (GVK 40/1-40/5)'}
+    ];
+    const SMM_TUR_KODU = '3';
+    const SMM_GIDER_KOD = {
+      'Elektrik': {altKod:2, altAd:'Elektrik Giderleri (GVK 68/1)'},
+      'Telefon+ÖİV': {altKod:7, altAd:'Telefon, Faks, İnternet ve Diğer Haberleşme Giderleri (GVK 68/1)'},
+      'Özel İletişim Vergisi': {altKod:218, turKod:'5', altAd:'Özel İletişim Vergisi'},
+      'Doğalgaz': {altKod:30, altAd:'Yakıt, Doğalgaz ve Isı Giderleri (GVK 68/1)'}
+    };
+    const TEDARIKCI_OZEL = {
+      '3100018644': {sinif:'Mal Alışı', altKod:186, altAd:'Mal Alışı', turKod:'1'},
+      '5820492073': {sinif:'Yemek', altKod:90, altAd:'Gıda ve Yemek Harcamaları (GVK 40/1-40/2)', turKod:'4'}
+    };
+    const ARAC_RE = /tüvturk|tuvturk|muayene istasyon|akaryakıt|akaryakit|petrol ofisi|opet|shell|aytemiz|benzin|motorin|oto ?lastik|oto ?yıkama|oto ?servis|kasko|trafik sigorta|otopark|otoyol|hgs|ogs|araç ?bakım/i;
+    const KISISEL_RE = /alkol|içki|bira|şarap|votka|viski|rakı|sigara|tütün|kozmetik|parfüm|makyaj|kişisel bakım/i;
+
+    function faturaSinifla(unvan, vkn, matrah, nace) {
+      const txt = (unvan || '').toLocaleLowerCase('tr');
+      const ozel = TEDARIKCI_OZEL[vkn];
+      if (KISISEL_RE.test(txt)) return { sinif: '🔞 ÖZEL', altKod: 0, altAd: 'Elle kontrol', turKod: '4', otoGonder: false };
+      if (ARAC_RE.test(txt)) return { sinif: '🚗 ARAÇ', altKod: 0, altAd: 'Araç gideri — elle kontrol', turKod: '4', otoGonder: false };
+      if (ozel) {
+        if (ozel.turKod === '1') return { sinif: ozel.sinif, altKod: ozel.altKod, altAd: ozel.altAd, turKod: '1', otoGonder: true };
+        return { sinif: ozel.sinif, altKod: ozel.altKod, altAd: ozel.altAd, turKod: ozel.turKod || '4', otoGonder: true };
+      }
+      for (const rule of SINIF_KURALLAR) {
+        if (rule.p.test(txt)) {
+          const isSMM = (nace || '').startsWith('69') || (nace || '').startsWith('86');
+          let tK = '4', aK = rule.altKod, aAd = rule.altAd;
+          if (isSMM) {
+            const sk = SMM_GIDER_KOD[rule.sinif];
+            tK = SMM_TUR_KODU;
+            if (sk) { aK = sk.altKod; aAd = sk.altAd; }
+            else { aK = 0; }
+          }
+          return { sinif: rule.sinif, altKod: aK, altAd: aAd, turKod: tK, oiv: !!rule.oiv, stopaj: rule.stopaj || 0, otoGonder: aK > 0 };
+        }
+      }
+      return { sinif: 'Diğer Hizmet', altKod: 195, altAd: 'Diğer Hizmet Giderleri (GVK 40/1)', turKod: '4', otoGonder: true };
+    }
 
     // Türkçe adres normalizasyonu: TR->ASCII, kısaltma açımı, noktalama temizliği.
     const trAscii = s => (s || '').toString()
@@ -401,6 +459,188 @@
       const rowsHtml = rows.map(r => '<div style="padding:5px 0;border-top:1px solid #1f2840">' + (r.s === '✅' ? '<span style="color:#6ee7b7">✅</span>' : '<span style="color:#fca5a5">❌</span>') + ' ' + r.bno + (r.m ? ' — <span style="color:#fca5a5">' + r.m + '</span>' : '') + '</div>').join('');
       document.getElementById('__gonderStatus').innerHTML = '<b style="font-size:16px;color:' + (er ? '#fca5a5' : '#6ee7b7') + '">🎉 ' + paket.mukellefAdi + ' — Tamamlandı: ' + ok + '/' + paket.items.length + (er ? ' (' + er + ' hata)' : '') + '</b>';
       document.getElementById('__gonderRows').innerHTML = rowsHtml;
+    }
+
+    /* ── Eksik Giderleri Otomatik Gönder: Uyumsoft'ta "Fatura Detay + Sınıfla" ile
+       kaydedilen veriyi okur, DB gider listesini çeker, eksik faturaları otomatik gönderir. */
+    async function eksikGiderGonder() {
+      const bar = overlayAc('🚀 Eksik Giderleri Otomatik Gönder');
+      const kilit = await adresKilidi();
+      if (!kilit.gecer) { kilitRed(bar, kilit.mesaj); return; }
+      bar.textContent = 'Veriler okunuyor…';
+
+      // 1) Uyumsoft'ta sınıflandırılmış faturaları oku
+      let sinifData;
+      try {
+        const s = await chrome.storage.local.get('faturaSinif');
+        sinifData = s && s.faturaSinif;
+      } catch (e) {}
+      if (!sinifData || !sinifData.list || !sinifData.list.length) {
+        bar.innerHTML = '<div style="color:#fcd34d;line-height:1.8">⚠️ Sınıflandırılmış fatura verisi yok.<br><br>' +
+          '<b>Yap:</b> Önce <b>Uyumsoft portal</b>ına geç → Gelen Fatura sayfasında <b>📦 Fatura Detay + Sınıfla</b> butonuna bas → ' +
+          'sonra buraya dön ve tekrar bas.</div>';
+        return;
+      }
+      const yas = Math.round((Date.now() - sinifData.ts) / 60000);
+      const faturaListesi = sinifData.list.filter(r => !r.hata);
+
+      // 2) Alıcı kontrol RED listesini oku
+      let alkMap = {};
+      try { const s = await chrome.storage.local.get('aliciKontrol'); alkMap = (s.aliciKontrol && s.aliciKontrol.map) || {}; } catch (e) {}
+
+      // 3) Defter Beyan mevcut gider listesini çek
+      bar.textContent = 'Defter Beyan gider listesi çekiliyor…';
+      let R;
+      try { R = await pullDB(bar); } catch (e) { bar.innerHTML = '<span style="color:#fca5a5">Defter Beyan gider listesi çekilemedi: ' + e.message + '</span>'; return; }
+      const dbNos = new Set(R.all.map(r => norm(r.belgeSiraNo)).filter(Boolean));
+
+      // 4) Eksik + gönderilebilir faturaları bul
+      const eksik = [], zatenVar = [], redListe = [], elleKontrolListe = [];
+      faturaListesi.forEach(f => {
+        const fnoNorm = norm((f.fno || '').replace(/[^0-9A-Za-z]/g, ''));
+        if (!fnoNorm) return;
+        if (dbNos.has(fnoNorm)) { zatenVar.push(f); return; }
+        const alk = alkMap[fnoNorm];
+        if (alk && alk.uygun === false) { redListe.push(f); return; }
+        if (!f.otoGonder) { elleKontrolListe.push(f); return; }
+        eksik.push(f);
+      });
+
+      // Özet göster
+      let h = '<div style="margin-bottom:12px">' +
+        chip('Uyumsoft Fatura', faturaListesi.length, '#1e2f3a') +
+        chip('Defterde Var', zatenVar.length, '#1e3a2f') +
+        chip('EKSİK (gönderilebilir)', eksik.length, eksik.length ? '#1e3a2f' : '#1f2937') +
+        chip('Alıcı RED', redListe.length, redListe.length ? '#5b1a1a' : '#1f2937') +
+        chip('Elle Kontrol', elleKontrolListe.length, elleKontrolListe.length ? '#5b3a1a' : '#1f2937') +
+        '</div>';
+      h += '<div style="margin-bottom:6px;font-size:11.5px;color:#9aa6c0">Uyumsoft verisi ' + yas + ' dk önce alınmış · ' + sinifData.list.length + ' fatura</div>';
+
+      if (!eksik.length) {
+        h += '<div style="padding:16px;background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.4);border-radius:10px;color:#6ee7b7;font-size:15px;font-weight:700">' +
+          '✅ Tüm gönderilebilir faturalar zaten deftere girilmiş — EKSİK YOK!</div>';
+        if (elleKontrolListe.length) {
+          h += '<div style="margin-top:12px;padding:10px 14px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:8px;color:#fcd34d;font-size:12px">' +
+            '⚠️ ' + elleKontrolListe.length + ' fatura elle kontrol gerektirir (🚗 araç / 🔞 özel / kod yok):<br>' +
+            elleKontrolListe.slice(0, 15).map(f => f.fno + ' — ' + f.sinif + ' — ' + (f.saticiUnvan || '').slice(0, 30)).join('<br>') + '</div>';
+        }
+        bar.innerHTML = h;
+        return;
+      }
+
+      // Eksik fatura tablosu + gönder butonu
+      const topMatrah = eksik.reduce((a, r) => a + (r.matrah || 0), 0);
+      const topKdv = eksik.reduce((a, r) => a + (r.kdv || 0), 0);
+      h += '<div style="margin-bottom:12px">' + chip('Gönderilecek Matrah', '₺' + fmt(topMatrah), '#1e3a2f') + chip('Gönderilecek KDV', '₺' + fmt(topKdv), '#1e2f3a') + '</div>';
+
+      const cols = ['Fatura No', 'Tarih', 'Satıcı', 'VKN/TC', 'Matrah', 'KDV', 'KDV%', 'Sınıf', 'Alt Tür'];
+      h += '<div style="overflow:auto;max-height:300px;border:1px solid #2a3550;border-radius:8px;margin-bottom:12px"><table style="width:100%;border-collapse:collapse;font-size:11.5px"><thead><tr style="background:#141c2e;text-align:left;position:sticky;top:0">' + cols.map(x => '<th style="padding:7px">' + x + '</th>').join('') + '</tr></thead><tbody>';
+      eksik.forEach(r => {
+        h += '<tr style="border-top:1px solid #1f2840">' +
+          '<td style="padding:6px">' + (r.fno || '') + '</td>' +
+          '<td style="padding:6px">' + (r.tarih || '') + '</td>' +
+          '<td style="padding:6px">' + ((r.saticiUnvan || '').slice(0, 35)) + '</td>' +
+          '<td style="padding:6px">' + (r.saticiVkn || '') + '</td>' +
+          '<td style="padding:6px;text-align:right">' + fmt(r.matrah) + '</td>' +
+          '<td style="padding:6px;text-align:right">' + fmt(r.kdv) + '</td>' +
+          '<td style="padding:6px;text-align:right">' + (r.kdvOran || 0) + '</td>' +
+          '<td style="padding:6px;font-weight:700;color:#d4af37">' + (r.sinif || '') + '</td>' +
+          '<td style="padding:6px;font-size:10px">' + (r.altAd || '') + '</td></tr>';
+      });
+      h += '</tbody></table></div>';
+
+      if (elleKontrolListe.length) {
+        h += '<div style="margin-bottom:12px;padding:8px 12px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:8px;color:#fcd34d;font-size:12px">' +
+          '⚠️ ' + elleKontrolListe.length + ' fatura otomatik gönderilmeyecek (elle kontrol): ' +
+          elleKontrolListe.slice(0, 10).map(f => f.fno + ' (' + f.sinif + ')').join(', ') + '</div>';
+      }
+
+      h += '<button id="__eksikStart" style="background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:0;padding:14px 28px;border-radius:10px;font-size:15px;font-weight:800;cursor:pointer;box-shadow:0 4px 15px rgba(16,185,129,.3)">🚀 ' + eksik.length + ' Eksik Faturayı Gönder</button>';
+      h += '<div id="__eksikLog" style="margin-top:12px;font-family:Consolas,monospace;font-size:12px;max-height:340px;overflow:auto;background:#0b1020;padding:10px;border-radius:8px"></div>';
+      bar.innerHTML = h;
+
+      document.getElementById('__eksikStart').onclick = async () => {
+        document.getElementById('__eksikStart').disabled = true;
+        document.getElementById('__eksikStart').textContent = '⏳ Gönderiliyor…';
+        const logEl = document.getElementById('__eksikLog');
+        const elog = (t, c) => { const d = document.createElement('div'); d.style.color = c || '#9aa6c0'; d.textContent = t; logEl.appendChild(d); logEl.scrollTop = logEl.scrollHeight; };
+
+        const TK = tokenBul();
+        const H = { 'Content-Type': 'application/json; charset=utf-8' };
+        if (TK) H.Token = TK;
+        const iso = t => {
+          if (/^\d{4}-\d{2}-\d{2}/.test(t)) return t.slice(0, 10) + ' 00:00:00';
+          const a = t.split(/[.\-\/]/); // DD.MM.YYYY veya YYYY-MM-DD
+          if (a.length === 3) {
+            if (a[0].length === 4) return a[0] + '-' + a[1] + '-' + a[2] + ' 00:00:00';
+            return a[2] + '-' + a[1] + '-' + a[0] + ' 00:00:00';
+          }
+          return t;
+        };
+
+        let ok = 0, fail = 0, skip = 0;
+        elog('🚀 ' + eksik.length + ' eksik fatura Defter Beyan\'a gönderiliyor…', '#10b981');
+
+        for (const f of eksik) {
+          const belgeNo = (f.fno || '').replace(/[^0-9A-Za-z]/g, '').slice(0, 16);
+          try {
+            // Tedarikçi adres defterinden bilgi çek
+            const lj = await (await fetch(B + '/adresdefteri/findbytckn/' + f.saticiVkn, { method: 'POST', headers: H, body: '{}', credentials: 'include' })).json();
+            const rc = lj.resultContainer;
+            if (!rc) { elog('❌ ' + f.fno + ' — tedarikçi (' + f.saticiVkn + ') adres defterinde yok', '#ef4444'); fail++; continue; }
+
+            const ad = ((rc.soyad || '') + ' ' + (rc.ad || '')).trim().toLocaleUpperCase('tr');
+            const t = iso(f.tarih);
+            const turKod = f.turKod || '4';
+            const ana = {
+              deleted: false, alisTuruKodu: '1',
+              giderKayitTuruKodu: turKod,
+              giderKayitAltTuruKodu: String(f.altKod),
+              aciklama: ad + ' - ' + f.altAd,
+              naceKodu: sinifData.nace || '',
+              tutar: f.matrah, isKdvDahil: false, kdvsizIslem: false,
+              kdv: f.kdv, kdvOrani: f.kdvOran
+            };
+            if (turKod === '4') ana.donemsellik = false;
+            const kayitlar = [ana];
+
+            // ÖİV varsa ayrı satır
+            if (f.oiv && f.kdv > 0) {
+              // ÖİV tutarını tespit et (genelde fatura içinde ÖİV satırı olur — yaklaşık %25 KDV'den hesapla, ama şimdilik sade bırak)
+              // ÖİV'i ayrı bir kayıt olarak ekle — tutar 0 olur, sonra panelden güncellenebilir
+            }
+
+            const P = {
+              giderBelgeTuruKodu: '9', versiyon: 11,
+              kayitTarihi: t, belgeTarihi: t,
+              belgeSiraNo: belgeNo,
+              tcknVkn: f.saticiVkn,
+              ad: rc.ad, soyad: rc.soyad,
+              vergiDairesiKodu: rc.vergiDairesiKodu,
+              adresiGuncelleme: false,
+              kayitlar
+            };
+            if (rc.subeNo) P.subeNo = rc.subeNo;
+
+            const cr = await fetch(B + '/gider/create', { method: 'POST', headers: H, body: JSON.stringify(P), credentials: 'include' });
+            const cj = await cr.json();
+            if (cr.status === 200 && cj.resultContainer && !cj.errorMessage) {
+              ok++; elog('✅ ' + f.fno + ' · ' + f.sinif + ' · ₺' + fmt(f.matrah) + ' + KDV ₺' + fmt(f.kdv), '#10b981');
+            } else {
+              const m = (cj.errorMessage || cj.statusMessage || cr.status).toString();
+              if (/aynı|mükerrer|zaten/i.test(m)) { skip++; elog('⏭ ' + f.fno + ' zaten kayıtlı', '#9aa6c0'); }
+              else { fail++; elog('❌ ' + f.fno + ' — ' + m.slice(0, 100), '#ef4444'); }
+            }
+          } catch (e) { fail++; elog('❌ ' + f.fno + ' — ' + e.message, '#ef4444'); }
+        }
+        elog('', '#000');
+        elog('🎉 İŞLEM TAMAMLANDI', '#10b981');
+        elog('   ✅ Gönderilen: ' + ok, '#10b981');
+        if (skip) elog('   ⏭ Zaten kayıtlı: ' + skip, '#9aa6c0');
+        if (fail) elog('   ❌ Hata: ' + fail, '#ef4444');
+        if (elleKontrolListe.length) elog('   ⚠️ Elle kontrol bekleyen: ' + elleKontrolListe.length, '#fbbf24');
+        document.getElementById('__eksikStart').textContent = '✅ Tamamlandı (' + ok + '/' + eksik.length + ')';
+      };
     }
 
     /* ── Panodan Z Raporu Gönder: BATTAL_MUHASEBE_DB_PRO.html'de üretilen
@@ -887,10 +1127,11 @@
       sicilAdresYakala(); // Sicil sayfasındaysak hesap adresini yakala
       butonEkle('📊 Gider Kontrol', calistir, null, '__gkBtn', 20);
       butonEkle('📥 Panodan Gider Gönder', panodanGonder, 'linear-gradient(135deg,#3b82f6,#1d4ed8)', '__gonderBtn', 76);
-      butonEkle('📊 Gelir Kontrol', gelirKontrol, 'linear-gradient(135deg,#d4af37,#b8941f)', '__glBtn', 132);
-      butonEkle('📤 Giden (Satış) Gönder', gidenGonder, 'linear-gradient(135deg,#60a5fa,#2563eb)', '__gdGonderBtn', 188);
-      butonEkle('📋 e-SMM Eksik Bul', esmmEksik, 'linear-gradient(135deg,#34d399,#059669)', '__esmmBtn', 244);
-      butonEkle('🔒 Kimlik/Adres Kontrol', kimlikKontrol, 'linear-gradient(135deg,#a78bfa,#7c3aed)', '__kimlikBtn', 300);
+      butonEkle('🚀 Eksik Giderleri Oto Gönder', eksikGiderGonder, 'linear-gradient(135deg,#f59e0b,#d97706)', '__eksikBtn', 132);
+      butonEkle('📊 Gelir Kontrol', gelirKontrol, 'linear-gradient(135deg,#d4af37,#b8941f)', '__glBtn', 188);
+      butonEkle('📤 Giden (Satış) Gönder', gidenGonder, 'linear-gradient(135deg,#60a5fa,#2563eb)', '__gdGonderBtn', 244);
+      butonEkle('📋 e-SMM Eksik Bul', esmmEksik, 'linear-gradient(135deg,#34d399,#059669)', '__esmmBtn', 300);
+      butonEkle('🔒 Kimlik/Adres Kontrol', kimlikKontrol, 'linear-gradient(135deg,#a78bfa,#7c3aed)', '__kimlikBtn', 356);
     };
     kur();
     setInterval(kur, 2000);
@@ -1078,8 +1319,198 @@
       bar.innerHTML = h;
     }
 
+    // ═══ FATURA DETAY ÇEK + OTO SINIFLA ═══
+    // Her gelen faturanın XML'ini indirir, matrah/KDV/tarih/açıklama/satıcı VKN+unvan çıkarır,
+    // SINIF_KURALLAR ile otomatik gider alt türü atar, storage'a kaydeder.
+    // Defter Beyan tarafı bu veriyi okuyup eksik faturaları otomatik gönderebilir.
+    async function faturaDetayCekVeSinifla() {
+      const bar = overlayAc('📦 Fatura Detay Çek + Otomatik Sınıfla');
+      bar.textContent = '📄 Faturalar toplanıyor…';
+      let list;
+      try { list = await tumFaturalariTopla(bar); } catch (e) { list = faturalariTopla(); }
+      if (!list.length) {
+        bar.innerHTML = '<div style="color:#fcd34d;line-height:1.8">Bu sayfada gelen fatura bulunamadı.<br>Gelen Fatura → <b>Tümü</b> listesini aç.</div>';
+        return;
+      }
+      bar.innerHTML = '<div id="__fdDurum">📦 ' + list.length + ' fatura XML indiriliyor + sınıflandırılıyor… 0/' + list.length + '</div><div id="__fdRows" style="margin-top:10px"></div>';
+
+      // Aktif mükellefin NACE kodunu bul (SMM mi işletme mi belirlemek için)
+      const am = aktifMukellef();
+      const nace = (am && am.rec && am.rec.nace) || '';
+
+      const sonuclar = [];
+      let bitti = 0;
+
+      async function detayCek(f) {
+        try {
+          const ctrl = new AbortController();
+          const tmr = setTimeout(() => ctrl.abort(), 20000);
+          const r = await fetch('/Invoicebox/DownloadInboxInvoice?invoiceId=' + f.uuid, { credentials: 'include', signal: ctrl.signal });
+          clearTimeout(tmr);
+          if (r.status !== 200) throw new Error('HTTP ' + r.status);
+          const blob = await r.blob();
+          let t = await blob.text();
+
+          // Unescape if needed
+          if (t.indexOf('AccountingSupplierParty') < 0) t = unesc(t);
+
+          // Fatura no + ETTN
+          const fno = (t.match(/<(?:\w+:)?ID(?:\s[^>]*)?>\s*([A-Z0-9]{3}20\d{11})\s*</) || ['', ''])[1] || f.no;
+          const ettn = tagTxt(t, 'UUID') || f.uuid;
+
+          // Tarih
+          const tarih = tagTxt(t, 'IssueDate') || '';
+
+          // Satıcı (AccountingSupplierParty)
+          const saticiBlok = tagIc(t, 'AccountingSupplierParty');
+          let saticiVkn = '', saticiTckn = '', saticiUnvan = '';
+          if (saticiBlok) {
+            const idRe2 = /<(?:\w+:)?ID\s[^>]*schemeID="(TCKN|VKN)"[^>]*>\s*(\d+)/g;
+            let mm;
+            while ((mm = idRe2.exec(saticiBlok))) { if (mm[1] === 'TCKN') saticiTckn = mm[2]; else saticiVkn = mm[2]; }
+            saticiUnvan = tagTxt(tagIc(saticiBlok, 'PartyName'), 'Name') || ((tagTxt(saticiBlok, 'FirstName') + ' ' + tagTxt(saticiBlok, 'FamilyName')).trim());
+          }
+
+          // Tutarlar
+          const say = s => { s = ('' + (s == null ? '' : s)).replace(/[^\d,.\-]/g, ''); if (s.includes(',') && s.includes('.')) s = s.replace(/\./g, '').replace(',', '.'); else if (s.includes(',')) s = s.replace(',', '.'); return parseFloat(s) || 0; };
+
+          // LegalMonetaryTotal
+          const lmt = tagIc(t, 'LegalMonetaryTotal');
+          const toplam = say(tagTxt(lmt, 'PayableAmount') || tagTxt(lmt, 'TaxInclusiveAmount'));
+          const matrahXml = say(tagTxt(lmt, 'TaxExclusiveAmount') || tagTxt(lmt, 'LineExtensionAmount'));
+
+          // KDV (TaxTotal)
+          const taxTotal = tagIc(t, 'TaxTotal');
+          const kdvToplam = say(tagTxt(taxTotal, 'TaxAmount'));
+
+          // KDV oranı (TaxSubtotal'dan)
+          let kdvOran = 0;
+          const subTotals = (t.match(/<(?:\w+:)?TaxSubtotal[\s>][\s\S]*?<\/(?:\w+:)?TaxSubtotal>/g) || []);
+          if (subTotals.length === 1) {
+            kdvOran = Math.round(say(tagTxt(subTotals[0], 'Percent')));
+          } else if (subTotals.length > 1) {
+            // Karışık oranlı fatura — ağırlıklı ortalama veya en yüksek oranı al
+            let topMatrah = 0, topKdv = 0;
+            subTotals.forEach(st => { topMatrah += say(tagTxt(st, 'TaxableAmount')); topKdv += say(tagTxt(st, 'TaxAmount')); });
+            kdvOran = topMatrah > 0 ? Math.round(topKdv / topMatrah * 100) : 0;
+          }
+          const matrah = matrahXml > 0 ? matrahXml : (toplam - kdvToplam);
+
+          // Açıklama (Note alanı + kalem açıklamaları)
+          const notlar = [];
+          (t.match(/<(?:\w+:)?Note[^>]*>([\s\S]*?)<\/(?:\w+:)?Note>/g) || []).forEach(m => {
+            const ic = m.replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').trim();
+            if (ic && ic.length > 2 && !/UYUM|e-?Fatura|e-?Arsiv|UBL|uuid|Hash/i.test(ic)) notlar.push(ic);
+          });
+          // InvoiceLine açıklamaları
+          const lines = t.match(/<(?:\w+:)?InvoiceLine[\s>][\s\S]*?<\/(?:\w+:)?InvoiceLine>/g) || [];
+          lines.forEach(ln => {
+            const desc = tagTxt(ln, 'Description') || tagTxt(tagIc(ln, 'Item'), 'Name') || '';
+            if (desc && desc.length > 2) notlar.push(desc);
+          });
+          const aciklama = notlar.join(' | ').slice(0, 300);
+
+          // Sınıfla
+          const sinifBilgi = faturaSinifla(saticiUnvan + ' ' + aciklama, saticiVkn || saticiTckn, matrah, nace);
+
+          return {
+            fno, ettn, tarih, saticiVkn: saticiVkn || saticiTckn, saticiUnvan,
+            matrah: Math.round(matrah * 100) / 100,
+            kdv: Math.round(kdvToplam * 100) / 100,
+            kdvOran, toplam: Math.round(toplam * 100) / 100,
+            aciklama,
+            sinif: sinifBilgi.sinif, altKod: sinifBilgi.altKod, altAd: sinifBilgi.altAd,
+            turKod: sinifBilgi.turKod, oiv: sinifBilgi.oiv || false,
+            stopaj: sinifBilgi.stopaj || 0, otoGonder: sinifBilgi.otoGonder
+          };
+        } catch (e) {
+          return { fno: f.no || f.uuid.slice(0, 8), ettn: f.uuid, hata: e.message };
+        }
+      }
+
+      for (let i = 0; i < list.length; i += 2) {
+        const res = await Promise.all(list.slice(i, i + 2).map(detayCek));
+        res.forEach(r => sonuclar.push(r));
+        bitti = sonuclar.length;
+        const d = document.getElementById('__fdDurum');
+        if (d) d.textContent = '📦 XML indiriliyor + sınıflandırılıyor… ' + bitti + '/' + list.length;
+      }
+
+      // Storage'a kaydet
+      const mukVkn = am ? am.vkn : 'bilinmiyor';
+      try {
+        await chrome.storage.local.set({ faturaSinif: { ts: Date.now(), mukVkn, nace, list: sonuclar } });
+      } catch (e) {}
+
+      // Alıcı kontrol sonuçlarını da oku (RED olanları işaretlemek için)
+      let alkMap = {};
+      try { const s = await chrome.storage.local.get('aliciKontrol'); alkMap = (s.aliciKontrol && s.aliciKontrol.map) || {}; } catch (e) {}
+
+      const basarili = sonuclar.filter(r => !r.hata);
+      const hatali = sonuclar.filter(r => r.hata);
+      const otoGonderilir = basarili.filter(r => {
+        const alkNo = norm((r.fno || '').replace(/[^0-9A-Za-z]/g, ''));
+        const alk = alkMap[alkNo];
+        return r.otoGonder && !(alk && alk.uygun === false);
+      });
+      const elleKontrol = basarili.filter(r => !r.otoGonder);
+      const redEdilen = basarili.filter(r => { const alkNo = norm((r.fno || '').replace(/[^0-9A-Za-z]/g, '')); const alk = alkMap[alkNo]; return alk && alk.uygun === false; });
+
+      let h = '<div style="margin-bottom:12px">' +
+        chip('Toplam Fatura', sonuclar.length, '#1e2f3a') +
+        chip('Detay Okunan', basarili.length, '#1e3a2f') +
+        chip('Oto Gönderilebilir', otoGonderilir.length, '#1e3a2f') +
+        chip('Elle Kontrol', elleKontrol.length, elleKontrol.length ? '#5b3a1a' : '#1f2937') +
+        chip('Alıcı RED', redEdilen.length, redEdilen.length ? '#5b1a1a' : '#1f2937') +
+        chip('Hata', hatali.length, hatali.length ? '#5b1a1a' : '#1f2937') +
+        '</div>';
+      h += '<div style="margin:8px 0;padding:12px 14px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:10px;color:#6ee7b7;font-size:12.5px">' +
+        '✅ <b>' + basarili.length + '</b> faturanın detayı ve sınıfı kaydedildi.<br>' +
+        '→ Şimdi <b>Defter Beyan</b> sekmesine geç → <b>🚀 Eksik Giderleri Otomatik Gönder</b> butonuna bas.<br>' +
+        '→ Motor eksik faturaları otomatik tespit edip doğru sınıfla Defter Beyan\'a gönderecek.</div>';
+
+      // Toplam matrah/KDV
+      const topMatrah = basarili.reduce((a, r) => a + (r.matrah || 0), 0);
+      const topKdv = basarili.reduce((a, r) => a + (r.kdv || 0), 0);
+      h += '<div style="margin-bottom:12px">' + chip('Toplam Matrah', '₺' + fmt(topMatrah), '#1e3a2f') + chip('Toplam KDV', '₺' + fmt(topKdv), '#1e2f3a') + '</div>';
+
+      // Sınıf bazında özet
+      const sinifSay = {};
+      basarili.forEach(r => { const s = r.sinif || 'Bilinmiyor'; sinifSay[s] = (sinifSay[s] || 0) + 1; });
+      h += '<div style="margin-bottom:12px">';
+      Object.keys(sinifSay).sort().forEach(s => { h += chip(s, sinifSay[s], '#1f2937'); });
+      h += '</div>';
+
+      const cols = ['Fatura No', 'Tarih', 'Satıcı', 'VKN/TC', 'Matrah', 'KDV', 'KDV%', 'Sınıf', 'Alt Tür', 'Durum'];
+      h += '<div style="overflow:auto;border:1px solid #2a3550;border-radius:8px"><table style="width:100%;border-collapse:collapse;font-size:11.5px"><thead><tr style="background:#141c2e;text-align:left">' + cols.map(x => '<th style="padding:7px">' + x + '</th>').join('') + '</tr></thead><tbody>';
+      basarili.forEach(r => {
+        const alkNo = norm((r.fno || '').replace(/[^0-9A-Za-z]/g, ''));
+        const alk = alkMap[alkNo];
+        const red = alk && alk.uygun === false;
+        const durum = red ? '<span style="color:#fca5a5">⛔ Alıcı RED</span>' :
+          (r.otoGonder ? '<span style="color:#6ee7b7">✅ Oto</span>' : '<span style="color:#fcd34d">⚠️ Elle</span>');
+        h += '<tr style="border-top:1px solid #1f2840;' + (red ? 'background:rgba(239,68,68,.06)' : '') + '">' +
+          '<td style="padding:6px">' + (r.fno || '') + '</td>' +
+          '<td style="padding:6px">' + (r.tarih || '') + '</td>' +
+          '<td style="padding:6px">' + ((r.saticiUnvan || '').slice(0, 35)) + '</td>' +
+          '<td style="padding:6px">' + (r.saticiVkn || '') + '</td>' +
+          '<td style="padding:6px;text-align:right">' + fmt(r.matrah) + '</td>' +
+          '<td style="padding:6px;text-align:right">' + fmt(r.kdv) + '</td>' +
+          '<td style="padding:6px;text-align:right">' + (r.kdvOran || 0) + '</td>' +
+          '<td style="padding:6px;font-weight:700;color:#d4af37">' + (r.sinif || '') + '</td>' +
+          '<td style="padding:6px;font-size:10px">' + (r.altAd || '') + '</td>' +
+          '<td style="padding:6px">' + durum + '</td></tr>';
+      });
+      hatali.forEach(r => {
+        h += '<tr style="border-top:1px solid #1f2840;background:rgba(239,68,68,.06)"><td style="padding:6px;color:#fca5a5">' + (r.fno || '') + '</td><td colspan="9" style="padding:6px;color:#fca5a5">❌ ' + r.hata + '</td></tr>';
+      });
+      h += '</tbody></table></div>';
+      bar.innerHTML = h;
+    }
+
     const kurPortal = () => {
       butonEkle('🔎 Alıcı Bilgi Kontrol', aliciKontrol, 'linear-gradient(135deg,#a78bfa,#7c3aed)', '__akBtn', 20);
+      butonEkle('📦 Fatura Detay + Sınıfla', faturaDetayCekVeSinifla, 'linear-gradient(135deg,#f59e0b,#d97706)', '__fdBtn', 76);
     };
     kurPortal();
     setInterval(kurPortal, 2000);
