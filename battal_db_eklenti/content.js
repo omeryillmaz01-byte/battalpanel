@@ -99,7 +99,7 @@
       '5820492073': {sinif:'Yemek', altKod:90, altAd:'Gıda ve Yemek Harcamaları (GVK 40/1-40/2)', turKod:'4'}
     };
     const ARAC_RE = /tüvturk|tuvturk|muayene istasyon|akaryakıt|akaryakit|petrol ofisi|opet|shell|aytemiz|benzin|motorin|oto ?lastik|oto ?yıkama|oto ?servis|kasko|trafik sigorta|otopark|otoyol|hgs|ogs|araç ?bakım/i;
-    const KISISEL_RE = /alkol|içki|bira|şarap|votka|viski|rakı|sigara|tütün|kozmetik|parfüm|makyaj|kişisel bakım/i;
+    const KISISEL_RE = /alkol|içki|bira|şarap|votka|viski|rakı|sigara|tütün|kozmetik|parfüm|makyaj|kişisel bakım|hastane|sağlık|tıp merkezi|poliklinik|muayenehane|diş polikliniği|göz merkezi|tıp mrkz|medikal|laboratuvar|eczane|ilaç/i;
 
     function faturaSinifla(unvan, vkn, matrah, nace) {
       const txt = (unvan || '').toLocaleLowerCase('tr');
@@ -559,6 +559,15 @@
         h += '<div style="margin-bottom:12px;padding:8px 12px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:8px;color:#fcd34d;font-size:12px">' +
           '⚠️ ' + elleKontrolListe.length + ' fatura otomatik gönderilmeyecek (elle kontrol): ' +
           elleKontrolListe.slice(0, 10).map(f => f.fno + ' (' + f.sinif + ')').join(', ') + '</div>';
+      }
+      if (redListe.length) {
+        h += '<div style="margin-bottom:12px;padding:8px 12px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.35);border-radius:8px;color:#fca5a5;font-size:12px">' +
+          '⛔ ' + redListe.length + ' fatura alıcı kontrolü ile REDDEDİLDİ (LEVHA\'daki VKN/adres ile tutmadığı için):<br>' +
+          redListe.slice(0, 20).map(f => {
+            const alkNo = norm((f.fno || '').replace(/[^0-9A-Za-z]/g, ''));
+            const alk = alkMap[alkNo] || {};
+            return '<b>' + f.fno + '</b> — ' + (f.saticiUnvan || '').slice(0, 40) + ' — <i>' + (alk.sebep || 'sebep bilinmiyor') + '</i>';
+          }).join('<br>') + '</div>';
       }
 
       h += '<button id="__eksikStart" style="background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:0;padding:14px 28px;border-radius:10px;font-size:15px;font-weight:800;cursor:pointer;box-shadow:0 4px 15px rgba(16,185,129,.3)">🚀 ' + eksik.length + ' Eksik Faturayı Gönder</button>';
