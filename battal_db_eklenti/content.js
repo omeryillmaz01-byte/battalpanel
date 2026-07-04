@@ -1007,18 +1007,42 @@
       bar.innerHTML = '<div id="__akDurum">🔎 ' + list.length + ' fatura kontrol ediliyor… 0/' + list.length + '</div><div id="__akRows" style="margin-top:10px"></div>';
       const sonuc = [];
       let bitti = 0;
+      // XML'i birden fazla yoldan çekmeyi dene — hangisi AccountingCustomerParty içeriyorsa onu kullan
+      async function xmlCek(uuid) {
+        const yollar = [
+          '/GelenFaturaGoruntule/' + uuid + '/false',
+          '/Invoicebox/DownloadInvoiceXml/' + uuid + '/True',
+          '/Invoicebox/DownloadInvoice/' + uuid + '/True',
+          '/InvoiceBox/DownloadInvoiceXml?invoiceId=' + uuid + '&isInbox=True',
+          '/InvoiceBox/DownloadInvoice?invoiceId=' + uuid + '&isInbox=True',
+          '/Invoicebox/GetInvoiceContent/' + uuid + '/True',
+          '/api/Invoice/GetInvoiceXml/' + uuid
+        ];
+        for (const yol of yollar) {
+          try {
+            const ctrl = new AbortController();
+            const tmr = setTimeout(() => ctrl.abort(), 12000);
+            const r = await fetch(yol, { credentials: 'include', signal: ctrl.signal });
+            clearTimeout(tmr);
+            if (r.status !== 200) continue;
+            const txt = await r.text();
+            const a = aliciAyikla(txt);
+            if (a && (a.tckn || a.vkn)) return { a, yol };
+          } catch (e) {}
+        }
+        return null;
+      }
+
       async function tekKontrol(f) {
         try {
-          const r = await fetch('/GelenFaturaGoruntule/' + f.uuid + '/false', { credentials: 'include' });
-          if (r.status !== 200) throw new Error('HTTP ' + r.status);
-          const a = aliciAyikla(await r.text());
-          if (!a) return { f, uygun: false, sebep: 'XML/alıcı bloğu okunamadı', detay: '' };
-          const k = aliciKiyasla(a);
-          return { f, a, uygun: k.uygun, sebep: k.sebep, detay: k.detay };
+          const sonuc = await xmlCek(f.uuid);
+          if (!sonuc) return { f, uygun: false, sebep: 'XML/alıcı bloğu okunamadı (tüm yollar denendi)', detay: '' };
+          const k = aliciKiyasla(sonuc.a);
+          return { f, a: sonuc.a, uygun: k.uygun, sebep: k.sebep, detay: k.detay };
         } catch (e) { return { f, uygun: false, sebep: 'Hata: ' + e.message, detay: '' }; }
       }
-      for (let i = 0; i < list.length; i += 4) {
-        const res = await Promise.all(list.slice(i, i + 4).map(tekKontrol));
+      for (let i = 0; i < list.length; i += 2) {
+        const res = await Promise.all(list.slice(i, i + 2).map(tekKontrol));
         res.forEach(r => sonuc.push(r));
         bitti = Math.min(i + 4, list.length);
         const d = document.getElementById('__akDurum');
