@@ -1532,9 +1532,32 @@
       bar.innerHTML = h;
     }
 
+    // 🧙 SİHİRBAZ · Uyumsoft Portal: alıcı kontrol → detay+sınıflandırma → Defter Beyan aç
+    async function sihirbazAlisPortal() {
+      const bar = overlayAc('🧙 Tam Otomatik Alış Kontrol Sihirbazı');
+      bar.innerHTML = '<div style="font-size:13.5px;line-height:1.9;color:#a78bfa"><b>Adım 1/3:</b> Alıcı Bilgi Kontrol çalıştırılıyor…</div>';
+      try { await aliciKontrol(); } catch(e){}
+      const bar2 = overlayAc('🧙 Sihirbaz · Adım 2/3');
+      bar2.innerHTML = '<div style="font-size:13.5px;line-height:1.9;color:#fcd34d">📦 <b>Adım 2/3:</b> Fatura detayı çekiliyor + sınıflandırılıyor… (Her fatura için XML detayı çekiliyor, uzun sürebilir)</div>';
+      try { await faturaDetayCekVeSinifla(); } catch(e){ bar2.innerHTML='<span style="color:#fca5a5">Sınıflandırma hatası: '+e.message+'</span>'; return; }
+      const bar3 = overlayAc('🧙 Sihirbaz · Adım 3/3 · Defter Beyan');
+      bar3.innerHTML =
+        '<div style="padding:14px;background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.35);border-radius:10px;color:#6ee7b7;font-size:14px;font-weight:700;margin-bottom:14px">'+
+        '✅ Uyumsoft tarafı hazır — faturalar sınıflandırıldı.</div>'+
+        '<div style="font-size:13px;color:#e8edf5;line-height:1.7;margin-bottom:16px">Şimdi <b>Defter Beyan</b>\'a geçilecek. Orada eksik faturaların özeti otomatik açılacak — <b>Gönder</b> tuşuna sen basacaksın.</div>'+
+        '<button id="__sihGoDB" style="background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:0;padding:14px 28px;border-radius:10px;font-size:15px;font-weight:800;cursor:pointer">▶️ Defter Beyan\'ı Aç</button>'+
+        ' <button id="__sihIptal" style="background:transparent;color:#9aa6c0;border:1px solid #3a3550;padding:14px 20px;border-radius:10px;font-size:13px;cursor:pointer;margin-left:8px">İptal</button>';
+      document.getElementById('__sihGoDB').onclick = async () => {
+        try { await chrome.storage.local.set({ sihirbaz: { asama:'db', ts:Date.now() } }); } catch(e){}
+        window.open('https://portal.defterbeyan.gov.tr/#sihirbaz=1', '_blank');
+      };
+      document.getElementById('__sihIptal').onclick = () => { try{ chrome.storage.local.remove('sihirbaz'); }catch(e){}; bar3.remove(); };
+    }
+
     const kurPortal = () => {
-      butonEkle('🔎 Alıcı Bilgi Kontrol', aliciKontrol, 'linear-gradient(135deg,#a78bfa,#7c3aed)', '__akBtn', 20);
-      butonEkle('📦 Fatura Detay + Sınıfla', faturaDetayCekVeSinifla, 'linear-gradient(135deg,#f59e0b,#d97706)', '__fdBtn', 76);
+      butonEkle('🧙 Tam Otomatik (Alış)', sihirbazAlisPortal, 'linear-gradient(135deg,#a855f7,#7c3aed)', '__sihPortalBtn', 20);
+      butonEkle('🔎 Alıcı Bilgi Kontrol', aliciKontrol, 'linear-gradient(135deg,#a78bfa,#7c3aed)', '__akBtn', 76);
+      butonEkle('📦 Fatura Detay + Sınıfla', faturaDetayCekVeSinifla, 'linear-gradient(135deg,#f59e0b,#d97706)', '__fdBtn', 132);
     };
     kurPortal();
     setInterval(kurPortal, 2000);
