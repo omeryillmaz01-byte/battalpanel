@@ -482,7 +482,13 @@
         return;
       }
       const yas = Math.round((Date.now() - sinifData.ts) / 60000);
-      const faturaListesi = sinifData.list.filter(r => !r.hata);
+      // 🗓️ YIL FİLTRESİ — sadece cari yıl faturaları işlenir (varsayılan: içinde bulunulan yıl)
+      // Tarih formatı "YYYY-MM-DD" veya "DD.MM.YYYY" olabilir; her ikisinden yıl çıkarılır.
+      const yilCek = t => { const s = (t||'').toString(); const m = s.match(/(20\d{2})/); return m ? m[1] : ''; };
+      const CARI_YIL = String(new Date().getFullYear());
+      const tumFatura = sinifData.list.filter(r => !r.hata);
+      const faturaListesi = tumFatura.filter(r => yilCek(r.tarih) === CARI_YIL);
+      const eskiYilAdet = tumFatura.length - faturaListesi.length;
 
       // 2) Alıcı kontrol RED listesini oku
       let alkMap = {};
@@ -514,7 +520,7 @@
         chip('Alıcı RED', redListe.length, redListe.length ? '#5b1a1a' : '#1f2937') +
         chip('Elle Kontrol', elleKontrolListe.length, elleKontrolListe.length ? '#5b3a1a' : '#1f2937') +
         '</div>';
-      h += '<div style="margin-bottom:6px;font-size:11.5px;color:#9aa6c0">Uyumsoft verisi ' + yas + ' dk önce alınmış · ' + sinifData.list.length + ' fatura</div>';
+      h += '<div style="margin-bottom:6px;font-size:11.5px;color:#9aa6c0">Uyumsoft verisi ' + yas + ' dk önce alınmış · ' + sinifData.list.length + ' fatura · <b style="color:#fcd34d">Yıl filtresi: ' + CARI_YIL + '</b>' + (eskiYilAdet ? ' · <span style="color:#9aa6c0">' + eskiYilAdet + ' fatura eski yıl (atlandı)</span>' : '') + '</div>';
 
       if (!eksik.length) {
         h += '<div style="padding:16px;background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.4);border-radius:10px;color:#6ee7b7;font-size:15px;font-weight:700">' +
