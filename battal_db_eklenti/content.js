@@ -1388,7 +1388,7 @@
           return { f, a, uygun: k.uygun, sebep: k.sebep, detay: k.detay };
         } catch (e) { return { f, uygun: false, sebep: 'Hata: ' + e.message, detay: '' }; }
       }
-      const PAR_AK = 8;
+      const PAR_AK = 15;
       for (let i = 0; i < list.length; i += PAR_AK) {
         const res = await Promise.all(list.slice(i, i + PAR_AK).map(tekKontrol));
         res.forEach(r => sonuc.push(r));
@@ -1534,7 +1534,7 @@
 
       // Paralel indirme: 2 → 10. Aynı origin'e 6 socket sınırı var ama modern Chrome
       // HTTP/2 üzerinden çok daha fazla eşzamanlı istek destekliyor.
-      const PAR = 8;
+      const PAR = 15;
       for (let i = 0; i < list.length; i += PAR) {
         const res = await Promise.all(list.slice(i, i + PAR).map(detayCek));
         res.forEach(r => sonuclar.push(r));
@@ -1618,11 +1618,15 @@
     // 🧙 SİHİRBAZ · Uyumsoft Portal: alıcı kontrol → detay+sınıflandırma → Defter Beyan aç
     async function sihirbazAlisPortal() {
       const bar = overlayAc('🧙 Tam Otomatik Alış Kontrol Sihirbazı');
-      bar.innerHTML = '<div style="font-size:13.5px;line-height:1.9;color:#a78bfa"><b>Adım 1/3:</b> Alıcı Bilgi Kontrol çalıştırılıyor…</div>';
-      try { await aliciKontrol(); } catch(e){}
-      const bar2 = overlayAc('🧙 Sihirbaz · Adım 2/3');
-      bar2.innerHTML = '<div style="font-size:13.5px;line-height:1.9;color:#fcd34d">📦 <b>Adım 2/3:</b> Fatura detayı çekiliyor + sınıflandırılıyor… (Her fatura için XML detayı çekiliyor, uzun sürebilir)</div>';
-      try { await faturaDetayCekVeSinifla(); } catch(e){ bar2.innerHTML='<span style="color:#fca5a5">Sınıflandırma hatası: '+e.message+'</span>'; return; }
+      bar.innerHTML = '<div style="font-size:13.5px;line-height:1.9;color:#a78bfa"><b>Alıcı Kontrol</b> + <b>Fatura Detay + Sınıflandırma</b> paralel çalışıyor…</div>';
+      // İki bağımsız iş: farklı endpointler, farklı veri. Ardışık çalıştırmak yerine
+      // aynı anda başlatıp bitmelerini bekliyoruz — süre yaklaşık yarıya iner.
+      try {
+        await Promise.all([
+          aliciKontrol().catch(e => console.warn('aliciKontrol hata:', e)),
+          faturaDetayCekVeSinifla().catch(e => console.warn('faturaDetay hata:', e))
+        ]);
+      } catch(e){ bar.innerHTML='<span style="color:#fca5a5">Hata: '+e.message+'</span>'; return; }
       const bar3 = overlayAc('🧙 Sihirbaz · Adım 3/3 · Defter Beyan');
       bar3.innerHTML =
         '<div style="padding:14px;background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.35);border-radius:10px;color:#6ee7b7;font-size:14px;font-weight:700;margin-bottom:14px">'+
@@ -1797,13 +1801,13 @@
     //  3) Defter Beyan'a otomatik geç → orada eksik özeti açılır (gönderim onayı elle)
     async function sihirbazAlis() {
       const bar = overlayAc('🧙 Tam Otomatik Alış Kontrol Sihirbazı');
-      bar.innerHTML = '<div style="font-size:13.5px;line-height:1.9">'+
-        '<div style="color:#6ee7b7"><b>Adım 1/3:</b> Alıcı Bilgi Kontrol çalıştırılıyor…</div></div>';
-      try { await aliciKontrol(); } catch(e){}
-      // aliciKontrol kendi paneli açar; sihirbazı yeniden zirveye getir
-      const bar2 = overlayAc('🧙 Sihirbaz · Adım 2/3');
-      bar2.innerHTML = '<div style="font-size:13.5px;line-height:1.9;color:#fcd34d">📦 <b>Adım 2/3:</b> Fatura detayı çekiliyor + sınıflandırılıyor… (Bu adım uzun sürebilir; ürünler için XML detayı çekilir)</div>';
-      try { await faturaDetayCekVeSinifla(); } catch(e){ bar2.innerHTML = '<span style="color:#fca5a5">Sınıflandırma hatası: '+e.message+'</span>'; return; }
+      bar.innerHTML = '<div style="font-size:13.5px;line-height:1.9;color:#6ee7b7"><b>Alıcı Kontrol</b> + <b>Fatura Detay + Sınıflandırma</b> paralel çalışıyor…</div>';
+      try {
+        await Promise.all([
+          aliciKontrol().catch(e => console.warn('aliciKontrol hata:', e)),
+          faturaDetayCekVeSinifla().catch(e => console.warn('faturaDetay hata:', e))
+        ]);
+      } catch(e){ bar.innerHTML='<span style="color:#fca5a5">Hata: '+e.message+'</span>'; return; }
       // Sınıflandırma bitti — kullanıcının onayıyla DB'ye geç
       const bar3 = overlayAc('🧙 Sihirbaz · Adım 3/3 · Defter Beyan');
       bar3.innerHTML =
