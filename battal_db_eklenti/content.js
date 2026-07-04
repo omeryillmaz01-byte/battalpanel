@@ -570,6 +570,14 @@
           }).join('<br>') + '</div>';
       }
 
+      // 📅 Tarih üzerine yaz — geçmiş dönem KDV'si beyan edildiyse cari döneme çekmek için.
+      // Varsayılan: cari ayın 1'i.
+      const bugun = new Date();
+      const cariAyIlk = bugun.getFullYear() + '-' + ('0'+(bugun.getMonth()+1)).slice(-2) + '-01';
+      h += '<div style="margin-bottom:12px;padding:10px 14px;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.3);border-radius:8px;color:#93c5fd;font-size:12.5px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">'+
+        '<label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="__tarihEz" checked style="width:16px;height:16px;cursor:pointer"> Tüm fatura tarihlerini şu tarihle üzerine yaz:</label>'+
+        '<input type="date" id="__tarihEzVal" value="'+cariAyIlk+'" style="background:#0b1020;color:#e8edf5;border:1px solid #3a3550;padding:6px 10px;border-radius:6px;font-size:13px">'+
+        '<span style="font-size:11px;color:#9aa6c0">(geçmiş ay KDV beyan edildiyse cari döneme çekmek için)</span></div>';
       h += '<button id="__eksikStart" style="background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:0;padding:14px 28px;border-radius:10px;font-size:15px;font-weight:800;cursor:pointer;box-shadow:0 4px 15px rgba(16,185,129,.3)">🚀 ' + eksik.length + ' Eksik Faturayı Gönder</button>';
       h += '<div id="__eksikLog" style="margin-top:12px;font-family:Consolas,monospace;font-size:12px;max-height:340px;overflow:auto;background:#0b1020;padding:10px;border-radius:8px"></div>';
       bar.innerHTML = h;
@@ -596,6 +604,12 @@
         let ok = 0, fail = 0, skip = 0;
         elog('🚀 ' + eksik.length + ' eksik fatura Defter Beyan\'a gönderiliyor…', '#10b981');
 
+        // Tarih ezme ayarını oku
+        const ezCb = document.getElementById('__tarihEz');
+        const ezVal = document.getElementById('__tarihEzVal');
+        const tarihEzme = ezCb && ezCb.checked ? (ezVal ? ezVal.value : '') : '';
+        if (tarihEzme) elog('📅 Tüm fatura tarihleri ' + tarihEzme + ' olarak gönderilecek', '#93c5fd');
+
         for (const f of eksik) {
           const belgeNo = (f.fno || '').replace(/[^0-9A-Za-z]/g, '').slice(0, 16);
           try {
@@ -605,7 +619,7 @@
             if (!rc) { elog('❌ ' + f.fno + ' — tedarikçi (' + f.saticiVkn + ') adres defterinde yok', '#ef4444'); fail++; continue; }
 
             const ad = ((rc.soyad || '') + ' ' + (rc.ad || '')).trim().toLocaleUpperCase('tr');
-            const t = iso(f.tarih);
+            const t = tarihEzme ? (tarihEzme + ' 00:00:00') : iso(f.tarih);
             const turKod = f.turKod || '4';
             const ana = {
               deleted: false, alisTuruKodu: '1',
