@@ -81,13 +81,16 @@
       [/\bSITESI\b|\bSIT\b/g, 'SITE'],
       [/\bIS\s*MERKEZI\b|\bISMERKEZI\b|\bIS\s*MRK\b/g, 'ISMERKEZI'],
       [/\bNUMARA\b|\bNO\b/g, 'NO'],
-      [/\bIC\s*KAPI\b|\bDAIRE\b|\bDAIRESI\b|\bDS\b|\bDR\b/g, 'ICKAPI'],
+      [/\bIC\s*KAPI\b|\bDAIRE\b|\bDAIRESI\b|\bDS\b|\bDR\b|\bD\b(?=\s*:?\s*\d)/g, 'ICKAPI'],
       [/\bBLOK\b|\bBLK\b/g, 'BLOK'],
-      [/\bISTANBUL\b|\bIST\b/g, 'ISTANBUL']
+      [/\bISTANBUL\b|\bIST\b/g, 'ISTANBUL'],
+      [/\bBAYRAMPASA\b|\bBAY\b/g, 'BAYRAMPASA'],
+      [/\bBASINKOY\b/g, 'BASINKOYMAH'],
+      [/\bKARTALTEPE\b/g, 'KARTALTEPEMAH']
     ];
     const DUR = new Set(['NO', 'ICKAPI', 'BLOK', 'A', 'B', 'C', 'D', 'YOK', 'VE', 'ISTANBUL']); // gürültü/az ayırt edici
     function adresNorm(a) {
-      let s = trAscii(a).replace(/[.,;:/\\()\-]/g, ' ').replace(/\s+/g, ' ').trim();
+      let s = trAscii(a).replace(/[@.,;:/\\()\-_"']/g, ' ').replace(/\s+/g, ' ').trim();
       KIS.forEach(([re, to]) => { s = s.replace(re, to); });
       return s.replace(/\s+/g, ' ').trim();
     }
@@ -98,10 +101,18 @@
     }
     // İki adres benzerliği: 0..1 (levha token'larının faturada bulunma oranı, ağırlıklı).
     function adresBenzer(levhaAdres, faturaAdres) {
-      const L = anlamliTokens(levhaAdres), F = new Set(anlamliTokens(faturaAdres));
+      const L = anlamliTokens(levhaAdres), FA = anlamliTokens(faturaAdres);
+      const F = new Set(FA);
       if (!L.length || !F.size) return { skor: 0, eslesen: 0, toplam: L.length };
-      let hit = 0; L.forEach(t => { if (F.has(t)) hit++; });
-      return { skor: hit / L.length, eslesen: hit, toplam: L.length };
+      let hit = 0;
+      L.forEach(t => {
+        if (F.has(t)) { hit++; return; }
+        // Kısmi eşleşme: "BAYRAMPASA" ↔ "BAY" (token biri diğerinin başlangıcıysa)
+        for (const ft of FA) {
+          if ((t.length >= 3 && ft.startsWith(t)) || (ft.length >= 3 && t.startsWith(ft))) { hit += 0.8; return; }
+        }
+      });
+      return { skor: hit / L.length, eslesen: Math.round(hit), toplam: L.length };
     }
     // Sayfadaki metinden aktif mükellefi (banner/isim) tespit et.
     function aktifMukellef() {
@@ -128,8 +139,8 @@
 
     // Skoru renge/etikete çevir. birebir≈1, tolerans var ama düşükse RED.
     function adresKarar(skor) {
-      if (skor >= 0.85) return { renk: '#10b981', bg: 'rgba(16,185,129,.12)', et: '✅ TUTUYOR', islenir: true };
-      if (skor >= 0.6) return { renk: '#f59e0b', bg: 'rgba(245,158,11,.12)', et: '⚠️ ŞÜPHELİ — KONTROL ET', islenir: false };
+      if (skor >= 0.70) return { renk: '#10b981', bg: 'rgba(16,185,129,.12)', et: '✅ TUTUYOR', islenir: true };
+      if (skor >= 0.45) return { renk: '#f59e0b', bg: 'rgba(245,158,11,.12)', et: '⚠️ ŞÜPHELİ — KONTROL ET', islenir: false };
       return { renk: '#ef4444', bg: 'rgba(239,68,68,.12)', et: '⛔ TUTMUYOR — İŞLEME', islenir: false };
     }
 
