@@ -46,7 +46,7 @@
      işleme sokma. "birebir tutmasın lazım — tutmayanları işlemeyeceğiz"
      ──────────────────────────────────────────────────────────── */
     const LEVHA = {
-      '1500138444': { ad: 'Taner Battal', tckn: '24679499156', vd: 'BAYRAMPAŞA', nace: '692001', adres: 'TERAZİDERE MAH. TAŞ SK. BATTAL AP NO: 5 İÇ KAPI NO: 2 BAYRAMPAŞA/ İSTANBUL' },
+      '1500138444': { ad: 'Taner Battal', tckn: '24679499156', vd: 'BAYRAMPAŞA', nace: '692001', adres: 'TERAZİDERE MAH. TAŞ SK. BATTAL AP NO: 5 İÇ KAPI NO: 2 BAYRAMPAŞA/ İSTANBUL', eskiAdres: ['KARTALTEPE MAH. ŞEHİTLER ER RIDVANSOK NO: 1 BAKIRKÖY/ İSTANBUL'] },
       '1500360006': { ad: 'Emir Battal', tckn: '27286976096', vd: 'BEŞİKTAŞ', nace: '691003', adres: 'ABBASAĞA MAH. KEŞŞAF SK. ŞATIROĞLU IS MERKEZI NO: 4 İÇ KAPI NO: 10 BEŞİKTAŞ/ İSTANBUL' },
       '6630177279': { ad: 'Müge Özarmağan', tckn: '47707497320', vd: 'MECİDİYEKÖY', nace: '691003', adres: 'MEŞRUTİYET MAH. VALİ KONAĞI CAD. POLAT APT NO: 99 İÇ KAPI NO: 10 YOK/ ŞİŞLİ/ İSTANBUL' },
       '1500459508': { ad: 'Mert Tufan Battal', tckn: '26929736554', vd: 'MECİDİYEKÖY', nace: '862303', adres: 'TEŞVİKİYE MAH. NİŞANTAŞI IHLAMUR YOLU SK. BELDE APT. NO: 1 İÇ KAPI NO: 5 ŞİŞLİ/ İSTANBUL' },
@@ -956,7 +956,14 @@
       const adF = trAscii(a.ad);
       const adHit = adL.filter(t => adF.includes(t)).length;
       const adOk = adL.length > 0 && adHit === adL.length;
-      const adr = adresBenzer(rec.adres, a.adres);
+      let adr = adresBenzer(rec.adres, a.adres);
+      // Eski adresler varsa onlarla da kıyasla, en yüksek skoru al
+      if (rec.eskiAdres && Array.isArray(rec.eskiAdres)) {
+        rec.eskiAdres.forEach(ea => {
+          const eak = adresBenzer(ea, a.adres);
+          if (eak.skor > adr.skor) adr = eak;
+        });
+      }
       const karar = adresKarar(adr.skor);
       // VD kuralı: TCKN'li şahısta faturada VD boş olabilir (normal). VKN tüzelde VD karşılaştırılır.
       const vdGerek = !a.tckn && !!a.vkn;
