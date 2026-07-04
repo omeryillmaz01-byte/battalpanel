@@ -347,8 +347,15 @@
       const H = { 'Content-Type': 'application/json; charset=utf-8' };
       if (TK) H.Token = TK;
       const iso = t => { const a = t.split('.'); return a[2] + '-' + a[1] + '-' + a[0] + ' 00:00:00'; };
+      // 🔎 Alıcı Bilgi Kontrol sonuçları (Uyumsoft portalında çalıştırıldıysa):
+      // "UYGUN DEĞİL" işaretli fatura no'ları gider gönderimine SOKULMAZ.
+      let alkMap = {};
+      try { const s = await chrome.storage.local.get('aliciKontrol'); alkMap = (s.aliciKontrol && s.aliciKontrol.map) || {}; } catch (e) {}
       async function islem(d) {
         try {
+          const alkNo = norm((d.bno || '').toString().replace(/[^0-9A-Za-z]/g, ''));
+          const alk = alkMap[alkNo];
+          if (alk && alk.uygun === false) return { bno: d.bno, s: '❌', m: '🔎 Alıcı kontrol RED — ' + (alk.sebep || 'alıcı bilgisi levhayla tutmuyor') };
           const lj = await (await fetch(B + '/adresdefteri/findbytckn/' + d.vkn, { method: 'POST', headers: H, body: '{}', credentials: 'include' })).json();
           const rc = lj.resultContainer;
           if (!rc) return { bno: d.bno, s: '❌', m: 'Tedarikçi sorgu boş' };
@@ -876,6 +883,143 @@
     };
     kur();
     setInterval(kur, 2000);
+  }
+
+  /* ════════════════ UYUMSOFT PORTAL (portal.uyumsoft.com.tr) ════════════════
+     🔎 Alıcı Bilgi Kontrol motoru:
+     Gelen Fatura listesindeki her fatura için /GelenFaturaGoruntule/{uuid}/false
+     sayfasını çeker, gömülü UBL XML'den AccountingCustomerParty (alıcı) bloğunu
+     ayıklar ve LEVHA kaydıyla kıyaslar (TCKN/VKN + Ad + Adres; VD yalnız VKN'de —
+     TCKN'li şahıs faturasında alıcı VD'nin boş olması GİB standardında normaldir).
+     Tutmayanlar storage'a yazılır → Defter Beyan "Panodan Gider Gönder" bunları
+     gönderime SOKMAZ. Salt-okuma. */
+  else if (/uyumsoft\.com\.tr/.test(host)) {
+    const unesc = s => (s || '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&');
+    // Ad-alanı önekli (cac:/cbc:) etiketin iç XML'i / düz metni
+    const tagIc = (txt, tag) => { const m = (txt || '').match(new RegExp('<(?:\\w+:)?' + tag + '(?:\\s[^>]*)?>([\\s\\S]*?)</(?:\\w+:)?' + tag + '>')); return m ? m[1] : ''; };
+    const tagTxt = (txt, tag) => tagIc(txt, tag).replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
+
+    // Fatura görüntüleme HTML'inden alıcı (AccountingCustomerParty) bilgisi ayıkla.
+    // XML sayfada ham veya HTML-escape'li (&lt;cac:...&gt;) gömülü olabilir; ikisini de dener.
+    function aliciAyikla(html) {
+      let t = html || '';
+      let blok = tagIc(t, 'AccountingCustomerParty');
+      if (!blok) { t = unesc(t); blok = tagIc(t, 'AccountingCustomerParty'); }
+      if (!blok) return null;
+      let tckn = '', vkn = '', m;
+      const idRe = /<(?:\w+:)?ID\s[^>]*schemeID="(TCKN|VKN)"[^>]*>\s*(\d+)/g;
+      while ((m = idRe.exec(blok))) { if (m[1] === 'TCKN') tckn = m[2]; else vkn = m[2]; }
+      const ad = ((tagTxt(blok, 'FirstName') + ' ' + tagTxt(blok, 'FamilyName')).trim()) || tagTxt(tagIc(blok, 'PartyName'), 'Name');
+      const vd = tagTxt(tagIc(blok, 'PartyTaxScheme'), 'Name');
+      const pa = tagIc(blok, 'PostalAddress');
+      const adres = ['StreetName', 'BuildingName', 'BuildingNumber', 'Room', 'District', 'CitySubdivisionName', 'CityName']
+        .map(k => tagTxt(pa, k)).filter(Boolean).join(' ');
+      const ettn = tagTxt(t, 'UUID');
+      const fno = (t.match(/<(?:\w+:)?ID(?:\s[^>]*)?>\s*([A-Z0-9]{3}20\d{11})\s*</) || ['', ''])[1];
+      return { tckn, vkn, ad, vd, adres, ettn, fno };
+    }
+
+    // Ekrandaki Gelen Fatura tablosundan UUID'leri topla (satırlarda gizli invoiceId inputları var)
+    function faturalariTopla() {
+      const map = new Map();
+      document.querySelectorAll('tr').forEach(tr => {
+        let uuid = '';
+        const inp = tr.querySelector('input[name="invoiceId"], input.invoiceId, input[id*="invoiceId" i]');
+        if (inp && /^[0-9a-f-]{36}$/i.test(inp.value)) uuid = inp.value;
+        if (!uuid) { const mm = (tr.innerHTML || '').match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i); if (mm) uuid = mm[0]; }
+        if (!uuid || map.has(uuid.toLowerCase())) return;
+        const metin = (tr.innerText || '').replace(/\s+/g, ' ').trim();
+        const no = (metin.match(/[A-Z0-9]{3}20\d{11}/) || [''])[0];
+        map.set(uuid.toLowerCase(), { uuid, no, satir: metin.slice(0, 90) });
+      });
+      return [...map.values()];
+    }
+
+    // Alıcıyı levhayla kıyasla → { uygun, sebep, detay }
+    function aliciKiyasla(a) {
+      const kim = a.tckn || a.vkn;
+      const rec = kim ? LEVHA_BY_ID[kim] : null;
+      if (!kim) return { uygun: false, sebep: 'Faturada alıcı TCKN/VKN yok', detay: '' };
+      if (!rec) return { uygun: false, sebep: 'Levhada kayıtlı değil: ' + kim, detay: '' };
+      const adL = trAscii(rec.ad).split(' ').filter(x => x.length > 1);
+      const adF = trAscii(a.ad);
+      const adHit = adL.filter(t => adF.includes(t)).length;
+      const adOk = adL.length > 0 && adHit === adL.length;
+      const adr = adresBenzer(rec.adres, a.adres);
+      const karar = adresKarar(adr.skor);
+      // VD kuralı: TCKN'li şahısta faturada VD boş olabilir (normal). VKN tüzelde VD karşılaştırılır.
+      const vdGerek = !a.tckn && !!a.vkn;
+      const vdOk = vdGerek ? (!!a.vd && trAscii(a.vd) === trAscii(rec.vd || '')) : (!a.vd || trAscii(a.vd) === trAscii(rec.vd || ''));
+      const uygun = adOk && vdOk && karar.islenir;
+      const yzd = Math.round(adr.skor * 100);
+      const detay = (a.tckn ? 'TCKN ✓' : 'VKN ✓') + ' · Ad ' + (adOk ? '✓' : '✗') + ' · Adres %' + yzd + ' ' + (karar.islenir ? '✓' : '✗') +
+        (vdGerek ? ' · VD ' + (vdOk ? '✓' : '✗') : (a.vd ? ' · VD ' + (vdOk ? '✓' : '✗') : ' · VD boş (şahıs, normal)'));
+      let sebep = '';
+      if (!adOk) sebep = 'Ad tutmuyor: fatura "' + (a.ad || '—') + '" / levha "' + rec.ad + '"';
+      else if (!karar.islenir) sebep = 'Adres tutmuyor (%' + yzd + '): fatura "' + (a.adres || '—').slice(0, 70) + '"';
+      else if (!vdOk) sebep = 'VD tutmuyor: fatura "' + (a.vd || '—') + '" / levha "' + (rec.vd || '—') + '"';
+      return { uygun, sebep, detay, rec, yzd };
+    }
+
+    async function aliciKontrol() {
+      const bar = overlayAc('🔎 Alıcı Bilgi Kontrol · Gelen Fatura ↔ Levha');
+      const list = faturalariTopla();
+      if (!list.length) {
+        bar.innerHTML = '<div style="color:#fcd34d;line-height:1.8">Bu sayfada gelen fatura satırı bulunamadı.<br><b>Yap:</b> Gelen Fatura → Tümü listesini aç, sayfa boyutunu <b>250</b> yap → bu butona tekrar bas.<br><span style="font-size:11px;color:#9aa6c0">Not: Kontrol yalnız ekrandaki sayfayı tarar; 250\'lik sayfalarla tüm listeyi gez.</span></div>';
+        return;
+      }
+      bar.innerHTML = '<div id="__akDurum">🔎 ' + list.length + ' fatura kontrol ediliyor… 0/' + list.length + '</div><div id="__akRows" style="margin-top:10px"></div>';
+      const sonuc = [];
+      let bitti = 0;
+      async function tekKontrol(f) {
+        try {
+          const r = await fetch('/GelenFaturaGoruntule/' + f.uuid + '/false', { credentials: 'include' });
+          if (r.status !== 200) throw new Error('HTTP ' + r.status);
+          const a = aliciAyikla(await r.text());
+          if (!a) return { f, uygun: false, sebep: 'XML/alıcı bloğu okunamadı', detay: '' };
+          const k = aliciKiyasla(a);
+          return { f, a, uygun: k.uygun, sebep: k.sebep, detay: k.detay };
+        } catch (e) { return { f, uygun: false, sebep: 'Hata: ' + e.message, detay: '' }; }
+      }
+      for (let i = 0; i < list.length; i += 4) {
+        const res = await Promise.all(list.slice(i, i + 4).map(tekKontrol));
+        res.forEach(r => sonuc.push(r));
+        bitti = Math.min(i + 4, list.length);
+        const d = document.getElementById('__akDurum');
+        if (d) d.textContent = '🔎 Kontrol ediliyor… ' + bitti + '/' + list.length;
+      }
+      const uygun = sonuc.filter(r => r.uygun), red = sonuc.filter(r => !r.uygun);
+      // Sonuçları hafızaya yaz → Defter Beyan "Panodan Gider Gönder" red'leri göndermesin
+      try {
+        const st = await chrome.storage.local.get('aliciKontrol');
+        const mapEski = (st.aliciKontrol && st.aliciKontrol.map) || {};
+        sonuc.forEach(r => {
+          const no = ((r.a && r.a.fno) || r.f.no || '').replace(/[^0-9A-Za-z]/g, '');
+          if (no) mapEski[norm(no)] = { uygun: r.uygun, sebep: r.sebep || '', detay: r.detay || '', ts: Date.now() };
+        });
+        await chrome.storage.local.set({ aliciKontrol: { ts: Date.now(), map: mapEski } });
+      } catch (e) {}
+      let h = '<div style="margin-bottom:12px">' + chip('Kontrol Edilen', sonuc.length, '#1e2f3a') + chip('UYGUN', uygun.length, '#1e3a2f') + chip('UYGUN DEĞİL', red.length, red.length ? '#5b1a1a' : '#1e3a2f') + '</div>';
+      h += '<div style="margin-bottom:10px;padding:10px 12px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:8px;color:#6ee7b7;font-size:12px">Sonuçlar kaydedildi — Defter Beyan\'da <b>📥 Panodan Gider Gönder</b> artık "UYGUN DEĞİL" faturaları otomatik atlar.</div>';
+      const satirHtml = r => {
+        const no = (r.a && r.a.fno) || r.f.no || r.f.uuid.slice(0, 8);
+        return '<tr style="border-top:1px solid #1f2840"><td style="padding:7px;font-weight:700;color:' + (r.uygun ? '#6ee7b7' : '#fca5a5') + '">' + (r.uygun ? '✅' : '⛔') + ' ' + no + '</td>' +
+          '<td style="padding:7px">' + ((r.a && r.a.ad) || r.f.satir.slice(0, 40)) + '</td>' +
+          '<td style="padding:7px">' + (r.detay || '') + '</td>' +
+          '<td style="padding:7px;color:#fca5a5">' + (r.sebep || '') + '</td></tr>';
+      };
+      h += '<div style="overflow:auto;border:1px solid #2a3550;border-radius:8px"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#141c2e;text-align:left">' + ['Fatura', 'Alıcı (faturadaki)', 'Kontrol', 'Sebep'].map(x => '<th style="padding:8px">' + x + '</th>').join('') + '</tr></thead><tbody>';
+      red.forEach(r => { h += satirHtml(r); });
+      uygun.forEach(r => { h += satirHtml(r); });
+      h += '</tbody></table></div>';
+      bar.innerHTML = h;
+    }
+
+    const kurPortal = () => {
+      butonEkle('🔎 Alıcı Bilgi Kontrol', aliciKontrol, 'linear-gradient(135deg,#a78bfa,#7c3aed)', '__akBtn', 20);
+    };
+    kurPortal();
+    setInterval(kurPortal, 2000);
   }
 
   /* ════════════════════ UYUMSOFT ════════════════════ */
