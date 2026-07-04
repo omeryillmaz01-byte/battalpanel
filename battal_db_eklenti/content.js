@@ -961,11 +961,47 @@
       return { uygun, sebep, detay, rec, yzd };
     }
 
+    const bekle = ms => new Promise(r => setTimeout(r, ms));
+    const ilkUuid = () => { const l = faturalariTopla(); return l.length ? l[0].uuid : ''; };
+
+    // TAM OTOMATİK toplama: sayfa boyutunu en büyüğe (250) kendisi çeker,
+    // "Sonraki" ile TÜM sayfaları kendisi gezer, bütün faturaları toplar.
+    async function tumFaturalariTopla(bar) {
+      const hepsi = new Map();
+      // 1) Sayfa boyutu → mevcut en büyük seçenek
+      const sel = document.querySelector('select[name$="_length"], .dataTables_length select, select.pageSize, select[onchange*="length" i]');
+      if (sel && sel.options && sel.options.length) {
+        const enB = Math.max(...[...sel.options].map(o => +o.value).filter(v => v > 0));
+        if (enB > (+sel.value || 0)) {
+          sel.value = String(enB);
+          sel.dispatchEvent(new Event('change', { bubbles: true }));
+          if (bar) bar.textContent = '📄 Sayfa boyutu ' + enB + ' yapıldı, tablo yenileniyor…';
+          await bekle(3000);
+        }
+      }
+      // 2) Tüm sayfaları gez
+      let guard = 0;
+      while (guard++ < 300) {
+        faturalariTopla().forEach(f => hepsi.set(f.uuid.toLowerCase(), f));
+        if (bar) bar.textContent = '📄 Sayfalar geziliyor… toplanan fatura: ' + hepsi.size;
+        const next = document.querySelector('a.paginate_button.next, li.next a, a[title="Sonraki" i], a[aria-label="Next" i], .pagination .next a');
+        const kapali = !next || /disabled/i.test((next.className || '') + ' ' + ((next.parentElement && next.parentElement.className) || ''));
+        if (kapali) break;
+        const onceki = ilkUuid();
+        next.click();
+        let t = 0; while (t++ < 40) { await bekle(300); if (ilkUuid() !== onceki) break; }
+        if (ilkUuid() === onceki) break; // sayfa değişmedi → son sayfa
+      }
+      return [...hepsi.values()];
+    }
+
     async function aliciKontrol() {
-      const bar = overlayAc('🔎 Alıcı Bilgi Kontrol · Gelen Fatura ↔ Levha');
-      const list = faturalariTopla();
+      const bar = overlayAc('🔎 Alıcı Bilgi Kontrol · Gelen Fatura ↔ Levha (otomatik)');
+      bar.textContent = '📄 Faturalar toplanıyor…';
+      let list;
+      try { list = await tumFaturalariTopla(bar); } catch (e) { list = faturalariTopla(); }
       if (!list.length) {
-        bar.innerHTML = '<div style="color:#fcd34d;line-height:1.8">Bu sayfada gelen fatura satırı bulunamadı.<br><b>Yap:</b> Gelen Fatura → Tümü listesini aç, sayfa boyutunu <b>250</b> yap → bu butona tekrar bas.<br><span style="font-size:11px;color:#9aa6c0">Not: Kontrol yalnız ekrandaki sayfayı tarar; 250\'lik sayfalarla tüm listeyi gez.</span></div>';
+        bar.innerHTML = '<div style="color:#fcd34d;line-height:1.8">Bu sayfada gelen fatura satırı bulunamadı.<br>Gelen Fatura → <b>Tümü</b> listesini aç — motor gerisini kendisi yapar (sayfa boyutu + tüm sayfalar otomatik).</div>';
         return;
       }
       bar.innerHTML = '<div id="__akDurum">🔎 ' + list.length + ' fatura kontrol ediliyor… 0/' + list.length + '</div><div id="__akRows" style="margin-top:10px"></div>';
@@ -1020,6 +1056,24 @@
     };
     kurPortal();
     setInterval(kurPortal, 2000);
+
+    // ⚡ TAM OTOMATİK BAŞLATMA: Gelen Fatura listesi açılınca (satırlar yüklenince)
+    // kontrol kendiliğinden başlar — hiçbir tıklama gerekmez. Sekme başına 1 kez;
+    // yeniden çalıştırmak istersen butona basman yeter.
+    (function otoBaslat() {
+      if (sessionStorage.getItem('__akOto')) return;
+      let deneme = 0;
+      const iv = setInterval(() => {
+        deneme++;
+        if (sessionStorage.getItem('__akOto')) { clearInterval(iv); return; }
+        if (/gelen/i.test(location.pathname + location.search) && faturalariTopla().length) {
+          clearInterval(iv);
+          sessionStorage.setItem('__akOto', '1');
+          aliciKontrol();
+        }
+        if (deneme > 60) clearInterval(iv); // ~2 dk içinde liste gelmediyse bekleme
+      }, 2000);
+    })();
   }
 
   /* ════════════════════ UYUMSOFT ════════════════════ */
