@@ -539,7 +539,7 @@
       const topKdv = eksik.reduce((a, r) => a + (r.kdv || 0), 0);
       h += '<div style="margin-bottom:12px">' + chip('Gönderilecek Matrah', '₺' + fmt(topMatrah), '#1e3a2f') + chip('Gönderilecek KDV', '₺' + fmt(topKdv), '#1e2f3a') + '</div>';
 
-      const cols = ['Fatura No', 'Tarih', 'Satıcı', 'VKN/TC', 'Matrah', 'KDV', 'KDV%', 'Sınıf', 'Alt Tür'];
+      const cols = ['Fatura No', 'Tarih', 'Satıcı', 'VKN/TC', 'Matrah', 'KDV', 'KDV%', 'ÖİV', 'Sınıf', 'Alt Tür'];
       h += '<div style="overflow:auto;max-height:300px;border:1px solid #2a3550;border-radius:8px;margin-bottom:12px"><table style="width:100%;border-collapse:collapse;font-size:11.5px"><thead><tr style="background:#141c2e;text-align:left;position:sticky;top:0">' + cols.map(x => '<th style="padding:7px">' + x + '</th>').join('') + '</tr></thead><tbody>';
       eksik.forEach(r => {
         h += '<tr style="border-top:1px solid #1f2840">' +
@@ -550,6 +550,7 @@
           '<td style="padding:6px;text-align:right">' + fmt(r.matrah) + '</td>' +
           '<td style="padding:6px;text-align:right">' + fmt(r.kdv) + '</td>' +
           '<td style="padding:6px;text-align:right">' + (r.kdvOran || 0) + '</td>' +
+          '<td style="padding:6px;text-align:right;color:#fcd34d">' + (r.oivTutar > 0 ? fmt(r.oivTutar) : '—') + '</td>' +
           '<td style="padding:6px;font-weight:700;color:#d4af37">' + (r.sinif || '') + '</td>' +
           '<td style="padding:6px;font-size:10px">' + (r.altAd || '') + '</td></tr>';
       });
@@ -634,10 +635,18 @@
             if (turKod === '4') ana.donemsellik = false;
             const kayitlar = [ana];
 
-            // ÖİV varsa ayrı satır
-            if (f.oiv && f.kdv > 0) {
-              // ÖİV tutarını tespit et (genelde fatura içinde ÖİV satırı olur — yaklaşık %25 KDV'den hesapla, ama şimdilik sade bırak)
-              // ÖİV'i ayrı bir kayıt olarak ekle — tutar 0 olur, sonra panelden güncellenebilir
+            // ÖİV varsa ayrı satır (KDV'siz işlem, alt kod 218)
+            if (f.oivTutar && f.oivTutar > 0) {
+              kayitlar.push({
+                deleted: false, alisTuruKodu: '1',
+                giderKayitTuruKodu: '5',
+                giderKayitAltTuruKodu: '218',
+                aciklama: ad + ' - ÖZEL İLETİŞİM VERGİSİ',
+                naceKodu: sinifData.nace || '',
+                tutar: f.oivTutar,
+                isKdvDahil: false,
+                kdvsizIslem: true
+              });
             }
 
             const P = {
@@ -1498,22 +1507,30 @@
           const toplam = say(tagTxt(lmt, 'PayableAmount') || tagTxt(lmt, 'TaxInclusiveAmount'));
           const matrahXml = say(tagTxt(lmt, 'TaxExclusiveAmount') || tagTxt(lmt, 'LineExtensionAmount'));
 
-          // KDV (TaxTotal)
-          const taxTotal = tagIc(t, 'TaxTotal');
-          const kdvToplam = say(tagTxt(taxTotal, 'TaxAmount'));
-
-          // KDV oranı (TaxSubtotal'dan)
-          let kdvOran = 0;
+          // Vergi ayrıştırma: KDV (0015) ve ÖİV (4171 / OIV / ÖİV) ayrı çekilir.
+          // Telecom faturasında ikisi tek TaxTotal içinde farklı TaxCategory ile gelir.
           const subTotals = (t.match(/<(?:\w+:)?TaxSubtotal[\s>][\s\S]*?<\/(?:\w+:)?TaxSubtotal>/g) || []);
-          if (subTotals.length === 1) {
-            kdvOran = Math.round(say(tagTxt(subTotals[0], 'Percent')));
-          } else if (subTotals.length > 1) {
-            // Karışık oranlı fatura — ağırlıklı ortalama veya en yüksek oranı al
-            let topMatrah = 0, topKdv = 0;
-            subTotals.forEach(st => { topMatrah += say(tagTxt(st, 'TaxableAmount')); topKdv += say(tagTxt(st, 'TaxAmount')); });
-            kdvOran = topMatrah > 0 ? Math.round(topKdv / topMatrah * 100) : 0;
+          let kdvToplam = 0, kdvOran = 0, oivToplam = 0, oivOran = 0, kdvMatrahi = 0;
+          const isOIVSub = st => {
+            const catId = tagTxt(st, 'TaxTypeCode') || tagTxt(tagIc(st, 'TaxCategory'), 'ID') || '';
+            const catName = tagTxt(tagIc(st, 'TaxCategory'), 'Name') + ' ' + tagTxt(tagIc(tagIc(st, 'TaxCategory'), 'TaxScheme'), 'Name') + ' ' + tagTxt(tagIc(tagIc(st, 'TaxCategory'), 'TaxScheme'), 'TaxTypeCode');
+            return /4171|ÖİV|OIV|OZEL ILET|ÖZEL İLET/i.test(catId + ' ' + catName);
+          };
+          if (subTotals.length) {
+            subTotals.forEach(st => {
+              const ta = say(tagTxt(st, 'TaxableAmount'));
+              const tx = say(tagTxt(st, 'TaxAmount'));
+              const pc = say(tagTxt(st, 'Percent'));
+              if (isOIVSub(st)) { oivToplam += tx; if (!oivOran) oivOran = Math.round(pc); }
+              else { kdvToplam += tx; kdvMatrahi += ta; if (!kdvOran) kdvOran = Math.round(pc); }
+            });
+            if (!kdvOran && kdvMatrahi > 0) kdvOran = Math.round(kdvToplam / kdvMatrahi * 100);
+          } else {
+            // Yedek: TaxTotal → TaxAmount (ayrım yok)
+            const taxTotal = tagIc(t, 'TaxTotal');
+            kdvToplam = say(tagTxt(taxTotal, 'TaxAmount'));
           }
-          const matrah = matrahXml > 0 ? matrahXml : (toplam - kdvToplam);
+          const matrah = matrahXml > 0 ? matrahXml : (toplam - kdvToplam - oivToplam);
 
           // Açıklama (Note alanı + kalem açıklamaları)
           const notlar = [];
@@ -1536,6 +1553,8 @@
             fno, ettn, tarih, saticiVkn: saticiVkn || saticiTckn, saticiUnvan,
             matrah: Math.round(matrah * 100) / 100,
             kdv: Math.round(kdvToplam * 100) / 100,
+            oivTutar: Math.round(oivToplam * 100) / 100,
+            oivOran,
             kdvOran, toplam: Math.round(toplam * 100) / 100,
             aciklama,
             sinif: sinifBilgi.sinif, altKod: sinifBilgi.altKod, altAd: sinifBilgi.altAd,
