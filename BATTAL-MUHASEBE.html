@@ -2,7 +2,8 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<title>BATTAL MUHASEBE · Yönetim Paneli</title>
+<title>BATTAL MUHASEBE · Komut Merkezi</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <style>
 :root{
   --bg-1:#0b1224; --bg-2:#0f1830; --bg-3:#13203f;
@@ -10,278 +11,428 @@
   --acc:#3b82f6; --acc-2:#60a5fa;
   --ok:#10b981; --warn:#f59e0b; --err:#ef4444; --pur:#a855f7;
   --txt:#e8edf5; --txt-dim:#8895b3; --txt-soft:#cdd6e8;
-  --card:rgba(255,255,255,.04); --card-h:rgba(255,255,255,.075);
-  --br:rgba(255,255,255,.08); --br-2:rgba(212,175,55,.25);
-  --sidebar-w:240px;
+  --card:rgba(255,255,255,.04); --card-h:rgba(255,255,255,.08);
+  --br:rgba(255,255,255,.08); --br-2:rgba(212,175,55,.28);
+  --sidebar-w:230px;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%}
 body{
   font-family:'Segoe UI','Inter',-apple-system,system-ui,sans-serif;
   background:
-    radial-gradient(1400px 900px at 0% 0%,#1e3a8a18 0%,transparent 60%),
-    radial-gradient(1000px 700px at 100% 100%,#d4af3712 0%,transparent 55%),
+    radial-gradient(1400px 900px at 0% 0%,#1e3a8a16 0%,transparent 60%),
+    radial-gradient(1000px 700px at 100% 100%,#d4af3710 0%,transparent 55%),
     linear-gradient(160deg,var(--bg-1),var(--bg-2));
   background-attachment:fixed;color:var(--txt);min-height:100vh;line-height:1.55;
   display:grid;grid-template-columns:var(--sidebar-w) 1fr;
 }
-::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar{width:8px;height:8px}
 ::-webkit-scrollbar-track{background:rgba(0,0,0,.2)}
-::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:5px}
-::-webkit-scrollbar-thumb:hover{background:rgba(212,175,55,.35)}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.11);border-radius:5px}
+::-webkit-scrollbar-thumb:hover{background:rgba(212,175,55,.3)}
 
 /* ════════ SIDEBAR ════════ */
 aside{
-  background:linear-gradient(180deg,rgba(11,18,36,.95),rgba(15,24,48,.95));
+  background:linear-gradient(180deg,rgba(10,16,32,.97),rgba(13,21,42,.97));
   border-right:1px solid var(--br);min-height:100vh;
   display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto;
 }
 .brand{
-  padding:22px 20px 18px;border-bottom:1px solid var(--br);
-  display:flex;align-items:center;gap:12px;
+  padding:20px 18px 16px;border-bottom:1px solid var(--br);
+  display:flex;align-items:center;gap:11px;
 }
 .brand-mark{
-  width:44px;height:44px;border-radius:11px;
+  width:40px;height:40px;border-radius:10px;flex-shrink:0;
   background:linear-gradient(135deg,var(--gold),var(--gold-3));
-  display:flex;align-items:center;justify-content:center;font-size:22px;
-  box-shadow:0 6px 18px rgba(212,175,55,.4);
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 4px 14px rgba(212,175,55,.4);
 }
+.brand-mark i{font-size:20px;color:#0b1224}
 .brand-text h1{
-  font-size:14px;font-weight:800;letter-spacing:.6px;
+  font-size:13px;font-weight:800;letter-spacing:.5px;
   background:linear-gradient(90deg,#fff,#e6c558);
   -webkit-background-clip:text;background-clip:text;color:transparent;
+  line-height:1.2;
 }
-.brand-text p{font-size:9.5px;color:var(--txt-dim);letter-spacing:1.2px;text-transform:uppercase;margin-top:2px}
+.brand-text p{font-size:9px;color:var(--txt-dim);letter-spacing:1.2px;text-transform:uppercase;margin-top:3px}
 
-nav{padding:14px 12px;flex:1}
-.nav-section{margin-bottom:18px}
+nav{padding:12px 10px;flex:1}
+.nav-section{margin-bottom:16px}
 .nav-section-t{
-  font-size:10px;color:var(--txt-dim);letter-spacing:1.2px;
-  text-transform:uppercase;font-weight:700;padding:0 10px 8px;
+  font-size:9.5px;color:var(--txt-dim);letter-spacing:1.3px;
+  text-transform:uppercase;font-weight:700;padding:0 10px 7px;
 }
 .nav-item{
-  display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:8px;
-  color:var(--txt-soft);font-size:12.5px;font-weight:500;cursor:pointer;
+  display:flex;align-items:center;gap:10px;padding:8px 11px;border-radius:7px;
+  color:var(--txt-soft);font-size:12px;font-weight:500;cursor:pointer;
   transition:all .15s;text-decoration:none;
 }
 .nav-item:hover{background:rgba(255,255,255,.05);color:#fff}
-.nav-item.active{background:linear-gradient(90deg,rgba(212,175,55,.18),rgba(212,175,55,.05));color:var(--gold-2);font-weight:600}
-.nav-item .ic{font-size:15px;width:18px;text-align:center}
-.nav-item .badge{margin-left:auto;font-size:9px;padding:2px 7px;border-radius:10px;background:var(--gold);color:#0b1224;font-weight:700}
-.nav-item .badge.warn{background:var(--warn);color:#0b1224}
+.nav-item.active{
+  background:linear-gradient(90deg,rgba(212,175,55,.16),rgba(212,175,55,.04));
+  color:var(--gold-2);font-weight:600;
+  border-left:2px solid var(--gold);margin-left:-1px;
+}
+.nav-item .ic{
+  width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;
+  font-size:14px;flex-shrink:0;background:rgba(255,255,255,.05);color:var(--txt-dim);
+}
+.nav-item.active .ic{background:rgba(212,175,55,.15);color:var(--gold-2)}
+.nav-item:hover .ic{background:rgba(255,255,255,.09);color:#fff}
+.nav-item .nbadge{margin-left:auto;font-size:9px;padding:1.5px 6px;border-radius:8px;background:var(--gold);color:#0b1224;font-weight:800}
+.nav-item .nbadge.new{background:#10b981;color:#fff}
+.nav-item .nbadge.warn{background:var(--warn)}
 
 .sidebar-footer{
-  padding:14px;border-top:1px solid var(--br);
-  font-size:10.5px;color:var(--txt-dim);text-align:center;
+  padding:12px 16px;border-top:1px solid var(--br);
+  font-size:10px;color:var(--txt-dim);
+  display:flex;align-items:center;gap:8px;
 }
-.sidebar-footer b{color:var(--gold-2)}
+.sidebar-footer .av{
+  width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--gold),var(--gold-3));
+  display:flex;align-items:center;justify-content:center;font-size:10px;color:#0b1224;font-weight:800;flex-shrink:0;letter-spacing:.5px;
+}
+.sidebar-footer .info{flex:1}
+.sidebar-footer .name{font-size:11px;color:var(--txt-soft);font-weight:600}
+.sidebar-footer .dt{font-size:9.5px;color:var(--txt-dim)}
 
 /* ════════ MAIN ════════ */
-main{padding:0;min-width:0}
+main{padding:0;min-width:0;overflow-x:hidden}
 
 .topbar{
-  background:rgba(11,18,36,.7);backdrop-filter:blur(12px);
-  border-bottom:1px solid var(--br);padding:16px 28px;
-  display:flex;align-items:center;gap:18px;position:sticky;top:0;z-index:50;
+  background:rgba(11,18,36,.72);backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--br);padding:14px 26px;
+  display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:50;
 }
-.topbar h2{font-size:18px;font-weight:700;color:#fff;letter-spacing:.2px}
-.topbar .sub{font-size:11.5px;color:var(--txt-dim);margin-top:1px}
+.topbar .t-icon{
+  width:36px;height:36px;border-radius:9px;
+  background:rgba(212,175,55,.12);border:1px solid rgba(212,175,55,.2);
+  display:flex;align-items:center;justify-content:center;font-size:17px;color:var(--gold-2);
+}
+.topbar .t-info h2{font-size:16px;font-weight:700;color:#fff;letter-spacing:.2px;line-height:1.2}
+.topbar .t-info .sub{font-size:10.5px;color:var(--txt-dim)}
 .topbar .spc{flex:1}
-.topbar .chip{
-  display:inline-flex;align-items:center;gap:6px;padding:7px 13px;
-  background:rgba(255,255,255,.04);border:1px solid var(--br);border-radius:8px;
-  font-size:11.5px;color:var(--txt-soft);
+.live-badge{
+  display:inline-flex;align-items:center;gap:7px;padding:6px 12px;
+  background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.25);border-radius:7px;
+  font-size:11px;color:#6ee7b7;font-weight:600;
 }
-.topbar .chip b{color:var(--gold-2);font-weight:700}
-.topbar .chip.live{background:rgba(16,185,129,.10);border-color:rgba(16,185,129,.3);color:#6ee7b7}
-.topbar .chip.live .dot{width:6px;height:6px;border-radius:50%;background:#10b981;box-shadow:0 0 8px #10b981;animation:pulse 2s infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-
-.body{padding:24px 28px 60px}
-
-/* KPI bar */
-.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(195px,1fr));gap:14px;margin-bottom:22px}
-.kpi{
-  background:linear-gradient(135deg,var(--card),rgba(255,255,255,.02));
-  border:1px solid var(--br);border-radius:13px;padding:17px 18px;
-  position:relative;overflow:hidden;transition:all .2s;
+.live-badge .dot{width:6px;height:6px;border-radius:50%;background:#10b981;box-shadow:0 0 7px #10b981;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.date-badge{
+  display:inline-flex;align-items:center;gap:7px;padding:6px 12px;
+  background:var(--card);border:1px solid var(--br);border-radius:7px;
+  font-size:11px;color:var(--txt-soft);
 }
-.kpi:hover{border-color:var(--br-2);transform:translateY(-2px);box-shadow:0 12px 30px rgba(0,0,0,.3)}
-.kpi::before{
-  content:'';position:absolute;top:0;left:0;width:3px;height:100%;
-  background:var(--gold);opacity:.7;
-}
-.kpi.acc::before{background:var(--acc)}
-.kpi.ok::before{background:var(--ok)}
-.kpi.warn::before{background:var(--warn)}
-.kpi.pur::before{background:var(--pur)}
-.kpi-h{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
-.kpi-l{font-size:10.5px;color:var(--txt-dim);letter-spacing:1px;text-transform:uppercase;font-weight:600}
-.kpi-ic{font-size:18px;opacity:.7}
-.kpi-v{font-size:26px;font-weight:800;color:#fff;letter-spacing:-.5px;line-height:1.1}
-.kpi-s{font-size:11px;color:var(--txt-dim);margin-top:5px;display:flex;align-items:center;gap:6px}
-.kpi-s .delta{padding:1.5px 7px;border-radius:10px;font-weight:700;font-size:9.5px}
-.kpi-s .delta.up{background:rgba(16,185,129,.18);color:#6ee7b7}
-.kpi-s .delta.down{background:rgba(239,68,68,.18);color:#fca5a5}
-.kpi-s .delta.flat{background:rgba(212,175,55,.15);color:var(--gold-2)}
+.date-badge i{color:var(--gold-2)}
 
-/* Spark mini chart */
-.kpi-spark{position:absolute;bottom:0;right:0;width:90px;height:36px;opacity:.55}
+.body{padding:20px 26px 80px}
+
+/* ════════ KOMUT ŞERİDİ ════════ */
+.komut-seridi{
+  display:grid;grid-template-columns:repeat(4,1fr);
+  gap:0;background:linear-gradient(135deg,rgba(212,175,55,.07),rgba(212,175,55,.02));
+  border:1px solid var(--br-2);border-radius:14px;overflow:hidden;margin-bottom:22px;
+}
+@media(max-width:760px){.komut-seridi{grid-template-columns:1fr 1fr}.ks-stat:nth-child(2){border-right:none}}
+.ks-stat{
+  padding:16px 20px;display:flex;align-items:center;gap:13px;
+  border-right:1px solid rgba(255,255,255,.06);position:relative;
+}
+.ks-stat:last-child{border-right:none}
+.ks-ic{
+  width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;
+  font-size:20px;flex-shrink:0;
+}
+.ks-ic.gold{background:rgba(212,175,55,.15);color:var(--gold-2)}
+.ks-ic.ok{background:rgba(16,185,129,.15);color:#6ee7b7}
+.ks-ic.acc{background:rgba(59,130,246,.15);color:#93c5fd}
+.ks-ic.warn{background:rgba(245,158,11,.15);color:#fde68a}
+.ks-val{font-size:24px;font-weight:800;color:#fff;line-height:1}
+.ks-lbl{font-size:10px;color:var(--txt-dim);margin-top:3px;letter-spacing:.5px;text-transform:uppercase}
+.ks-delta{display:inline-flex;align-items:center;gap:4px;font-size:9.5px;padding:1.5px 6px;border-radius:6px;margin-top:4px;font-weight:700}
+.ks-delta.up{background:rgba(16,185,129,.15);color:#6ee7b7}
+.ks-delta.warn{background:rgba(245,158,11,.15);color:#fde68a}
+.ks-actions{
+  display:flex;flex-direction:column;justify-content:center;gap:7px;
+  padding:14px 18px;background:rgba(0,0,0,.15);
+}
+.ks-btn{
+  display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:8px;
+  background:rgba(212,175,55,.12);border:1px solid rgba(212,175,55,.22);
+  color:var(--gold-2);font-size:11.5px;font-weight:700;cursor:pointer;transition:all .15s;
+  text-decoration:none;white-space:nowrap;
+}
+.ks-btn:hover{background:rgba(212,175,55,.22);transform:translateX(2px)}
+.ks-btn.acc{background:rgba(59,130,246,.12);border-color:rgba(59,130,246,.25);color:#93c5fd}
+.ks-btn.acc:hover{background:rgba(59,130,246,.22)}
+.ks-btn.ok{background:rgba(16,185,129,.12);border-color:rgba(16,185,129,.25);color:#6ee7b7}
+.ks-btn.ok:hover{background:rgba(16,185,129,.22)}
+
+/* ════════ DEFTER BEYAN KOMUTA BARI ════════ */
+.db-bar{
+  display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+  background:linear-gradient(135deg,rgba(175,0,3,.12),rgba(212,175,55,.05));
+  border:1px solid var(--br-2);border-radius:14px;padding:16px 20px;margin-bottom:22px;
+}
+.db-bar-info{display:flex;align-items:center;gap:13px;flex:1;min-width:220px}
+.db-bar-ic{
+  width:44px;height:44px;border-radius:11px;background:linear-gradient(135deg,#af0003,#7a0002);
+  display:flex;align-items:center;justify-content:center;font-size:21px;color:#fff;flex-shrink:0;
+}
+.db-bar-info h4{font-size:14px;color:#fff;font-weight:700}
+.db-bar-info p{font-size:11px;color:var(--txt-dim);margin-top:2px}
+.db-bar-actions{display:flex;gap:9px;flex-wrap:wrap}
+.db-btn{
+  display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border-radius:9px;
+  font-size:12.5px;font-weight:700;cursor:pointer;text-decoration:none;white-space:nowrap;transition:all .15s;border:1px solid transparent;
+}
+.db-btn.primary{background:linear-gradient(135deg,#af0003,#7a0002);color:#fff;box-shadow:0 4px 14px rgba(175,0,3,.35)}
+.db-btn.primary:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(175,0,3,.5)}
+.db-btn.gold{background:rgba(212,175,55,.14);border-color:rgba(212,175,55,.35);color:var(--gold-2);cursor:grab}
+.db-btn.gold:hover{background:rgba(212,175,55,.24)}
+.db-btn.gold:active{cursor:grabbing}
+.db-btn.ghost{background:rgba(255,255,255,.05);border-color:var(--br);color:var(--txt-dim)}
+.db-btn.ghost:hover{color:var(--txt-soft);background:rgba(255,255,255,.09)}
 
 /* Section */
-.section{margin-bottom:26px}
-.section-h{
-  display:flex;align-items:center;gap:12px;margin-bottom:14px;
-}
-.section-h h3{font-size:14px;font-weight:700;color:#fff;letter-spacing:.3px}
-.section-h .badge{font-size:9.5px;padding:3px 8px;border-radius:14px;background:rgba(212,175,55,.18);color:var(--gold-2);font-weight:700;letter-spacing:.5px;text-transform:uppercase}
+.section{margin-bottom:24px}
+.section-h{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.section-h h3{font-size:13px;font-weight:700;color:#fff;letter-spacing:.3px}
+.section-h .sbadge{font-size:9px;padding:2.5px 8px;border-radius:10px;background:rgba(212,175,55,.16);color:var(--gold-2);font-weight:700;letter-spacing:.5px;text-transform:uppercase}
 .section-h .line{flex:1;height:1px;background:linear-gradient(90deg,var(--br),transparent)}
-.section-h .more{font-size:11px;color:var(--txt-dim);cursor:pointer}
+.section-h .more{font-size:11px;color:var(--txt-dim);cursor:pointer;display:flex;align-items:center;gap:4px}
 .section-h .more:hover{color:var(--gold-2)}
 
-/* 2-col layout */
-.two-col{display:grid;grid-template-columns:2fr 1fr;gap:18px}
-@media (max-width:1100px){.two-col{grid-template-columns:1fr}}
+/* two-col */
+.two-col{display:grid;grid-template-columns:3fr 2fr;gap:18px}
+@media(max-width:1150px){.two-col{grid-template-columns:1fr}}
 
-/* ════════ 3 BÜYÜK ANA MODÜL ════════ */
-.big3-grid{
-  display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:18px;
-  margin-bottom:12px;
-}
-@media(max-width:1100px){.big3-grid{grid-template-columns:1fr}}
-.big3{
-  position:relative;cursor:pointer;border-radius:16px;padding:24px 22px 22px;
-  background:linear-gradient(160deg,rgba(255,255,255,.05),rgba(255,255,255,.015));
-  border:2px solid var(--br);transition:all .25s;overflow:hidden;
-  display:flex;flex-direction:column;min-height:240px;
-}
-.big3::before{
-  content:"";position:absolute;top:0;right:-30%;width:60%;height:100%;
-  background:radial-gradient(circle at 70% 50%,var(--big3-glow,#7c3aed33) 0%,transparent 65%);
-  pointer-events:none;
-}
-.big3:hover{transform:translateY(-3px);border-color:var(--big3-color,#7c3aed);box-shadow:0 12px 32px var(--big3-glow,#7c3aed30)}
-.big3-ic{
-  width:60px;height:60px;border-radius:14px;display:flex;align-items:center;justify-content:center;
-  font-size:30px;margin-bottom:14px;
-  background:linear-gradient(135deg,var(--big3-color,#7c3aed),var(--big3-color2,#5b21b6));
-  box-shadow:0 8px 20px var(--big3-glow,#7c3aed40);
-}
-.big3 h3{font-size:16px;font-weight:800;color:#fff;letter-spacing:.3px;margin-bottom:8px}
-.big3 p{font-size:12.5px;color:var(--txt-soft);line-height:1.55;margin-bottom:16px;flex:1}
-.big3-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
-.big3-tags span{
-  font-size:10px;padding:3px 9px;border-radius:6px;
-  background:rgba(255,255,255,.06);color:var(--txt-soft);font-weight:500;
-}
-.big3-btn{
-  align-self:flex-start;padding:8px 18px;border-radius:8px;
-  background:var(--big3-color,#7c3aed);color:#fff;font-weight:700;font-size:12px;
-  letter-spacing:.5px;
-}
-.big3.banka{--big3-color:#3b82f6;--big3-color2:#1e40af;--big3-glow:#3b82f640}
-.big3.beyan{--big3-color:#10b981;--big3-color2:#047857;--big3-glow:#10b98140}
-.big3.db{--big3-color:#7c3aed;--big3-color2:#5b21b6;--big3-glow:#7c3aed40}
-.big3.dbpro{--big3-color:#f59e0b;--big3-color2:#b45309;--big3-glow:#f59e0b40}
-
-/* Panel cards row (eski grid, gizli araçlar için kullanılıyor) */
-.tools-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
-.tool{
-  background:var(--card);border:1px solid var(--br);border-radius:11px;padding:14px;
-  cursor:pointer;text-decoration:none;color:inherit;transition:all .2s;
-  display:flex;gap:11px;align-items:flex-start;
-}
-.tool:hover{background:var(--card-h);border-color:var(--br-2);transform:translateY(-1px)}
-.tool .ic{
-  width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;
-  font-size:18px;background:rgba(212,175,55,.12);flex-shrink:0;
-}
-.tool.html .ic{background:rgba(212,175,55,.12)}
-.tool.py .ic{background:rgba(59,130,246,.15);color:#93c5fd}
-.tool.folder .ic{background:rgba(168,85,247,.12);color:#d8b4fe}
-.tool h4{font-size:12.5px;color:#fff;font-weight:600;margin-bottom:2px}
-.tool p{font-size:10.5px;color:var(--txt-dim);line-height:1.5}
-.tool.featured{border-color:rgba(212,175,55,.45);background:linear-gradient(135deg,rgba(212,175,55,.08),rgba(212,175,55,.02))}
-
-/* Mükellef portfolio */
-.mukellef-tbl{
-  background:var(--card);border:1px solid var(--br);border-radius:11px;overflow:hidden;
-}
+/* ════════ MÜKELLEF TABLO ════════ */
+.mukellef-tbl{background:var(--card);border:1px solid var(--br);border-radius:11px;overflow:hidden}
 .mukellef-tbl table{width:100%;border-collapse:collapse;font-size:12px}
 .mukellef-tbl th{
-  padding:11px 14px;text-align:left;background:rgba(0,0,0,.2);color:var(--txt-dim);
-  font-size:10px;letter-spacing:.6px;text-transform:uppercase;font-weight:700;
+  padding:10px 13px;text-align:left;background:rgba(0,0,0,.2);color:var(--txt-dim);
+  font-size:9.5px;letter-spacing:.7px;text-transform:uppercase;font-weight:700;
   border-bottom:1px solid var(--br);
 }
-.mukellef-tbl td{padding:10px 14px;border-bottom:1px solid rgba(255,255,255,.03);color:var(--txt-soft)}
-.mukellef-tbl tr:hover td{background:rgba(255,255,255,.025)}
+.mukellef-tbl td{padding:9px 13px;border-bottom:1px solid rgba(255,255,255,.03);color:var(--txt-soft);vertical-align:middle}
+.mukellef-tbl tr:hover td{background:rgba(255,255,255,.02)}
 .mukellef-tbl tr:last-child td{border-bottom:none}
-.mukellef-tbl .ad{color:#fff;font-weight:600;font-size:12.5px}
-.mukellef-tbl .emoji{font-size:16px;margin-right:6px}
-.mukellef-tbl .pill{
-  padding:2.5px 9px;border-radius:11px;font-size:9.5px;font-weight:700;
-  letter-spacing:.4px;text-transform:uppercase;
+.muk-avatar{
+  width:28px;height:28px;border-radius:7px;display:inline-flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:800;flex-shrink:0;color:#fff;
+  background:linear-gradient(135deg,rgba(212,175,55,.4),rgba(212,175,55,.15));
 }
-.pill.ok{background:rgba(16,185,129,.18);color:#6ee7b7}
-.pill.warn{background:rgba(245,158,11,.18);color:#fde68a}
-.pill.info{background:rgba(59,130,246,.18);color:#93c5fd}
+.muk-ad{color:#fff;font-weight:600;font-size:12px}
+.muk-vkn{font-size:9.5px;color:var(--txt-dim);margin-top:1px}
+.pill{padding:2px 8px;border-radius:9px;font-size:9.5px;font-weight:700;letter-spacing:.3px;text-transform:uppercase}
+.pill.ok{background:rgba(16,185,129,.15);color:#6ee7b7}
+.pill.warn{background:rgba(245,158,11,.15);color:#fde68a}
+.pill.info{background:rgba(59,130,246,.15);color:#93c5fd}
 .pill.gray{background:rgba(255,255,255,.06);color:var(--txt-dim)}
+.pill.gold{background:rgba(212,175,55,.15);color:var(--gold-2)}
+.type-badge{font-size:9.5px;padding:2px 7px;border-radius:5px;font-weight:700;letter-spacing:.4px}
+.type-badge.smm{background:rgba(168,85,247,.15);color:#c4b5fd}
+.type-badge.isl{background:rgba(245,158,11,.15);color:#fde68a}
+.type-badge.bil{background:rgba(59,130,246,.15);color:#93c5fd}
 
-/* Activity */
-.act-list{background:var(--card);border:1px solid var(--br);border-radius:11px;padding:8px}
-.act{padding:11px 14px;display:flex;gap:12px;align-items:flex-start;border-bottom:1px solid rgba(255,255,255,.03)}
-.act:last-child{border-bottom:none}
-.act-ic{
-  width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;
-  font-size:14px;flex-shrink:0;
+/* ════════ ANA MODÜLLER ════════ */
+.big3-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:12px}
+@media(max-width:900px){.big3-grid{grid-template-columns:1fr}}
+.big3{
+  border-radius:13px;padding:20px 18px;cursor:pointer;
+  background:linear-gradient(160deg,rgba(255,255,255,.05),rgba(255,255,255,.015));
+  border:1.5px solid var(--br);transition:all .22s;overflow:hidden;
+  display:flex;flex-direction:column;min-height:180px;position:relative;
 }
-.act-ic.ok{background:rgba(16,185,129,.18);color:#6ee7b7}
-.act-ic.info{background:rgba(59,130,246,.18);color:#93c5fd}
-.act-ic.warn{background:rgba(245,158,11,.18);color:#fde68a}
-.act-ic.gold{background:rgba(212,175,55,.18);color:var(--gold-2)}
-.act-c{flex:1;min-width:0}
-.act-c h5{font-size:12px;color:#fff;font-weight:600;margin-bottom:2px}
-.act-c p{font-size:11px;color:var(--txt-dim);line-height:1.5}
-.act-time{font-size:10px;color:var(--txt-dim);white-space:nowrap;margin-left:auto}
+.big3::after{
+  content:"";position:absolute;top:0;right:-20%;width:55%;height:100%;
+  background:radial-gradient(circle at 80% 40%,var(--b3-glow,#3b82f633) 0%,transparent 65%);
+  pointer-events:none;
+}
+.big3:hover{transform:translateY(-2px);border-color:var(--b3-color,#3b82f6);box-shadow:0 10px 28px var(--b3-glow,#3b82f625)}
+.b3-icon{
+  width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;
+  font-size:22px;margin-bottom:12px;
+  background:linear-gradient(135deg,var(--b3-color,#3b82f6),var(--b3-c2,#1e40af));
+  box-shadow:0 6px 16px var(--b3-glow,#3b82f635);
+}
+.big3 h3{font-size:13px;font-weight:800;color:#fff;letter-spacing:.3px;margin-bottom:6px}
+.big3 p{font-size:11px;color:var(--txt-soft);line-height:1.55;margin-bottom:12px;flex:1}
+.big3-tags{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px}
+.big3-tags span{font-size:9.5px;padding:2px 7px;border-radius:5px;background:rgba(255,255,255,.06);color:var(--txt-soft);font-weight:500}
+.big3-btn{
+  align-self:flex-start;padding:6px 14px;border-radius:7px;
+  background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);
+  color:#fff;font-weight:700;font-size:11px;letter-spacing:.5px;
+  display:flex;align-items:center;gap:6px;
+}
+.big3.banka{--b3-color:#3b82f6;--b3-c2:#1e40af;--b3-glow:#3b82f640}
+.big3.beyan{--b3-color:#10b981;--b3-c2:#047857;--b3-glow:#10b98140}
+.big3.dbpro{--b3-color:#f59e0b;--b3-c2:#b45309;--b3-glow:#f59e0b40}
 
-/* System status */
-.sys-list{background:var(--card);border:1px solid var(--br);border-radius:11px;padding:14px}
-.sys{display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.03)}
+/* ════════ ARAÇ GRID ════════ */
+.tools-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+.tool{
+  background:var(--card);border:1px solid var(--br);border-radius:10px;padding:12px;
+  cursor:pointer;text-decoration:none;color:inherit;transition:all .18s;
+  display:flex;gap:10px;align-items:flex-start;
+}
+.tool:hover{background:var(--card-h);border-color:rgba(212,175,55,.22);transform:translateY(-1px)}
+.tool .t-ic{
+  width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;
+  font-size:16px;flex-shrink:0;
+}
+.tool .t-ic.html{background:rgba(212,175,55,.12);color:var(--gold-2)}
+.tool .t-ic.py{background:rgba(59,130,246,.12);color:#93c5fd}
+.tool .t-ic.folder{background:rgba(168,85,247,.12);color:#d8b4fe}
+.tool .t-ic.link{background:rgba(16,185,129,.12);color:#6ee7b7}
+.tool .t-ic.feat{background:linear-gradient(135deg,rgba(212,175,55,.25),rgba(212,175,55,.1));color:var(--gold);border:1px solid rgba(212,175,55,.3)}
+.tool h4{font-size:12px;color:#fff;font-weight:600;margin-bottom:2px}
+.tool p{font-size:10px;color:var(--txt-dim);line-height:1.5}
+.tool.featured{border-color:rgba(212,175,55,.3);background:linear-gradient(135deg,rgba(212,175,55,.07),rgba(212,175,55,.02))}
+
+/* ════════ BEYAN TAKVİMİ ════════ */
+.beyan-card{background:var(--card);border:1px solid var(--br);border-radius:11px;overflow:hidden}
+.beyan-item{
+  display:flex;align-items:center;gap:12px;padding:11px 14px;
+  border-bottom:1px solid rgba(255,255,255,.03);transition:background .12s;
+}
+.beyan-item:last-child{border-bottom:none}
+.beyan-item:hover{background:rgba(255,255,255,.02)}
+.beyan-date{
+  min-width:46px;text-align:center;padding:5px 7px;border-radius:8px;
+  background:rgba(0,0,0,.2);flex-shrink:0;
+}
+.beyan-date .day{font-size:17px;font-weight:800;color:#fff;line-height:1}
+.beyan-date .mon{font-size:9px;color:var(--txt-dim);letter-spacing:.5px;text-transform:uppercase}
+.beyan-date.today{background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3)}
+.beyan-date.today .day{color:#fca5a5}
+.beyan-date.soon{background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.25)}
+.beyan-date.soon .day{color:#fde68a}
+.beyan-info{flex:1;min-width:0}
+.beyan-info h5{font-size:12px;color:#fff;font-weight:600;margin-bottom:2px}
+.beyan-info p{font-size:10.5px;color:var(--txt-dim);line-height:1.4}
+.beyan-countdown{
+  font-size:10px;font-weight:800;padding:2.5px 8px;border-radius:6px;white-space:nowrap;flex-shrink:0;
+}
+.beyan-countdown.today{background:rgba(239,68,68,.2);color:#fca5a5}
+.beyan-countdown.soon{background:rgba(245,158,11,.15);color:#fde68a}
+.beyan-countdown.ok{background:rgba(16,185,129,.12);color:#6ee7b7}
+
+/* ════════ SİSTEM DURUMU ════════ */
+.sys-list{background:var(--card);border:1px solid var(--br);border-radius:11px;padding:12px}
+.sys{display:flex;align-items:center;gap:10px;padding:7px 4px;border-bottom:1px solid rgba(255,255,255,.03)}
 .sys:last-child{border-bottom:none}
-.sys .dot{width:8px;height:8px;border-radius:50%}
-.sys .dot.ok{background:#10b981;box-shadow:0 0 8px #10b98180}
-.sys .dot.warn{background:#f59e0b;box-shadow:0 0 8px #f59e0b80}
-.sys .dot.err{background:#ef4444;box-shadow:0 0 8px #ef444480}
-.sys .name{flex:1;font-size:12px;color:var(--txt-soft)}
-.sys .val{font-size:11px;color:var(--txt-dim);font-variant-numeric:tabular-nums}
+.sys-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.sys-dot.ok{background:#10b981;box-shadow:0 0 7px #10b98170}
+.sys-dot.warn{background:#f59e0b;box-shadow:0 0 7px #f59e0b70}
+.sys-dot.err{background:#ef4444;box-shadow:0 0 7px #ef444470}
+.sys-name{flex:1;font-size:11.5px;color:var(--txt-soft)}
+.sys-val{font-size:10.5px;color:var(--txt-dim);font-variant-numeric:tabular-nums}
+
+/* ════════ FİRMA KÜNYELERİ ════════ */
+.kunye-toolbar{
+  display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;
+}
+.kunye-search{
+  flex:1;min-width:220px;
+  background:var(--card);border:1px solid var(--br);border-radius:9px;
+  padding:9px 13px 9px 36px;color:var(--txt);font-family:inherit;font-size:13px;
+  outline:none;transition:border .15s;position:relative;
+}
+.kunye-search:focus{border-color:rgba(212,175,55,.4)}
+.kunye-search-wrap{position:relative;flex:1;min-width:220px}
+.kunye-search-wrap i{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--txt-dim);font-size:14px;pointer-events:none}
+.kunye-filter{
+  display:flex;gap:5px;flex-wrap:wrap;
+}
+.kf-btn{
+  padding:7px 13px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;
+  background:var(--card);border:1px solid var(--br);color:var(--txt-dim);transition:all .15s;
+}
+.kf-btn:hover{border-color:rgba(212,175,55,.3);color:var(--txt-soft)}
+.kf-btn.active{background:rgba(212,175,55,.15);border-color:rgba(212,175,55,.4);color:var(--gold-2)}
+.kunye-count{font-size:11px;color:var(--txt-dim);white-space:nowrap;align-self:center}
+
+.kunye-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px;
+}
+.kk{
+  background:var(--card);border:1px solid var(--br);border-radius:11px;
+  padding:14px;transition:all .18s;cursor:default;
+  position:relative;overflow:hidden;
+}
+.kk::before{
+  content:"";position:absolute;left:0;top:0;width:3px;height:100%;
+  background:var(--kk-color,var(--gold));opacity:.7;
+}
+.kk:hover{background:var(--card-h);border-color:rgba(212,175,55,.2)}
+.kk-head{display:flex;align-items:flex-start;gap:10px;margin-bottom:9px}
+.kk-av{
+  width:36px;height:36px;border-radius:8px;flex-shrink:0;
+  background:var(--kk-bg,rgba(212,175,55,.12));
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px;font-weight:800;color:var(--kk-color,var(--gold-2));
+}
+.kk-title{flex:1;min-width:0}
+.kk-unvan{font-size:12px;font-weight:700;color:#fff;line-height:1.35;margin-bottom:2px}
+.kk-vkn{font-size:10px;color:var(--txt-dim);font-family:'Consolas',monospace;letter-spacing:.4px}
+.kk-body{font-size:11px;color:var(--txt-dim);line-height:1.65}
+.kk-body b{color:var(--txt-soft)}
+.kk-body .row{display:flex;gap:6px;align-items:flex-start;margin-bottom:2px}
+.kk-body .row i{margin-top:2px;flex-shrink:0;font-size:11px}
+.kk-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:9px}
+.kk-tag{
+  font-size:9.5px;padding:2px 7px;border-radius:5px;font-weight:600;
+  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);color:var(--txt-dim);
+}
+.kk-tag.ok{background:rgba(16,185,129,.12);border-color:rgba(16,185,129,.25);color:#6ee7b7}
+.kk-tag.warn{background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.25);color:#fde68a}
+.kk-tag.acc{background:rgba(59,130,246,.12);border-color:rgba(59,130,246,.25);color:#93c5fd}
+.kk-tag.pur{background:rgba(168,85,247,.12);border-color:rgba(168,85,247,.25);color:#d8b4fe}
+.kk-copy{
+  position:absolute;top:10px;right:10px;
+  width:24px;height:24px;border-radius:6px;border:none;cursor:pointer;
+  background:rgba(255,255,255,.05);color:var(--txt-dim);
+  display:flex;align-items:center;justify-content:center;font-size:12px;
+  opacity:0;transition:opacity .15s;
+}
+.kk:hover .kk-copy{opacity:1}
+.kk-copy:hover{background:rgba(212,175,55,.18);color:var(--gold-2)}
+.kk-none{
+  grid-column:1/-1;padding:40px;text-align:center;
+  color:var(--txt-dim);font-size:13px;
+}
 
 /* Modal */
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.78);display:none;align-items:center;justify-content:center;z-index:1000;padding:20px}
 .modal.show{display:flex}
 .modal-box{
   background:linear-gradient(160deg,var(--bg-2),var(--bg-3));
-  border:1px solid var(--br-2);border-radius:14px;padding:24px;
-  max-width:520px;width:100%;box-shadow:0 18px 50px rgba(0,0,0,.6);
+  border:1px solid var(--br-2);border-radius:13px;padding:22px;
+  max-width:500px;width:100%;box-shadow:0 16px 48px rgba(0,0,0,.6);
 }
-.modal-box h2{font-size:17px;margin-bottom:10px;color:#fff;display:flex;align-items:center;gap:8px}
-.modal-box p{color:var(--txt-soft);font-size:12.5px;margin-bottom:11px;line-height:1.6}
+.modal-box h2{font-size:16px;margin-bottom:10px;color:#fff;display:flex;align-items:center;gap:8px}
+.modal-box p{color:var(--txt-soft);font-size:12px;margin-bottom:10px;line-height:1.6}
 .modal-box code{
-  background:#020617;color:#fde68a;padding:9px 12px;border-radius:7px;
+  background:#020617;color:#fde68a;padding:8px 11px;border-radius:7px;
   font-size:11px;font-family:'JetBrains Mono','Consolas',monospace;
   display:block;word-break:break-all;line-height:1.6;margin:8px 0;border:1px solid var(--br);
 }
-.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:14px}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
 .btn{
   border:none;cursor:pointer;font-family:inherit;font-weight:700;font-size:12px;
-  padding:9px 16px;border-radius:8px;transition:all .18s;color:#0b1224;
-  background:linear-gradient(135deg,var(--gold),var(--gold-3));
-  box-shadow:0 4px 12px rgba(212,175,55,.35);
+  padding:8px 14px;border-radius:7px;transition:all .18s;
+  display:inline-flex;align-items:center;gap:6px;
 }
-.btn:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(212,175,55,.5)}
+.btn.gold{color:#0b1224;background:linear-gradient(135deg,var(--gold),var(--gold-3));box-shadow:0 3px 10px rgba(212,175,55,.35)}
+.btn.gold:hover{transform:translateY(-1px);box-shadow:0 5px 14px rgba(212,175,55,.5)}
 .btn.sec{background:rgba(255,255,255,.06);box-shadow:none;color:var(--txt);border:1px solid var(--br)}
-kbd{background:#020617;border:1px solid #475569;color:var(--gold-2);padding:2px 7px;border-radius:4px;font-size:11px;font-family:monospace;font-weight:600}
+kbd{background:#020617;border:1px solid #475569;color:var(--gold-2);padding:2px 6px;border-radius:4px;font-size:10.5px;font-family:monospace;font-weight:600}
 
-@media (max-width:900px){
+@media(max-width:900px){
   body{grid-template-columns:1fr}
   aside{display:none}
 }
@@ -292,40 +443,69 @@ kbd{background:#020617;border:1px solid #475569;color:var(--gold-2);padding:2px 
 <!-- ════════════ SIDEBAR ════════════ -->
 <aside>
   <div class="brand">
-    <div class="brand-mark">🦁</div>
+    <div class="brand-mark"><i class="bi bi-lightning-charge-fill"></i></div>
     <div class="brand-text">
       <h1>BATTAL MUHASEBE</h1>
-      <p>Yönetim Paneli · v10.0</p>
+      <p>Komut Merkezi · v10.0</p>
     </div>
   </div>
 
   <nav>
     <div class="nav-section">
       <div class="nav-section-t">Ana Modüller</div>
-      <a class="nav-item active" href="#anasayfa"><span class="ic">📊</span>Anasayfa</a>
-      <a class="nav-item" href="#mukellef"><span class="ic">👥</span>Mükellef Portföyü<span class="badge">15</span></a>
-      <a class="nav-item" href="#araclar"><span class="ic">🛠️</span>Araçlar & Modüller</a>
-      <a class="nav-item" href="#aktivite"><span class="ic">📋</span>Aktivite Akışı</a>
-      <a class="nav-item" href="#veri"><span class="ic">📁</span>Veri Klasörleri</a>
+      <a class="nav-item active" href="#anasayfa">
+        <span class="ic"><i class="bi bi-grid-1x2-fill"></i></span>Anasayfa
+      </a>
+      <a class="nav-item" href="#mukellef">
+        <span class="ic"><i class="bi bi-people-fill"></i></span>Mükellef Portföyü
+        <span class="nbadge">15</span>
+      </a>
+      <a class="nav-item" href="#araclar">
+        <span class="ic"><i class="bi bi-tools"></i></span>Araçlar & Modüller
+      </a>
+      <a class="nav-item" href="#veri">
+        <span class="ic"><i class="bi bi-folder2-open"></i></span>Veri Klasörleri
+      </a>
+      <a class="nav-item" href="#firmalar">
+        <span class="ic"><i class="bi bi-building"></i></span>Firma Künyeleri
+        <span class="nbadge">37</span>
+      </a>
     </div>
 
     <div class="nav-section">
       <div class="nav-section-t">Hızlı Erişim</div>
-      <a class="nav-item" href="BATTAL_Z_BOOKMARKLET.html" target="_blank"><span class="ic">🔖</span>Z Raporu Bookmarklet<span class="badge">YENİ</span></a>
-      <a class="nav-item" href="BATTAL_MUHASEBE_DB_PRO.html" target="_blank"><span class="ic">🛒</span>Defter Beyan Pro</a>
-      <a class="nav-item" href="MusavirPro_FaturaKontrol.html" target="_blank"><span class="ic">🔍</span>Fatura Kontrol</a>
+      <a class="nav-item" href="BATTAL_Z_BOOKMARKLET.html" target="_blank">
+        <span class="ic"><i class="bi bi-bookmark-star-fill"></i></span>Z Raporu Bookmarklet
+        <span class="nbadge new">YENİ</span>
+      </a>
+      <a class="nav-item" href="BATTAL_MUHASEBE_DB_PRO.html" target="_blank">
+        <span class="ic"><i class="bi bi-lightning-fill"></i></span>Defter Beyan Pro
+      </a>
+      <a class="nav-item" href="MusavirPro_FaturaKontrol.html" target="_blank">
+        <span class="ic"><i class="bi bi-search"></i></span>Fatura Kontrol
+      </a>
+      <a class="nav-item" href="TRENDYO/Trendyol2MusavirPro.html" target="_blank">
+        <span class="ic"><i class="bi bi-shop"></i></span>Trendyol Aktarım
+      </a>
     </div>
 
     <div class="nav-section">
       <div class="nav-section-t">Sistem</div>
-      <a class="nav-item" href="MusavirPro_DefterBeyanAPI.html" target="_blank"><span class="ic">🔌</span>API Test Aracı</a>
-      <a class="nav-item" onclick="App.klasor('C:\\Users\\omery\\OneDrive\\Desktop\\📂 PANELLER\\🗄️ ESKI_KISAYOLLAR','Arşiv')"><span class="ic">🗄️</span>Arşiv</a>
+      <a class="nav-item" href="MusavirPro_DefterBeyanAPI.html" target="_blank">
+        <span class="ic"><i class="bi bi-plug-fill"></i></span>API Test Aracı
+      </a>
+      <a class="nav-item" onclick="App.klasor('C:\\Users\\omery\\OneDrive\\Desktop\\📂 PANELLER\\🗄️ ESKI_KISAYOLLAR','Arşiv')">
+        <span class="ic"><i class="bi bi-archive-fill"></i></span>Arşiv
+      </a>
     </div>
   </nav>
 
   <div class="sidebar-footer">
-    <b>Emircan Süleymanoğlu</b><br>
-    <span id="tarih2"></span>
+    <div class="av">ÖY</div>
+    <div class="info">
+      <div class="name">Ömer Yılmaz</div>
+      <div class="dt" id="tarih2">—</div>
+    </div>
   </div>
 </aside>
 
@@ -333,69 +513,87 @@ kbd{background:#020617;border:1px solid #475569;color:var(--gold-2);padding:2px 
 <main>
 
 <div class="topbar">
-  <div>
-    <h2>Yönetici Özeti</h2>
-    <div class="sub">Genel performans, mükellef portföyü, sistem durumu</div>
+  <div class="t-icon"><i class="bi bi-speedometer2"></i></div>
+  <div class="t-info">
+    <h2>Komut Merkezi</h2>
+    <div class="sub">15 mükellef · Defter Beyan · Banka/POS · Beyanname</div>
   </div>
   <div class="spc"></div>
-  <div class="chip live"><span class="dot"></span>Sistem Aktif</div>
-  <div class="chip" id="topTarih">📅 29.06.2026 · Pazartesi</div>
-  <div class="chip">⏱️ <span id="dbHaftaSon">14.07.2026'a kadar</span></div>
+  <div class="live-badge"><span class="dot"></span>Sistem Aktif</div>
+  <div class="date-badge"><i class="bi bi-calendar3"></i><span id="topTarih">—</span></div>
 </div>
 
 <div class="body">
 
-<!-- ════════ KPI BARI ════════ -->
-<section id="anasayfa" class="section">
-  <div class="kpi-grid">
-
-    <div class="kpi">
-      <div class="kpi-h"><div class="kpi-l">Aktif Mükellef</div><div class="kpi-ic">👥</div></div>
-      <div class="kpi-v">15</div>
-      <div class="kpi-s"><span class="delta up">+2</span>geçen aya göre</div>
-      <svg class="kpi-spark" viewBox="0 0 90 36" preserveAspectRatio="none"><polyline fill="none" stroke="#d4af37" stroke-width="1.5" points="0,28 12,24 24,26 36,20 48,18 60,14 72,10 90,8"/></svg>
+<!-- ════════ KOMUT ŞERİDİ ════════ -->
+<section id="anasayfa">
+  <div class="komut-seridi">
+    <div class="ks-stat">
+      <div class="ks-ic gold"><i class="bi bi-people-fill"></i></div>
+      <div>
+        <div class="ks-val">15</div>
+        <div class="ks-lbl">Aktif Mükellef</div>
+      </div>
     </div>
-
-    <div class="kpi ok">
-      <div class="kpi-h"><div class="kpi-l">Defter Beyan Kayıt</div><div class="kpi-ic">✅</div></div>
-      <div class="kpi-v">147</div>
-      <div class="kpi-s"><span class="delta up">+89</span>bu ay (Haziran)</div>
-      <svg class="kpi-spark" viewBox="0 0 90 36" preserveAspectRatio="none"><polyline fill="none" stroke="#10b981" stroke-width="1.5" points="0,32 12,28 24,22 36,24 48,16 60,12 72,8 90,4"/></svg>
+    <div class="ks-stat">
+      <div class="ks-ic ok"><i class="bi bi-check2-circle"></i></div>
+      <div>
+        <div class="ks-val">147</div>
+        <div class="ks-lbl">DB Kayıt · Haziran</div>
+      </div>
     </div>
-
-    <div class="kpi acc">
-      <div class="kpi-h"><div class="kpi-l">Aylık Ciro Toplam</div><div class="kpi-ic">💰</div></div>
-      <div class="kpi-v">₺1.24M</div>
-      <div class="kpi-s"><span class="delta up">+12%</span>geçen aya göre</div>
-      <svg class="kpi-spark" viewBox="0 0 90 36" preserveAspectRatio="none"><polyline fill="none" stroke="#3b82f6" stroke-width="1.5" points="0,30 12,26 24,28 36,22 48,18 60,16 72,12 90,6"/></svg>
+    <div class="ks-stat">
+      <div class="ks-ic warn"><i class="bi bi-hourglass-split"></i></div>
+      <div>
+        <div class="ks-val" id="ksBeyan">—</div>
+        <div class="ks-lbl" id="ksBeyanAd">Beyan Günü Kaldı</div>
+      </div>
     </div>
-
-    <div class="kpi pur">
-      <div class="kpi-h"><div class="kpi-l">Vergi Levhası</div><div class="kpi-ic">📄</div></div>
-      <div class="kpi-v">78</div>
-      <div class="kpi-s"><span class="delta flat">JSON</span>arşiv hazır</div>
+    <div class="ks-stat">
+      <div class="ks-ic" style="background:rgba(168,85,247,.15);color:#c4b5fd"><i class="bi bi-building"></i></div>
+      <div>
+        <div class="ks-val">37</div>
+        <div class="ks-lbl">Firma Künyesi</div>
+      </div>
     </div>
-
-    <div class="kpi warn">
-      <div class="kpi-h"><div class="kpi-l">Bekleyen İş</div><div class="kpi-ic">⏳</div></div>
-      <div class="kpi-v">5</div>
-      <div class="kpi-s"><span class="delta down">3 gün</span>14 Temmuz son tarih</div>
-    </div>
-
   </div>
 </section>
 
-<!-- ════════ İKİLİ KOLON: MÜKELLEF + AKTİVİTE ════════ -->
+<!-- ════════ DEFTER BEYAN KOMUTA BARI ════════ -->
+<section class="db-bar">
+  <div class="db-bar-info">
+    <div class="db-bar-ic"><i class="bi bi-bank2"></i></div>
+    <div>
+      <h4>Defter Beyan Komuta</h4>
+      <p>Portalı aç · giderleri tek tıkla çek &amp; kontrol et (mükerrer · KDV · stopaj)</p>
+    </div>
+  </div>
+  <div class="db-bar-actions">
+    <a class="db-btn primary" href="https://portal.defterbeyan.gov.tr/mukellef/genel-bilgileri" target="_blank" rel="noopener">
+      <i class="bi bi-box-arrow-up-right"></i> Defter Beyan'ı Aç
+    </a>
+    <a class="db-btn gold" id="giderKontrolBm" href="#" draggable="true" title="Bir kez yer imi çubuğuna sürükle — sonra Defter Beyan'dayken tıkla, tablo açılır">
+      <i class="bi bi-clipboard-data"></i> 📊 Gider Kontrol
+    </a>
+    <a class="db-btn ghost" href="DB_GIDER_KONTROL.html" target="_blank" rel="noopener">
+      <i class="bi bi-question-circle"></i> Nasıl?
+    </a>
+  </div>
+</section>
+
+<!-- ════════ İKİLİ KOLON ════════ -->
 <div class="two-col">
 
-<!-- SOL: Mükellef Portföyü -->
+<!-- SOL -->
 <div>
+  <!-- Mükellef Portföyü -->
   <section id="mukellef" class="section">
     <div class="section-h">
+      <i class="bi bi-people-fill" style="color:var(--gold-2);font-size:14px"></i>
       <h3>Mükellef Portföyü</h3>
-      <span class="badge">15 Aktif</span>
+      <span class="sbadge">15 Aktif</span>
       <span class="line"></span>
-      <span class="more">Tümünü Gör →</span>
+      <span class="more">Tümünü Gör <i class="bi bi-arrow-right"></i></span>
     </div>
     <div class="mukellef-tbl">
       <table>
@@ -407,86 +605,75 @@ kbd{background:#020617;border:1px solid #475569;color:var(--gold-2);padding:2px 
     </div>
   </section>
 
-  <!-- Araçlar (Sade · 3 Ana Modül) -->
+  <!-- Ana Modüller -->
   <section id="araclar" class="section">
     <div class="section-h">
+      <i class="bi bi-grid-fill" style="color:var(--gold-2);font-size:14px"></i>
       <h3>Ana Modüller</h3>
-      <span class="badge" style="background:#10b981;color:#0b1224">3 Modül · Sade</span>
+      <span class="sbadge" style="background:rgba(16,185,129,.15);color:#6ee7b7">3 Modül</span>
       <span class="line"></span>
-      <span class="more" onclick="document.getElementById('eskiAraclar').style.display=document.getElementById('eskiAraclar').style.display==='none'?'block':'none'" style="cursor:pointer">Tüm araçları göster ↓</span>
+      <span class="more" onclick="toggleEski()">Tüm araçlar <i class="bi bi-chevron-down" id="eskiChevron"></i></span>
     </div>
 
-    <!-- 3 BÜYÜK ANA KART -->
     <div class="big3-grid">
-
       <div class="big3 banka" onclick="App.pyAc('beyanname-otomatik-kaydetme\\banka_pos_panel\\banka_panel.py','Banka / POS Merkezi')">
-        <div class="big3-ic">🏦</div>
-        <h3>BANKA / POS MERKEZİ</h3>
-        <p>Banka ekstresi & POS slip oku · Mikro uyumlu Excel üret</p>
-        <div class="big3-tags">
-          <span>Ekstre Okuma</span>
-          <span>POS</span>
-          <span>Mikro Excel</span>
-        </div>
-        <div class="big3-btn">▶ AÇ</div>
+        <div class="b3-icon"><i class="bi bi-bank2"></i></div>
+        <h3>Banka / POS Merkezi</h3>
+        <p>Ekstre & POS slip oku · Mikro uyumlu Excel üret · Otomatik mutabakat</p>
+        <div class="big3-tags"><span>Ekstre</span><span>POS</span><span>Mikro Excel</span></div>
+        <div class="big3-btn"><i class="bi bi-play-fill"></i> Aç</div>
       </div>
 
       <div class="big3 beyan" onclick="App.pyAc('beyanname-otomatik-kaydetme\\panel.py','E-Beyanname PDF Merkezi')">
-        <div class="big3-ic">📋</div>
-        <h3>E-BEYANNAME PDF MERKEZİ</h3>
-        <p>KDV1 · KDV2 · Muhtasar · SGK otomatik PDF indir · arşivle</p>
-        <div class="big3-tags">
-          <span>KDV / Muh / SGK</span>
-          <span>Otomatik PDF</span>
-          <span>Mükellef Arşivi</span>
-        </div>
-        <div class="big3-btn">▶ AÇ</div>
+        <div class="b3-icon"><i class="bi bi-file-earmark-pdf-fill"></i></div>
+        <h3>E-Beyanname PDF</h3>
+        <p>KDV1 · KDV2 · Muhtasar · SGK otomatik PDF indir & arşivle</p>
+        <div class="big3-tags"><span>KDV</span><span>Muhtasar</span><span>SGK</span></div>
+        <div class="big3-btn"><i class="bi bi-play-fill"></i> Aç</div>
       </div>
 
       <div class="big3 dbpro" onclick="window.open('BATTAL_MUHASEBE_DB_PRO.html','_blank')">
-        <div class="big3-ic">⚡</div>
-        <h3>DEFTER BEYAN PRO</h3>
-        <p>15 mükellef · tek panel · tek tıkla defter beyan · Uyumsoft Excel kontrol</p>
-        <div class="big3-tags">
-          <span>SMM / İşletme</span>
-          <span>Tek Tık DB</span>
-          <span>Token</span>
-        </div>
-        <div class="big3-btn">▶ AÇ</div>
+        <div class="b3-icon"><i class="bi bi-lightning-charge-fill"></i></div>
+        <h3>Defter Beyan Pro</h3>
+        <p>15 mükellef · tek panel · tek tıkla DB · Uyumsoft Excel kontrol</p>
+        <div class="big3-tags"><span>SMM</span><span>İşletme</span><span>Token</span></div>
+        <div class="big3-btn"><i class="bi bi-play-fill"></i> Aç</div>
       </div>
-
     </div>
 
-    <!-- ESKİ TÜM ARAÇLAR (varsayılan gizli) -->
-    <div id="eskiAraclar" style="display:none;margin-top:24px">
-      <div class="section-h" style="margin-bottom:12px">
-        <h3 style="font-size:13px;color:var(--txt-dim)">Tüm Eski Araçlar (geriye uyumluluk)</h3>
-        <span class="line"></span>
-      </div>
+    <div id="eskiAraclar" style="display:none;margin-top:16px">
       <div class="tools-grid">
-        <a class="tool html featured" href="BATTAL_Z_BOOKMARKLET.html" target="_blank">
-          <div class="ic">🔖</div><div><h4>Z Raporu Bookmarklet</h4><p>F12'siz tek tık DB</p></div>
+        <a class="tool featured" href="BATTAL_Z_BOOKMARKLET.html" target="_blank">
+          <div class="t-ic feat"><i class="bi bi-bookmark-star-fill"></i></div>
+          <div><h4>Z Raporu Bookmarklet</h4><p>F12 yok · DB içi modal</p></div>
         </a>
-        <a class="tool html" href="MUSAVIR_PRO_PANEL.html" target="_blank">
-          <div class="ic">💼</div><div><h4>Müşavir Pro</h4><p>HTML mükellef paneli</p></div>
+        <a class="tool" href="MUSAVIR_PRO_PANEL.html" target="_blank">
+          <div class="t-ic html"><i class="bi bi-briefcase-fill"></i></div>
+          <div><h4>Müşavir Pro</h4><p>HTML mükellef paneli</p></div>
         </a>
-        <a class="tool html" href="MusavirPro_FaturaKontrol.html" target="_blank">
-          <div class="ic">🔍</div><div><h4>Fatura Kontrol</h4><p>Uyumsoft ↔ DB karşılaştır</p></div>
+        <a class="tool" href="MusavirPro_FaturaKontrol.html" target="_blank">
+          <div class="t-ic link"><i class="bi bi-search"></i></div>
+          <div><h4>Fatura Kontrol</h4><p>Uyumsoft ↔ DB karşılaştır</p></div>
         </a>
-        <a class="tool html" href="MusavirPro_DefterBeyanAPI.html" target="_blank">
-          <div class="ic">🔌</div><div><h4>API Test Aracı</h4><p>Endpoint & token testi</p></div>
+        <a class="tool" href="MusavirPro_DefterBeyanAPI.html" target="_blank">
+          <div class="t-ic py"><i class="bi bi-plug-fill"></i></div>
+          <div><h4>API Test Aracı</h4><p>Endpoint & token testi</p></div>
         </a>
-        <div class="tool py" onclick="App.pyAc('UYUMSOFT\\panel.py','Uyumsoft Komut Merkezi')">
-          <div class="ic">📥</div><div><h4>Uyumsoft (eski)</h4><p>Fatura/makbuz çekme</p></div>
+        <div class="tool" onclick="App.pyAc('UYUMSOFT\\panel.py','Uyumsoft Komut Merkezi')">
+          <div class="t-ic py"><i class="bi bi-inbox-fill"></i></div>
+          <div><h4>Uyumsoft (eski)</h4><p>Fatura/makbuz çekme</p></div>
         </div>
-        <div class="tool py" onclick="App.pyAc('z_raporu\\z_raporu_panel.py','Z Raporu Python')">
-          <div class="ic">📊</div><div><h4>Z Raporu (eski)</h4><p>Mevcut Python paneli</p></div>
+        <div class="tool" onclick="App.pyAc('z_raporu\\z_raporu_panel.py','Z Raporu Python')">
+          <div class="t-ic py"><i class="bi bi-bar-chart-fill"></i></div>
+          <div><h4>Z Raporu (eski)</h4><p>Python paneli</p></div>
         </div>
-        <div class="tool py" onclick="App.pyAc('KOMUT_MERKEZI\\komut_merkezi.py','Komut Merkezi')">
-          <div class="ic">🏠</div><div><h4>Codex Komut Merkezi</h4><p>Tüm Python panelleri</p></div>
+        <div class="tool" onclick="App.pyAc('KOMUT_MERKEZI\\komut_merkezi.py','Komut Merkezi')">
+          <div class="t-ic py"><i class="bi bi-house-gear-fill"></i></div>
+          <div><h4>Codex Komut Merkezi</h4><p>Tüm Python panelleri</p></div>
         </div>
-        <div class="tool py" onclick="App.pyAc('DB_AKTARIM_MERKEZI\\db_aktarim_merkezi.py','DB Aktarım Merkezi')">
-          <div class="ic">🚀</div><div><h4>DB Aktarım Merkezi</h4><p>Z Raporu/Trendyol/Hepsiburada toplama (Python)</p></div>
+        <div class="tool" onclick="App.pyAc('DB_AKTARIM_MERKEZI\\db_aktarim_merkezi.py','DB Aktarım Merkezi')">
+          <div class="t-ic py"><i class="bi bi-rocket-fill"></i></div>
+          <div><h4>DB Aktarım Merkezi</h4><p>Z/Trendyol/Hepsi toplama</p></div>
         </div>
       </div>
     </div>
@@ -495,62 +682,89 @@ kbd{background:#020617;border:1px solid #475569;color:var(--gold-2);padding:2px 
   <!-- Veri Klasörleri -->
   <section id="veri" class="section">
     <div class="section-h">
+      <i class="bi bi-folder2-open" style="color:var(--gold-2);font-size:14px"></i>
       <h3>Veri Klasörleri</h3>
-      <span class="badge">7 Klasör</span>
+      <span class="sbadge">7 Klasör</span>
       <span class="line"></span>
+      <span class="more" onclick="toggleVeri()">Göster <i class="bi bi-chevron-down" id="veriChevron"></i></span>
     </div>
-    <div class="tools-grid">
-      <div class="tool folder" onclick="App.klasor('C:\\Users\\omery\\OneDrive\\Desktop\\📂 PANELLER\\IS_VERILERI','IS_VERILERI')"><div class="ic">📂</div><div><h4>IS_VERILERI</h4><p>Vergi levhaları + JSON</p></div></div>
-      <div class="tool folder" onclick="App.klasor('C:\\Users\\omery\\OneDrive\\Desktop\\📂 PANELLER\\🟡 Z_RAPORU','Z_RAPORU Excel')"><div class="ic">🟡</div><div><h4>Z Raporu Excel'leri</h4><p>Aylık veriler</p></div></div>
-      <div class="tool folder" onclick="App.klasor('C:\\Users\\omery\\OneDrive\\Desktop\\📂 PANELLER\\HAZIRAN_DB_EXCEL','Haziran DB Excel')"><div class="ic">📅</div><div><h4>Haziran DB Listeleri</h4><p>Aylık Excel</p></div></div>
-      <div class="tool folder" onclick="App.klasor('C:\\Users\\omery\\OneDrive\\Desktop\\📂 PANELLER\\HESAP_PLANLARI','Hesap Planları')"><div class="ic">📒</div><div><h4>Hesap Planları</h4><p>Mükellef bazlı</p></div></div>
-      <div class="tool folder" onclick="App.klasor('C:\\Users\\omery\\OneDrive\\Desktop\\📂 PANELLER\\🟡 KISISEL_GELISIM','Kişisel Gelişim')"><div class="ic">🌱</div><div><h4>Kişisel Gelişim</h4><p>Notlar, kaynaklar</p></div></div>
-      <div class="tool folder" onclick="App.klasor('C:\\Users\\omery\\OneDrive\\Desktop\\📂 PANELLER','PANELLER')"><div class="ic">🗂️</div><div><h4>PANELLER</h4><p>Ana çalışma klasörü</p></div></div>
-      <div class="tool folder" onclick="App.klasor('C:\\Users\\omery\\OneDrive\\Desktop\\📂 PANELLER\\🗄️ ESKI_KISAYOLLAR','Arşiv')"><div class="ic">🗄️</div><div><h4>Arşiv</h4><p>Eski kısayollar (güvenli)</p></div></div>
+    <div class="tools-grid" id="veriGrid" style="display:none">
+      <div class="tool" onclick="App.klasor('C:\\Users\\omery\\OneDrive\\Desktop\\📂 PANELLER\\IS_VERILERI','IS_VERILERI')">
+        <div class="t-ic folder"><i class="bi bi-database-fill"></i></div>
+        <div><h4>IS_VERILERI</h4><p>Vergi levhaları · JSON</p></div>
+      </div>
+      <div class="tool" onclick="App.klasor('C:\\Users\\omery\\OneDrive\\Desktop\\📂 PANELLER\\🟡 Z_RAPORU','Z_RAPORU Excel')">
+        <div class="t-ic folder" style="background:rgba(245,158,11,.12);color:#fde68a"><i class="bi bi-file-earmark-spreadsheet-fill"></i></div>
+        <div><h4>Z Raporu Excel</h4><p>Aylık veriler</p></div>
+      </div>
+      <div class="tool" onclick="App.klasor('C:\\Users\\omery\\OneDrive\\Desktop\\📂 PANELLER\\HAZIRAN_DB_EXCEL','Haziran DB Excel')">
+        <div class="t-ic folder" style="background:rgba(16,185,129,.12);color:#6ee7b7"><i class="bi bi-calendar3-event-fill"></i></div>
+        <div><h4>Haziran DB Listeleri</h4><p>Aylık Excel</p></div>
+      </div>
+      <div class="tool" onclick="App.klasor('C:\\Users\\omery\\OneDrive\\Desktop\\📂 PANELLER\\HESAP_PLANLARI','Hesap Planları')">
+        <div class="t-ic folder" style="background:rgba(59,130,246,.12);color:#93c5fd"><i class="bi bi-journal-text"></i></div>
+        <div><h4>Hesap Planları</h4><p>Mükellef bazlı</p></div>
+      </div>
+      <div class="tool" onclick="App.klasor('C:\\Users\\omery\\OneDrive\\Desktop\\📂 PANELLER\\🟡 KISISEL_GELISIM','Kişisel Gelişim')">
+        <div class="t-ic folder" style="background:rgba(16,185,129,.12);color:#6ee7b7"><i class="bi bi-mortarboard-fill"></i></div>
+        <div><h4>Kişisel Gelişim</h4><p>Notlar · kaynaklar</p></div>
+      </div>
+      <div class="tool" onclick="App.klasor('C:\\Users\\omery\\OneDrive\\Desktop\\📂 PANELLER','PANELLER')">
+        <div class="t-ic folder" style="background:rgba(212,175,55,.15);color:var(--gold-2)"><i class="bi bi-layers-fill"></i></div>
+        <div><h4>PANELLER</h4><p>Ana çalışma klasörü</p></div>
+      </div>
+      <div class="tool" onclick="App.klasor('C:\\Users\\omery\\OneDrive\\Desktop\\📂 PANELLER\\🗄️ ESKI_KISAYOLLAR','Arşiv')">
+        <div class="t-ic folder" style="background:rgba(148,163,184,.1);color:var(--txt-dim)"><i class="bi bi-archive-fill"></i></div>
+        <div><h4>Arşiv</h4><p>Eski kısayollar</p></div>
+      </div>
     </div>
   </section>
 </div>
 
-<!-- SAĞ: Aktivite + Sistem Durumu -->
+<!-- SAĞ -->
 <div>
-  <section id="aktivite" class="section">
-    <div class="section-h">
-      <h3>Son Aktivite Akışı</h3>
-      <span class="line"></span>
-    </div>
-    <div class="act-list" id="actList"></div>
-  </section>
-
+  <!-- Beyan Takvimi -->
   <section class="section">
     <div class="section-h">
-      <h3>Sistem Durumu</h3>
+      <i class="bi bi-calendar-event-fill" style="color:var(--gold-2);font-size:14px"></i>
+      <h3>Beyan Takvimi</h3>
+      <span class="sbadge" style="background:rgba(239,68,68,.15);color:#fca5a5" id="beyanUyariBadge"></span>
       <span class="line"></span>
     </div>
-    <div class="sys-list">
-      <div class="sys"><span class="dot ok"></span><span class="name">Defter Beyan API</span><span class="val">200 OK</span></div>
-      <div class="sys"><span class="dot ok"></span><span class="name">Z Raporu Otomasyonu</span><span class="val">Aktif</span></div>
-      <div class="sys"><span class="dot ok"></span><span class="name">Uyumsoft Bağlantı</span><span class="val">Stabil</span></div>
-      <div class="sys"><span class="dot warn"></span><span class="name">Muzaffer subeNo</span><span class="val">Doğrulanmadı</span></div>
-      <div class="sys"><span class="dot warn"></span><span class="name">Selim Atalay Profili</span><span class="val">Eksik</span></div>
-      <div class="sys"><span class="dot ok"></span><span class="name">Vergi Levhaları</span><span class="val">78/78</span></div>
-    </div>
+    <div class="beyan-card" id="beyanList"></div>
   </section>
 
-  <section class="section">
-    <div class="section-h">
-      <h3>Sektör Dağılımı</h3>
-      <span class="line"></span>
-    </div>
-    <div class="sys-list">
-      <div class="sys"><span class="dot ok"></span><span class="name">Serbest Meslek (SMM)</span><span class="val">6 mükellef</span></div>
-      <div class="sys"><span class="dot" style="background:#3b82f6"></span><span class="name">Perakende / Mal Satışı</span><span class="val">4 mükellef</span></div>
-      <div class="sys"><span class="dot" style="background:#a855f7"></span><span class="name">İşletme Defteri</span><span class="val">3 mükellef</span></div>
-      <div class="sys"><span class="dot" style="background:#d4af37"></span><span class="name">Bilanço Esası</span><span class="val">2 mükellef</span></div>
-    </div>
-  </section>
 </div>
 
 </div><!-- /two-col -->
+
+<!-- ════════ FİRMA KÜNYELERİ ════════ -->
+<section id="firmalar" class="section" style="margin-top:10px">
+  <div class="section-h">
+    <i class="bi bi-building" style="color:var(--gold-2);font-size:14px"></i>
+    <h3>Firma Künyeleri</h3>
+    <span class="sbadge">37 Firma</span>
+    <span class="line"></span>
+    <span class="more" id="kunyeToggle" onclick="KK.toggle()">Göster <i class="bi bi-chevron-down"></i></span>
+  </div>
+  <div id="kunyeSection" style="display:none">
+    <div class="kunye-toolbar">
+      <div class="kunye-search-wrap">
+        <i class="bi bi-search"></i>
+        <input class="kunye-search" id="kunyeAra" placeholder="Firma adı, VKN, vergi dairesi, faaliyet..." oninput="KK.filtrele()">
+      </div>
+      <div class="kunye-filter" id="kunyeFiltre">
+        <button class="kf-btn active" data-f="tum"     onclick="KK.setFiltre('tum',this)">Tümü</button>
+        <button class="kf-btn"        data-f="sirket"  onclick="KK.setFiltre('sirket',this)">Şirket (VKN)</button>
+        <button class="kf-btn"        data-f="sahis"   onclick="KK.setFiltre('sahis',this)">Şahıs (TC)</button>
+        <button class="kf-btn"        data-f="sgk"     onclick="KK.setFiltre('sgk',this)">SGK'lı</button>
+        <button class="kf-btn"        data-f="uyumsoft"onclick="KK.setFiltre('uyumsoft',this)">Uyumsoft</button>
+      </div>
+      <span class="kunye-count" id="kunyeCount"></span>
+    </div>
+    <div class="kunye-grid" id="kunyeGrid"></div>
+  </div>
+</section>
 
 </div><!-- /body -->
 </main>
@@ -558,58 +772,211 @@ kbd{background:#020617;border:1px solid #475569;color:var(--gold-2);padding:2px 
 <!-- MODALLAR -->
 <div class="modal" id="m-py">
   <div class="modal-box">
-    <h2>🐍 <span id="m-py-name"></span></h2>
-    <p>Python modülünü başlatmak için <kbd>Win+R</kbd> aç → <b>klibbordaki komutu yapıştır</b> → <kbd>Enter</kbd></p>
+    <h2><i class="bi bi-terminal-fill" style="color:var(--acc-2)"></i><span id="m-py-name"></span></h2>
+    <p>Python modülünü başlatmak için <kbd>Win+R</kbd> aç → klibbordaki komutu yapıştır → <kbd>Enter</kbd></p>
     <code id="m-py-cmd"></code>
-    <p style="font-size:11px;color:var(--txt-dim)">📋 Komut otomatik klibborda kopyalandı.</p>
+    <p style="font-size:11px;color:var(--txt-dim)"><i class="bi bi-clipboard-check"></i> Komut otomatik klibborda kopyalandı.</p>
     <div class="modal-actions">
-      <button class="btn sec" onclick="App.kapat('m-py')">Tamam</button>
-      <button class="btn" onclick="App.kopyala(document.getElementById('m-py-cmd').textContent)">📋 Tekrar Kopyala</button>
+      <button class="btn sec" onclick="App.kapat('m-py')">Kapat</button>
+      <button class="btn gold" onclick="App.kopyala(document.getElementById('m-py-cmd').textContent)"><i class="bi bi-clipboard"></i>Tekrar Kopyala</button>
     </div>
   </div>
 </div>
 
 <div class="modal" id="m-klasor">
   <div class="modal-box">
-    <h2>📂 <span id="m-klasor-name"></span></h2>
-    <p>Klasörü açmak için <kbd>Win+E</kbd> aç → adres çubuğuna <b>yolu yapıştır</b> → <kbd>Enter</kbd></p>
+    <h2><i class="bi bi-folder2-open" style="color:var(--gold-2)"></i><span id="m-klasor-name"></span></h2>
+    <p>Klasörü açmak için <kbd>Win+E</kbd> aç → adres çubuğuna yolu yapıştır → <kbd>Enter</kbd></p>
     <code id="m-klasor-path"></code>
-    <p style="font-size:11px;color:var(--txt-dim)">📋 Yol otomatik klibborda kopyalandı.</p>
+    <p style="font-size:11px;color:var(--txt-dim)"><i class="bi bi-clipboard-check"></i> Yol otomatik klibborda kopyalandı.</p>
     <div class="modal-actions">
-      <button class="btn sec" onclick="App.kapat('m-klasor')">Tamam</button>
-      <button class="btn" onclick="App.kopyala(document.getElementById('m-klasor-path').textContent)">📋 Tekrar Kopyala</button>
+      <button class="btn sec" onclick="App.kapat('m-klasor')">Kapat</button>
+      <button class="btn gold" onclick="App.kopyala(document.getElementById('m-klasor-path').textContent)"><i class="bi bi-clipboard"></i>Tekrar Kopyala</button>
     </div>
   </div>
 </div>
 
 <script>
 const MUKELLEFLER = [
-  {ad:'Aylin Topçu',emoji:'⚕️',sektor:'Sağlık · SMM',tip:'SMM',durum:'aktif',durumKls:'ok'},
-  {ad:'Taner Battal',emoji:'⚖️',sektor:'Hukuk · SMM',tip:'SMM',durum:'aktif',durumKls:'ok'},
-  {ad:'Emir Battal',emoji:'👔',sektor:'Danışmanlık · SMM',tip:'SMM',durum:'aktif',durumKls:'ok'},
-  {ad:'Müge Özarmağan',emoji:'💼',sektor:'Danışmanlık · SMM',tip:'SMM',durum:'aktif',durumKls:'ok'},
-  {ad:'Mert Tufan Battal',emoji:'📐',sektor:'Mimarlık · SMM',tip:'SMM',durum:'aktif',durumKls:'ok'},
-  {ad:'Cihan Güneş Ertürk',emoji:'📸',sektor:'Fotoğrafçılık · SMM',tip:'SMM',durum:'aktif',durumKls:'ok'},
-  {ad:'Devran Süer',emoji:'🩺',sektor:'Sağlık · SMM',tip:'SMM',durum:'aktif',durumKls:'ok'},
-  {ad:'Çağrı Ertürk',emoji:'📸',sektor:'Etkinlik Fotoğraf',tip:'İşletme',durum:'aktif',durumKls:'ok'},
-  {ad:'Altuğ Erden',emoji:'☕',sektor:'Çay/Kahve Perakende',tip:'İşletme',durum:'Z Raporu hazır',durumKls:'info'},
-  {ad:'Muzaffer Murat',emoji:'☕',sektor:'Çay/Kahve Perakende',tip:'İşletme',durum:'subeNo doğrula',durumKls:'warn'},
-  {ad:'Selim Atalay',emoji:'💎',sektor:'Kuyumcu/Gümüşçü',tip:'İşletme',durum:'Profil eksik',durumKls:'warn'},
-  {ad:'Yakup Çoruh',emoji:'🏢',sektor:'Genel İşletme',tip:'İşletme',durum:'aktif',durumKls:'ok'},
-  {ad:'Sinan Yılmaz',emoji:'🛍️',sektor:'Trendyol/Hepsiburada',tip:'Bilanço',durum:'Otomasyon planı',durumKls:'info'},
-  {ad:'Dilek Öztürk',emoji:'🏥',sektor:'Sağlık · Bilanço',tip:'Bilanço',durum:'Mikro/Logo planı',durumKls:'info'},
-  {ad:'İskender M. Nuri Battal',emoji:'🏢',sektor:'Genel',tip:'İşletme',durum:'Manuel',durumKls:'gray'},
+  {ad:'Aylin Topçu Erdinç', harf:'A', sektor:'Psikolog · SMM',       tip:'SMM',     durum:'aktif',           durumKls:'ok'},
+  {ad:'Taner Battal',        harf:'T', sektor:'Mali Müşavir · SMM',   tip:'SMM',     durum:'aktif',           durumKls:'ok'},
+  {ad:'Emir Battal',         harf:'E', sektor:'Avukat · SMM',         tip:'SMM',     durum:'aktif',           durumKls:'ok'},
+  {ad:'Müge Özarmağan',      harf:'M', sektor:'Avukat · SMM',         tip:'SMM',     durum:'aktif',           durumKls:'ok'},
+  {ad:'Mert Tufan Battal',   harf:'M', sektor:'Diş Hekimi · SMM',     tip:'SMM',     durum:'aktif',           durumKls:'ok'},
+  {ad:'Cihan Güneş Ertürk',  harf:'C', sektor:'Uzman Hekim · SMM',    tip:'SMM',     durum:'aktif',           durumKls:'ok'},
+  {ad:'Devran Süer',         harf:'D', sektor:'Avukat · SMM',         tip:'SMM',     durum:'aktif',           durumKls:'ok'},
+  {ad:'İskender M.N. Battal',harf:'İ', sektor:'Uzman Hekim · SMM',    tip:'SMM',     durum:'Manuel',          durumKls:'gold'},
+  {ad:'Çağrı Ertürk',        harf:'Ç', sektor:'Etkinlik Fotoğraf',    tip:'İşletme', durum:'aktif',           durumKls:'ok'},
+  {ad:'Altuğ Erden',         harf:'A', sektor:'Çay/Kahve Perakende',  tip:'İşletme', durum:'Z Raporu hazır',  durumKls:'info'},
+  {ad:'Muzaffer Murat Çubukçuoğlu',harf:'M',sektor:'Çay/Kahve Perakende',tip:'İşletme',durum:'subeNo doğrula',durumKls:'warn'},
+  {ad:'Kadir Akıllı',        harf:'K', sektor:'Kuru Yemiş',           tip:'İşletme', durum:'aktif',           durumKls:'ok'},
+  {ad:'Sinan Atalay',        harf:'S', sektor:'E-ticaret (Kuyum)',     tip:'İşletme', durum:'aktif',           durumKls:'ok'},
+  {ad:'Dilek Öztürk',        harf:'D', sektor:'Kozmetik E-ticaret',   tip:'İşletme', durum:'aktif',           durumKls:'ok'},
+  {ad:'Yakup Çoruh',         harf:'Y', sektor:'Emlak / Araç',         tip:'İşletme', durum:'aktif',           durumKls:'ok'},
 ];
 
-const AKTIVITELER = [
-  {ic:'✅',iccls:'ok',h:'Altuğ Erden · Z Raporu 3200 kaydedildi',p:'01.06.2026 · ₺5.160 (KK ₺2.800 + Nakit ₺2.360)',t:'şimdi'},
-  {ic:'🔖',iccls:'gold',h:'Bookmarklet sistemi devreye alındı',p:'F12 yok · Defter Beyan içi modal · 3 firma',t:'15 dk önce'},
-  {ic:'📂',iccls:'info',h:'Masaüstü düzenlendi',p:'6 dağınık kısayol arşive taşındı · Dashboard kuruldu',t:'30 dk önce'},
-  {ic:'✅',iccls:'ok',h:'Z Raporu API kodları çözüldü',p:'gelirBelgeTuruKodu:"2" + subeNo:-13 + altTürü:"2"',t:'1 saat önce'},
-  {ic:'📄',iccls:'gold',h:'78 vergi levhası JSON\'a çıkarıldı',p:'vergi_levhalari.json (Üsküdar, Mecidiyeköy, Beşiktaş...)',t:'2 gün önce'},
-  {ic:'✅',iccls:'ok',h:'Gider API formülü çözüldü',p:'donemsellik:false + kismiTevkifatOrani kaldırıldı',t:'2 gün önce'},
-  {ic:'⏳',iccls:'warn',h:'Sinan Yılmaz Trendyol/Hepsi otomasyon',p:'Söz verilen tarih: 25.07.2026',t:'yakında'},
+// ════════ FİRMA KÜNYELERİ VERİSİ ════════
+const FIRMALAR = [
+  {klasor:'2AA_YAYINCILIK',unvan:'2AA GIDA KAHVECİLİK PAZ SAN VE TİC.LTD.ŞTİ.',vkn:'0011198756',vd:'SARIYER',faaliyet_kodu:'463702',faaliyet_adi:'KAHVE, KAKAO VE BAHARAT TOPTAN TİCARETİ',adres:'MİMAR SİNAN MAH. TEVFİK EFENDİ SK. NO: 13/1 EYÜPSULTAN/İSTANBUL',mersis:'0001119875600001',sermaye:'50.000,00 TL',kurulus:'27.09.2017',vergi_turu:'KURUMLAR VERGİSİ',uyumsoft_k:'aaGidaKahvecilik',sgk:false},
+  {klasor:'4_BIZ_BILISIM',unvan:'4 BİZ BİLİŞİM TEKN.SAN VE TİC LTD.ŞTİ.',vkn:'0010664713',vd:'BEŞİKTAŞ',faaliyet_kodu:'501014',faaliyet_adi:'DENİZ VE KIYI SULARINDA YAT İŞLETMECİLİĞİ',adres:'LEVAZIM MAH. KORU SK. KORUKENT SİTESİ S BLOK NO: 40/1 BEŞİKTAŞ/İSTANBUL',mersis:'0001066471300019',sermaye:'910.000,00 TL',kurulus:'21.10.2009',vergi_turu:'KURUMLAR VERGİSİ',uyumsoft_k:'4BizBilisim',sgk:true,sgk_adi:'BEŞİKTAŞ SGK'},
+  {klasor:'AKCA_AGIZ',unvan:'AKÇA AĞIZ VE DİŞ SAĞLIĞI HİZMETLERİ LİMİTED ŞİRKETİ',vkn:'0180814651',vd:'KOZYATAĞI',faaliyet_kodu:'862301',faaliyet_adi:'DİŞ HEKİMLİĞİ UYGULAMA FAALİYETLERİ',adres:'KÜÇÜKBAKKALKÖY MAH. RÜYA SK. NO: 12-18 ATAŞEHİR/İSTANBUL',mersis:'',sermaye:'',kurulus:'',vergi_turu:'KURUMLAR VERGİSİ',uyumsoft_k:'AkcaAgiz',sgk:false},
+  {klasor:'BESA_GIDA',unvan:'BESA GIDA VE TÜKETİM ÜRÜNLERİ SANAYİ TİC.LTD.ŞTİ.',vkn:'1660327399',vd:'BAŞAKŞEHİR',faaliyet_kodu:'463903',faaliyet_adi:'UZMANLAŞMAMIŞ GIDA, İÇECEK VE TÜTÜN TOPTAN TİCARETİ',adres:'ŞAHİNTEPE MAH. ŞEHİT POLİS FETHİ SEKİN CAD. İGTOT 10A BLOK NO: 1 R BAŞAKŞEHİR/İSTANBUL',mersis:'0166032739900017',sermaye:'500.000,00 TL',kurulus:'04.01.2006',vergi_turu:'KURUMLAR VERGİSİ',uyumsoft_k:'BesaGida1',sgk:true,sgk_adi:'BAŞAKŞEHİR SGK'},
+  {klasor:'BILPARK_BILISIM',unvan:'BİLPARK BİLİŞİM TEKN.SAN VE TİC.A.Ş.',vkn:'1750216728',vd:'ZİNCİRLİKUYU',faaliyet_kodu:'621000',faaliyet_adi:'BİLGİSAYAR PROGRAMLAMA FAALİYETLERİ',adres:'MECİDİYEKÖY MAH. KERVAN GEÇMEZ SK. ESER APT NO: 20 ŞİŞLİ/İSTANBUL',mersis:'0175021672800010',sermaye:'100.000,00 TL',kurulus:'14.12.2001',vergi_turu:'KURUMLAR VERGİSİ',uyumsoft_k:'BIlparkBIlIsIm',sgk:true,sgk_adi:'ŞİŞLİ SGK'},
+  {klasor:'BILPARK_YAZILIM',unvan:'BİLPARK YAZILIM TEKNOLOJİLERİ SANAYİ VE TİCARET A.Ş.',vkn:'1750918637',vd:'ZİNCİRLİKUYU',faaliyet_kodu:'621000',faaliyet_adi:'BİLGİSAYAR PROGRAMLAMA FAALİYETLERİ',adres:'MECİDİYEKÖY MAH. KERVAN GEÇMEZ SK. ESER APT NO: 20 ŞİŞLİ/İSTANBUL',mersis:'0175091863700001',sermaye:'50.000,00 TL',kurulus:'28.03.2022',vergi_turu:'KURUMLAR VERGİSİ',uyumsoft_k:'BilparkYazilim',sgk:true,sgk_adi:'ŞİŞLİ SGK'},
+  {klasor:'BODUR_TEKNIK',unvan:'BODUR TEKNİK ELEKTRİKLİ EV ALETLERİ LİMİTED ŞİRKETİ',vkn:'1781747897',vd:'ALEMDAR',faaliyet_kodu:'952201',faaliyet_adi:'ELEKTRİKLİ EV CİHAZLARININ ONARIMI',adres:'AKMEŞE ATATÜRK MAH. MENDERES CAD. NO: 116 İZMİT/KOCAELİ',mersis:'0178174789700001',sermaye:'50.000,00 TL',kurulus:'06.12.2023',vergi_turu:'KURUMLAR VERGİSİ',uyumsoft_k:'BodurTeknik',sgk:true,sgk_adi:'İZMİT SGK'},
+  {klasor:'BURAK_CET_ADI_ORT',unvan:'BURAK ŞADIKOĞLU (ADİ ORTAKLIK)',vkn:'',tc:'',vd:'',faaliyet_kodu:'',faaliyet_adi:'',adres:'',mersis:'',sermaye:'',kurulus:'',vergi_turu:'',uyumsoft_k:'BurakSadikoglu',sgk:false},
+  {klasor:'CET_ENERJI',unvan:'CET ENERJİ İNŞAAT TİCARET ANONİM ŞİRKETİ',vkn:'2061634964',vd:'KADIKÖY',faaliyet_kodu:'',faaliyet_adi:'',adres:'CAFERAĞA MAH. ŞAİR NEFİ SK. HUZUR PALAS APT NO: 48 KADIKÖY/İSTANBUL',mersis:'0206163496400001',sermaye:'5.000.000,00 TL',kurulus:'19.02.2026',vergi_turu:'KURUMLAR VERGİSİ',uyumsoft_k:'CetEnerji',sgk:false},
+  {klasor:'DECOR_PEOPLE',unvan:'DECOR PEOPLE TEKSTİL DIŞ TİC.LTD.ŞTİ.',vkn:'4540583673',vd:'MASLAK',faaliyet_kodu:'464101',faaliyet_adi:'EVDE KULLANILAN TEKSTİL MALZ. TOPTAN TİCARETİ',adres:'MASLAK MAH. AHİ EVRAN CAD. NAZMİ AKBACI C BLOK NO: 5 SARIYER/İSTANBUL',mersis:'0454058367300016',sermaye:'100.000,00 TL',kurulus:'10.04.2014',vergi_turu:'KURUMLAR VERGİSİ',uyumsoft_k:'DecorPeople',sgk:true,sgk_adi:'ŞİŞLİ SGK'},
+  {klasor:'DTB_YAZILIM',unvan:'DTB YAZILIM SANAYİ VE TİC.A.Ş.',vkn:'3130984401',vd:'KOZYATAĞI',faaliyet_kodu:'621000',faaliyet_adi:'BİLGİSAYAR PROGRAMLAMA FAALİYETLERİ',adres:'İÇERENKÖY MAH. TOPÇU İBRAHİM SK. QUICK TOWER NO: 8-10D ATAŞEHİR/İSTANBUL',mersis:'0313098440100001',sermaye:'100.000,00 TL',kurulus:'07.06.2018',vergi_turu:'KURUMLAR VERGİSİ',uyumsoft_k:'adminuser',sgk:true,sgk_adi:'ATAŞEHİR SGK'},
+  {klasor:'ERDA_GUMRUK',unvan:'ERDA GÜMRÜK MÜŞAVİRLİĞİ LTD.ŞTİ.',vkn:'3420258368',vd:'ÜMRANİYE',faaliyet_kodu:'522107',faaliyet_adi:'GÜMRÜK MÜŞAVİRLİĞİ',adres:'',mersis:'0343253556000012',sermaye:'10.000,00 TL',kurulus:'26.03.2004',vergi_turu:'KURUMLAR VERGİSİ',uyumsoft_k:'',sgk:false},
+  {klasor:'ERDEM_OZSEN',unvan:'ERDEM ÖZSEN (ŞAHIS)',vkn:'',tc:'45622625484',vd:'BEYKOZ',faaliyet_kodu:'622000',faaliyet_adi:'BİLGİSAYAR DANIŞMANLIĞI FAALİYETLERİ',adres:'GÖZTEPE MAH. BEGONYA CAD. GÖKSU EVLERİ C36 NO: 60 BEYKOZ/İSTANBUL',mersis:'',sermaye:'',kurulus:'',vergi_turu:'YILLIK GELİR VERGİSİ',uyumsoft_k:'ErdemOzsen',sgk:false},
+  {klasor:'ERLAMER',unvan:'ER-LAMER DERMATOLOJİ LAZER ESTETİK VE EPİLASYON MERKEZİ AŞ.',vkn:'3360350847',vd:'BEYOĞLU',faaliyet_kodu:'862202',faaliyet_adi:'UZMAN HEKİMLİK FAALİYETLERİ',adres:'HARBİYE MAH VALİKONAĞI CAD NO: 28 ŞİŞLİ/İSTANBUL',mersis:'0336035084700001',sermaye:'50.000,00 TL',kurulus:'06.09.2002',vergi_turu:'KURUMLAR VERGİSİ',uyumsoft_k:'Erlamer',sgk:true,sgk_adi:'ŞİŞLİ SGK'},
+  {klasor:'ESNI_BILISIM',unvan:'ESNİ BİLİŞİM GIDA TİCARET LİMİTED ŞTİ',vkn:'3801379747',vd:'TUNA',faaliyet_kodu:'463109',faaliyet_adi:'KURU YEMİŞ TOPTAN TİCARETİ',adres:'',mersis:'0380137974700001',sermaye:'500.000,00 TL',kurulus:'22.01.2026',vergi_turu:'KURUMLAR VERGİSİ',uyumsoft_k:'EsniBilisim',sgk:false},
+  {klasor:'GIZEM_GOKER_ADI_ORT',unvan:'GİZEM GÖKER (ADİ ORTAKLIK / ŞAHIS)',vkn:'',tc:'28244581116',vd:'KADIKÖY',faaliyet_kodu:'731101',faaliyet_adi:'REKLAM AJANSLARININ FAALİYETLERİ',adres:'CAFERAĞA MAH. DR. ESAT IŞIK CAD. EREN APT NO: 61 KADIKÖY/İSTANBUL',mersis:'',sermaye:'',kurulus:'',vergi_turu:'YILLIK GELİR VERGİSİ',uyumsoft_k:'GizemGoker',sgk:true,sgk_adi:'BEŞİKTAŞ SGK'},
+  {klasor:'HACIKERIMOGLU_GIDA',unvan:'HACIKERİMOĞLU GIDA SAN. TEM. MALZ. LTD.ŞTİ.',vkn:'4540085678',vd:'BAKIRKÖY',faaliyet_kodu:'471101',faaliyet_adi:'BAKKAL VE MARKETLERDE PERAKENDE TİCARET',adres:'KARTALTEPE MAH. HULUSİ DEMİRELLİ SK. FİDAN APT NO: 20 A BAKIRKÖY/İSTANBUL',mersis:'0454008567800018',sermaye:'100.000,00 TL',kurulus:'28.01.1997',vergi_turu:'KURUMLAR VERGİSİ',uyumsoft_k:'Hacıkerimoglu',sgk:false},
+  {klasor:'HULYA_HATUN_AKPINAR',unvan:'HÜLYA HATUN AKPINAR (ŞAHIS — ECZANE)',vkn:'',tc:'39886581884',vd:'ŞİŞLİ',faaliyet_kodu:'477301',faaliyet_adi:'ECZACILIK ÜRÜNLERİNİN PERAKENDE TİCARETİ',adres:'MERKEZ MH OKTAY CEBECİ SK NO: 27 ŞİŞLİ/İSTANBUL',mersis:'',sermaye:'',kurulus:'',vergi_turu:'YILLIK GELİR VERGİSİ',uyumsoft_k:'hulyaevin@gmail.com',sgk:true,sgk_adi:'ŞİŞLİ SGK'},
+  {klasor:'ISIK_PETROL',unvan:'IŞIK PETROL KÖMÜR LASTİK PARÇA DAYANIKLI TÜKETİM MALI LTD.ŞTİ.',vkn:'4670066942',vd:'SOMA',faaliyet_kodu:'473001',faaliyet_adi:'MOTORLU KARA TAŞITI YAKITININ PERAKENDE TİCARETİ',adres:'TURGUTALP MAH. BERGAMA CAD. NO: 5 SOMA/MANİSA',mersis:'0467006694200015',sermaye:'900.000,00 TL',kurulus:'18.08.1997',vergi_turu:'KURUMLAR VERGİSİ',uyumsoft_k:'IsikPetrol',sgk:false},
+  {klasor:'ISTANBUL_PLASTIK',unvan:'İSTANBUL PLASTİK EST CER VE LAZ EPİL. MER. TİC.LTD.ŞTİ.',vkn:'4810214440',vd:'MECİDİYEKÖY',faaliyet_kodu:'862205',faaliyet_adi:'POLİKLİNİK VE TIP MERKEZLERİ HİZMETLERİ',adres:'VALİKONAĞI CD SARIOĞLU AP NO: 83 ŞİŞLİ/İSTANBUL',mersis:'0481021444000019',sermaye:'446.825,00 TL',kurulus:'14.05.2001',vergi_turu:'KURUMLAR VERGİSİ',uyumsoft_k:'Istanbul17',sgk:true,sgk_adi:'ŞİŞLİ SGK'},
+  {klasor:'KARIYERKURE',unvan:'KARİYERKÜRE EĞİTİM HİZMETLERİ TİCARET LİMİTED ŞİRKETİ',vkn:'5241597534',vd:'ÜSKÜDAR',faaliyet_kodu:'856900',faaliyet_adi:'EĞİTİMİ DESTEKLEYİCİ FAALİYETLER',adres:'MİMAR SİNAN MAH. ÇAVUŞDERE CAD. E BLOK NO: 41 ÜSKÜDAR/İSTANBUL',mersis:'0524159753400001',sermaye:'50.000,00 TL',kurulus:'24.10.2024',vergi_turu:'KURUMLAR VERGİSİ',uyumsoft_k:'Kariyerkure',sgk:false},
+  {klasor:'KARMAKENT',unvan:'KARMAKENT KOZMETİK ÜRÜNLER DIŞ TİCARET LİMİTED ŞİRKETİ',vkn:'5240582780',vd:'BEŞİKTAŞ',faaliyet_kodu:'461802',faaliyet_adi:'KOZMETİK VE BAKIM ÜRÜNLERİ TOPTAN SATIŞI',adres:'SİNANPAŞA MAH. SİNANPAŞA KÖPRÜSÜ SK. ÇELİK İŞ MERKEZİ NO: 10 BEŞİKTAŞ/İSTANBUL',mersis:'0524056278000012',sermaye:'10.000,00 TL',kurulus:'14.07.2010',vergi_turu:'KURUMLAR VERGİSİ',uyumsoft_k:'Karmakent1',sgk:true,sgk_adi:'BEŞİKTAŞ SGK'},
+  {klasor:'KIRPI_YAYINCILIK',unvan:'KİRPİ YAYINCILIK SAN VE TİC LTD.ŞTİ.',vkn:'5630621223',vd:'ATIŞALANI',faaliyet_kodu:'581101',faaliyet_adi:'KİTAP YAYIMI',adres:'ORUÇREİS MAH. TEKSTİLKENT CAD. TEKSTİLKENT A16 BLOK NO: 10 N ESENLER/İSTANBUL',mersis:'0563062122300011',sermaye:'10.000,00 TL',kurulus:'25.09.2009',vergi_turu:'KURUMLAR VERGİSİ',uyumsoft_k:'KirpiYayincilik',sgk:true,sgk_adi:'ESENLER SGK'},
+  {klasor:'KNA_BILISIM',unvan:'KNA BİLİŞİM TİC LTD.ŞTİ.',vkn:'5640969891',vd:'KÜÇÜKYALI',faaliyet_kodu:'621000',faaliyet_adi:'BİLGİSAYAR PROGRAMLAMA FAALİYETLERİ',adres:'İDEALTEPE MAH. DİK SK. NO: 13 MALTEPE/İSTANBUL',mersis:'0564096893100001',sermaye:'10.000,00 TL',kurulus:'06.04.2018',vergi_turu:'KURUMLAR VERGİSİ',uyumsoft_k:'',sgk:true,sgk_adi:'MALTEPE SGK'},
+  {klasor:'MARMARAGES_GUNES',unvan:'MARMARAGES GÜNEŞ ENERJİ SİSTEMLERİ SANAYİ VE TİCARET A.Ş.',vkn:'6121538815',vd:'BEYKOZ',faaliyet_kodu:'351100',faaliyet_adi:'ELEKTRİK ÜRETİMİ',adres:'KAVACIK MAH. EKİNCİLER CAD. ULU ER PLAZA NO: 2 BEYKOZ/İSTANBUL',mersis:'0612153881500001',sermaye:'50.000,00 TL',kurulus:'28.02.2022',vergi_turu:'KURUMLAR VERGİSİ',uyumsoft_k:'Marmarages',sgk:true,sgk_adi:'BEYKOZ SGK'},
+  {klasor:'MD_DERMATOLOJI',unvan:'MD DERMATOLOJİ SAĞLIK HİZM.SAN. VE TİC.LTD.ŞTİ.',vkn:'6090279953',vd:'GÖZTEPE',faaliyet_kodu:'862202',faaliyet_adi:'UZMAN HEKİMLİK FAALİYETLERİ',adres:'FENERYOLU MAH. BAĞDAT CAD. BÜYÜKHANLI PLAZA NO: 91 KADIKÖY/İSTANBUL',mersis:'0609027995300011',sermaye:'599.600,00 TL',kurulus:'07.11.2003',vergi_turu:'KURUMLAR VERGİSİ',uyumsoft_k:'gokhan@gokhangokler.com',sgk:true,sgk_adi:'KADIKÖY SGK'},
+  {klasor:'NEN_SIGORTA',unvan:'NEN SİGORTA BROKERLİĞİ LİMİTED ŞİRKETİ',vkn:'6311510004',vd:'BAKIRKÖY',faaliyet_kodu:'662202',faaliyet_adi:'SİGORTA BROKERLARININ FAALİYETLERİ',adres:'YEŞİLKÖY MAH. YEŞİL ZEYTİN SK. NO: 3 BAKIRKÖY/İSTANBUL',mersis:'0631151000400001',sermaye:'300.000,00 TL',kurulus:'24.03.2021',vergi_turu:'KURUMLAR VERGİSİ',uyumsoft_k:'',sgk:true,sgk_adi:'BAKIRKÖY SGK'},
+  {klasor:'NES_GUZELLIK',unvan:'NES GÜZELLİK SALONU TİCARET A.Ş.',vkn:'6312080765',vd:'BEŞİKTAŞ',faaliyet_kodu:'962201',faaliyet_adi:'GÜZELLİK SALONLARININ FAALİYETLERİ',adres:'ETİLER MAH. AYAZMA YOLU SK. NO: 1 A BEŞİKTAŞ/İSTANBUL',mersis:'0631208076500001',sermaye:'250.000,00 TL',kurulus:'22.01.2026',vergi_turu:'KURUMLAR VERGİSİ',uyumsoft_k:'',sgk:false},
+  {klasor:'OGUTMEN_SAGLIK',unvan:'ÖĞÜTMEN SAĞLIK HİZ.TİC.LTD.ŞTİ.',vkn:'6520036676',vd:'KOZYATAĞI',faaliyet_kodu:'862202',faaliyet_adi:'UZMAN HEKİMLİK FAALİYETLERİ',adres:'BARBAROS MAH. ÇİĞDEM SK. E1 BLOK NO: 4 B ATAŞEHİR/İSTANBUL',mersis:'0652003667600012',sermaye:'45.000,00 TL',kurulus:'13.12.1996',vergi_turu:'KURUMLAR VERGİSİ',uyumsoft_k:'OgutmenSaglik',sgk:true,sgk_adi:'ATAŞEHİR SGK'},
+  {klasor:'OSNAK_NAKLIYAT',unvan:'OSNAK ULUS.NAKLİYAT VE TİC A.Ş.',vkn:'6480061339',vd:'HALKALI',faaliyet_kodu:'522107',faaliyet_adi:'OTOPARK VE GARAJ İŞLETMECİLİĞİ',adres:'İNÖNÜ MH. PROF. MUAMMER AKSOY CD. SEFAKÖY NO: 102 KÜÇÜKÇEKMECE/İSTANBUL',mersis:'0648006133900011',sermaye:'80.000,00 TL',kurulus:'28.11.1990',vergi_turu:'KURUMLAR VERGİSİ',uyumsoft_k:'OsnakUluslararasi',sgk:true,sgk_adi:'KÜÇÜKÇEKMECE SGK'},
+  {klasor:'SAMBAZ_SUKUSU',unvan:'SAMBAZ ŞÜKUŞU (ŞAHIS)',vkn:'',tc:'48751724738',vd:'AVCILAR',faaliyet_kodu:'474001',faaliyet_adi:'BİLGİSAYAR VE YAZILIMLARIN PERAKENDE TİCARETİ',adres:'CİHANGİR MAH. KARGACI SK. NO: 17 AVCILAR/İSTANBUL',mersis:'',sermaye:'',kurulus:'',vergi_turu:'YILLIK GELİR VERGİSİ',uyumsoft_k:'SAMBAZ@SUKUSU',sgk:false},
+  {klasor:'SCF_BILISIM',unvan:'SCF BİLİŞİM DAN.VE TİC.LTD.ŞTİ.',vkn:'7570431963',vd:'KOZYATAĞI',faaliyet_kodu:'622000',faaliyet_adi:'BİLGİSAYAR DANIŞMANLIĞI FAALİYETLERİ',adres:'ATATÜRK MAH. ERTUĞRUL GAZİ SK. METROPOL İSTANBUL A BLOK NO: 2 E ATAŞEHİR/İSTANBUL',mersis:'0757043196300016',sermaye:'100.000,00 TL',kurulus:'24.10.2013',vergi_turu:'KURUMLAR VERGİSİ',uyumsoft_k:'ScfBilisim',sgk:true,sgk_adi:'ATAŞEHİR SGK'},
+  {klasor:'SINAN_YILMAZ',unvan:'YILMAZ TEDARİK VR GIDA ÜRÜNLERİ SANAYİ TİCARET LİMİTED ŞİRKETİ',vkn:'',tc:'21080654488',vd:'KÜÇÜKYALI',faaliyet_kodu:'523102',faaliyet_adi:'KARA YOLU YÜK NAKLİYAT KOMİSYONCULUĞU',adres:'İDEALTEPE MAH. ANNELER SK. FURKAN APT NO: 5/1 MALTEPE/İSTANBUL',mersis:'',sermaye:'',kurulus:'',vergi_turu:'YILLIK GELİR VERGİSİ',uyumsoft_k:'SinanYilmaz1',sgk:false},
+  {klasor:'SSC_GUVENLIK',unvan:'SSC ÖZEL GÜVENLİK HİZMETLERİ LİMİTED ŞİRKETİ',vkn:'7811132490',vd:'ÜSKÜDAR',faaliyet_kodu:'800101',faaliyet_adi:'ÖZEL GÜVENLİK FAALİYETLERİ',adres:'ALTUNİZADE MAH. ATIFBEY SK. DERYA SİTESİ B NO: 26 B ÜSKÜDAR/İSTANBUL',mersis:'0781113249000001',sermaye:'50.000,00 TL',kurulus:'26.05.2025',vergi_turu:'KURUMLAR VERGİSİ',uyumsoft_k:'SscOzelGuvenlik',sgk:false},
+  {klasor:'STS_SAGLIK',unvan:'STS SAĞLIK TEKNİK SERVİS HİZ.PAZ.LTD.ŞTİ.',vkn:'7810195970',vd:'KADIKÖY',faaliyet_kodu:'464601',faaliyet_adi:'CERRAHİ, TIBBİ VE ORTOPEDİK ALET VE CİHAZLARIN TOPTAN TİCARETİ',adres:'CAFERAĞA MAH. ŞAİR NEFİ SK. HUZUR PALAS APT NO: 48 KADIKÖY/İSTANBUL',mersis:'0781019597000018',sermaye:'48.887.000,00 TL',kurulus:'28.12.1998',vergi_turu:'KURUMLAR VERGİSİ',uyumsoft_k:'',sgk:true,sgk_adi:'KADIKÖY SGK'},
+  {klasor:'SVI',unvan:'SVİ DIŞ TİC.VE SAN LTD.ŞTİ.',vkn:'7880398112',vd:'KAĞITHANE',faaliyet_kodu:'469004',faaliyet_adi:'UZMANLAŞMAMIŞ TOPTAN TİCARET',adres:'KUŞTEPE MAH. MECİDİYEKÖY YOLU CAD. TRUMP TOWER NO: 12 ŞİŞLİ/İSTANBUL',mersis:'0788039811200018',sermaye:'600.000,00 TL',kurulus:'19.04.2005',vergi_turu:'KURUMLAR VERGİSİ',uyumsoft_k:'svidisticaret',sgk:true,sgk_adi:'BAĞCILAR SGK'},
+  {klasor:'TURBO_BILISIM',unvan:'TURBO BİLİŞİM TEKN.SAT DAĞ.PAZ.AŞ.',vkn:'8690453380',vd:'BEŞİKTAŞ',faaliyet_kodu:'622000',faaliyet_adi:'BİLGİSAYAR DANIŞMANLIĞI FAALİYETLERİ',adres:'LEVAZIM MAH. KORU SK. KORUKENT SİTESİ S BLOK NO: 40 BEŞİKTAŞ/İSTANBUL',mersis:'0869045338000017',sermaye:'50.000,00 TL',kurulus:'18.06.2013',vergi_turu:'KURUMLAR VERGİSİ',uyumsoft_k:'Turbo1',sgk:true,sgk_adi:'BAKIRKÖY SGK'},
 ];
+
+// Sektör renkleri
+function kkRenk(f){
+  const kk=f.faaliyet_kodu||'';
+  if(/^86/.test(kk))return{color:'#6ee7b7',bg:'rgba(16,185,129,.15)'}; // Sağlık
+  if(/^62|^61|^58/.test(kk))return{color:'#93c5fd',bg:'rgba(59,130,246,.15)'}; // BT/Yazılım
+  if(/^47|^46|^45/.test(kk))return{color:'#fde68a',bg:'rgba(245,158,11,.15)'}; // Ticaret
+  if(/^66|^64/.test(kk))return{color:'#d8b4fe',bg:'rgba(168,85,247,.15)'}; // Finans/Sigorta
+  if(/^35|^47[3]/.test(kk))return{color:'#6ee7b7',bg:'rgba(16,185,129,.15)'}; // Enerji/Akaryakıt
+  if(/^80/.test(kk))return{color:'#fca5a5',bg:'rgba(239,68,68,.15)'}; // Güvenlik
+  if(/^96/.test(kk))return{color:'#f9a8d4',bg:'rgba(236,72,153,.15)'}; // Güzellik
+  return {color:'#e6c558',bg:'rgba(212,175,55,.15)'};
+}
+
+const KK = {
+  aktifFiltre:'tum',
+  gorunur:false,
+
+  toggle(){
+    this.gorunur=!this.gorunur;
+    const s=document.getElementById('kunyeSection');
+    const t=document.getElementById('kunyeToggle');
+    s.style.display=this.gorunur?'block':'none';
+    t.innerHTML=this.gorunur?'Gizle <i class="bi bi-chevron-up"></i>':'Göster <i class="bi bi-chevron-down"></i>';
+  },
+
+  setFiltre(f,btn){
+    this.aktifFiltre=f;
+    document.querySelectorAll('.kf-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    this.filtrele();
+  },
+
+  filtrele(){
+    const ara=(document.getElementById('kunyeAra').value||'').toLocaleLowerCase('tr');
+    const f=this.aktifFiltre;
+    const sonuc=FIRMALAR.filter(firm=>{
+      // arama
+      if(ara){
+        const hay=(firm.unvan+firm.vkn+(firm.tc||'')+firm.vd+firm.faaliyet_adi+firm.klasor).toLocaleLowerCase('tr');
+        if(!hay.includes(ara))return false;
+      }
+      // filtre
+      if(f==='sirket')  return !!firm.vkn;
+      if(f==='sahis')   return !firm.vkn;
+      if(f==='sgk')     return firm.sgk;
+      if(f==='uyumsoft')return !!firm.uyumsoft_k;
+      return true;
+    });
+    this.render(sonuc);
+  },
+
+  render(liste){
+    const g=document.getElementById('kunyeGrid');
+    document.getElementById('kunyeCount').textContent=liste.length+' firma';
+    if(!liste.length){
+      g.innerHTML='<div class="kk-none"><i class="bi bi-search" style="font-size:24px;margin-bottom:8px;display:block"></i>Arama sonucu bulunamadı</div>';
+      return;
+    }
+    g.innerHTML=liste.map(f=>{
+      const r=kkRenk(f);
+      const isSirket=!!f.vkn;
+      const harf=(f.unvan||f.klasor)[0].toLocaleUpperCase('tr');
+      const vknTc=f.vkn?f.vkn:(f.tc?'TC: '+f.tc:'—');
+      const adresk=(f.adres||'').length>60?f.adres.slice(0,60)+'…':f.adres;
+      const tags=[];
+      if(isSirket) tags.push('<span class="kk-tag acc">Şirket · VKN</span>');
+      else tags.push('<span class="kk-tag warn">Şahıs · TC</span>');
+      if(f.sgk) tags.push(`<span class="kk-tag ok">SGK · ${f.sgk_adi||''}</span>`);
+      if(f.uyumsoft_k) tags.push('<span class="kk-tag">Uyumsoft ✓</span>');
+      if(f.mersis) tags.push('<span class="kk-tag pur">MERSİS ✓</span>');
+      if(f.sermaye) tags.push(`<span class="kk-tag">₺ ${f.sermaye}</span>`);
+      return `<div class="kk" style="--kk-color:${r.color}">
+        <button class="kk-copy" title="VKN/TC kopyala" onclick="App.kopyala('${f.vkn||f.tc||''}')"><i class="bi bi-clipboard"></i></button>
+        <div class="kk-head">
+          <div class="kk-av" style="background:${r.bg};color:${r.color}">${harf}</div>
+          <div class="kk-title">
+            <div class="kk-unvan">${f.unvan}</div>
+            <div class="kk-vkn">${vknTc}${f.vd?' · '+f.vd:''}</div>
+          </div>
+        </div>
+        <div class="kk-body">
+          ${f.faaliyet_adi?`<div class="row"><i class="bi bi-briefcase"></i><span>${f.faaliyet_kodu} · ${f.faaliyet_adi}</span></div>`:''}
+          ${adresk?`<div class="row"><i class="bi bi-geo-alt"></i><span>${adresk}</span></div>`:''}
+          ${f.kurulus?`<div class="row"><i class="bi bi-calendar3"></i><span>Kuruluş: ${f.kurulus}</span></div>`:''}
+          ${f.uyumsoft_k?`<div class="row"><i class="bi bi-person-badge"></i><span>Uyumsoft: <b>${f.uyumsoft_k}</b></span></div>`:''}
+        </div>
+        <div class="kk-tags">${tags.join('')}</div>
+      </div>`;
+    }).join('');
+  },
+
+  init(){this.filtrele();}
+};
+
+// Beyan takvimi verisi
+const BEYANLAR = [
+  {tarih:'30.06.2026', ad:'Turizm Payı Beyanı',    acik:'Mayıs dönemi · Son gün'},
+  {tarih:'30.06.2026', ad:'e-Defter Berat Yükleme', acik:'Mayıs dönemi · Son gün'},
+  {tarih:'15.07.2026', ad:'ÖTV Beyanı (I-IV)',      acik:'Haziran dönemi'},
+  {tarih:'23.07.2026', ad:'SGK Prim Bildirgesi',    acik:'Haziran dönemi'},
+  {tarih:'26.07.2026', ad:'Muhtasar & Prim Hizmet', acik:'Haziran dönemi'},
+  {tarih:'28.07.2026', ad:'KDV-1 Beyannamesi',      acik:'Haziran dönemi · En kritik'},
+  {tarih:'17.08.2026', ad:'Geçici Vergi (2. Dönem)', acik:'Nisan–Haziran 2026'},
+];
+
+function toggleEski(){
+  const el=document.getElementById('eskiAraclar');
+  const ch=document.getElementById('eskiChevron');
+  const ac=el.style.display==='none';
+  el.style.display=ac?'block':'none';
+  ch.className='bi bi-chevron-'+(ac?'up':'down');
+}
+
+function toggleVeri(){
+  const el=document.getElementById('veriGrid');
+  const ch=document.getElementById('veriChevron');
+  const ac=el.style.display==='none';
+  el.style.display=ac?'grid':'none';
+  ch.className='bi bi-chevron-'+(ac?'up':'down');
+  ch.parentElement.firstChild.textContent=ac?'Gizle ':'Göster ';
+}
 
 const App = {
   PYTHON: 'C:\\Users\\omery\\AppData\\Local\\Programs\\Python\\Python314\\pythonw.exe',
@@ -619,57 +986,101 @@ const App = {
     const d=new Date();
     const dd=('0'+d.getDate()).slice(-2)+'.'+('0'+(d.getMonth()+1)).slice(-2)+'.'+d.getFullYear();
     const gun=['Pazar','Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi'][d.getDay()];
-    document.getElementById('topTarih').innerHTML='📅 '+dd+' · '+gun;
+    document.getElementById('topTarih').textContent=dd+' · '+gun;
     document.getElementById('tarih2').textContent=dd;
 
     this.tabloMukellef();
-    this.aktiviteListe();
+    this.beyanTakvimi(d);
+    KK.init();
   },
 
   tabloMukellef(){
     const tb=document.getElementById('mukellefTbl');
+    const tipKls={SMM:'smm',İşletme:'isl',Bilanço:'bil'};
     tb.innerHTML=MUKELLEFLER.map(m=>`
       <tr>
-        <td><span class="ad"><span class="emoji">${m.emoji}</span>${m.ad}</span></td>
+        <td><div style="display:flex;align-items:center;gap:9px">
+          <div class="muk-avatar">${m.harf}</div>
+          <div><div class="muk-ad">${m.ad}</div></div>
+        </div></td>
         <td>${m.sektor}</td>
-        <td><span class="pill gray">${m.tip}</span></td>
+        <td><span class="type-badge ${tipKls[m.tip]||'smm'}">${m.tip}</span></td>
         <td><span class="pill ${m.durumKls}">${m.durum}</span></td>
       </tr>`).join('');
   },
 
-  aktiviteListe(){
-    const el=document.getElementById('actList');
-    el.innerHTML=AKTIVITELER.map(a=>`
-      <div class="act">
-        <div class="act-ic ${a.iccls}">${a.ic}</div>
-        <div class="act-c"><h5>${a.h}</h5><p>${a.p}</p></div>
-        <div class="act-time">${a.t}</div>
-      </div>`).join('');
+  beyanTakvimi(bugun){
+    const parse=s=>{const a=s.split('.');return new Date(+a[2],+a[1]-1,+a[0]);};
+    const sorted=[...BEYANLAR].sort((a,b)=>parse(a.tarih)-parse(b.tarih));
+    const upcoming=sorted.filter(b=>parse(b.tarih)>=new Date(bugun.getFullYear(),bugun.getMonth(),bugun.getDate()));
+
+    // En yakın beyan
+    if(upcoming.length){
+      const ilk=upcoming[0];
+      const kalan=Math.round((parse(ilk.tarih)-new Date(bugun.getFullYear(),bugun.getMonth(),bugun.getDate()))/(1000*60*60*24));
+      document.getElementById('ksBeyan').textContent=kalan===0?'Bugün':kalan+' gün';
+      document.getElementById('ksBeyanAd').innerHTML='<i class="bi bi-exclamation-triangle"></i>'+ilk.ad.slice(0,20);
+    }
+
+    const bugKey=bugun.toLocaleDateString('tr-TR',{day:'2-digit',month:'2-digit',year:'numeric'}).replace(/\//g,'.');
+    let ugCounter=0;
+    const html=sorted.map(b=>{
+      const bd=parse(b.tarih);
+      const kalan=Math.round((bd-new Date(bugun.getFullYear(),bugun.getMonth(),bugun.getDate()))/(1000*60*60*24));
+      const gecti=kalan<0;
+      if(gecti)return'';
+      const today=kalan===0;
+      const soon=kalan<=7&&kalan>0;
+      if(today||soon)ugCounter++;
+      const [g,ay]=b.tarih.split('.');
+      const ayAd=['','Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'][+ay];
+      const dateCls=today?'today':soon?'soon':'';
+      const cntCls=today?'today':soon?'soon':'ok';
+      const cntTxt=today?'BUGÜN':kalan===1?'Yarın':kalan+' gün';
+      return `<div class="beyan-item">
+        <div class="beyan-date ${dateCls}">
+          <div class="day">${g}</div>
+          <div class="mon">${ayAd}</div>
+        </div>
+        <div class="beyan-info">
+          <h5>${b.ad}</h5>
+          <p>${b.acik}</p>
+        </div>
+        <div class="beyan-countdown ${cntCls}">${cntTxt}</div>
+      </div>`;
+    }).join('');
+
+    document.getElementById('beyanList').innerHTML=html||'<div style="padding:20px;text-align:center;color:var(--txt-dim);font-size:12px">Yaklaşan beyan yok</div>';
+    if(ugCounter>0){
+      document.getElementById('beyanUyariBadge').textContent=ugCounter+' acil';
+      document.getElementById('beyanUyariBadge').style.display='';
+    }else{
+      document.getElementById('beyanUyariBadge').style.display='none';
+    }
   },
 
   pyAc(rel, ad){
-    const r = (rel||'').toLowerCase();
+    const r=(rel||'').toLowerCase();
     let key='';
-    if(r.includes('banka_panel')||r.includes('banka_pos')) key='banka';
-    else if(r.includes('db_aktarim')) key='dbaktarim';
-    else if(r.includes('fatura')) key='fatura';
-    else if(r.includes('uyumsoft')) key='uyumsoft';
-    else if(r.includes('z_raporu')||r.includes('zraporu')) key='zraporu';
-    else if(r.includes('komut_merkezi')) key='komut';
-    else if(r.includes('beyanname')||r.includes('panel.py')) key='beyanname';
-    if(key){ location.href='battal://'+key; return; }   // protokolle DOĞRUDAN aç
-    // protokol eşleşmezse eski yöntem (komutu kopyala + Win+R)
-    const cmd = `"${this.PYTHON}" "${this.PANELLER}\\${rel}"`;
+    if(r.includes('banka_panel')||r.includes('banka_pos'))key='banka';
+    else if(r.includes('db_aktarim'))key='dbaktarim';
+    else if(r.includes('fatura'))key='fatura';
+    else if(r.includes('uyumsoft'))key='uyumsoft';
+    else if(r.includes('z_raporu')||r.includes('zraporu'))key='zraporu';
+    else if(r.includes('komut_merkezi'))key='komut';
+    else if(r.includes('beyanname')||r.includes('panel.py'))key='beyanname';
+    if(key){location.href='battal://'+key;return;}
+    const cmd=`"${this.PYTHON}" "${this.PANELLER}\\${rel}"`;
     this.kopyala(cmd);
-    document.getElementById('m-py-name').textContent = ad;
-    document.getElementById('m-py-cmd').textContent = cmd;
+    document.getElementById('m-py-name').textContent=' '+ad;
+    document.getElementById('m-py-cmd').textContent=cmd;
     document.getElementById('m-py').classList.add('show');
   },
 
-  klasor(yol, ad){
+  klasor(yol,ad){
     this.kopyala(yol);
-    document.getElementById('m-klasor-name').textContent = ad;
-    document.getElementById('m-klasor-path').textContent = yol;
+    document.getElementById('m-klasor-name').textContent=' '+ad;
+    document.getElementById('m-klasor-path').textContent=yol;
     document.getElementById('m-klasor').classList.add('show');
   },
 
@@ -680,10 +1091,16 @@ const App = {
     });
   },
 
-  kapat(id){document.getElementById(id).classList.remove('show');}
+  kapat(id){document.getElementById(id).classList.remove('show')}
 };
 
 document.addEventListener('DOMContentLoaded',()=>App.init());
+</script>
+
+<!-- Gider Kontrol bookmarklet kaynağı (Defter Beyan sayfasında çalışır) -->
+<script type="text/plain" id="bmGiderKontrol">javascript:(async()=>{const B='https://backend-p.defterbeyan.gov.tr/rs';let TK='';for(const S of[sessionStorage,localStorage]){try{for(let i=0;i<S.length;i++){const v=S.getItem(S.key(i));if(v&&/^ey[\w-]+\.[\w-]+\./.test(v)){TK=v;break}}}catch(e){}if(TK)break}const H={'Content-Type':'application/json; charset=utf-8'};if(TK)H.Token=TK;const yil=new Date().getFullYear();let ov=document.getElementById('__gk');if(ov)ov.remove();ov=document.createElement('div');ov.id='__gk';ov.style.cssText='position:fixed;inset:0;z-index:2147483647;background:rgba(8,12,24,.97);color:#e8edf5;font:13px Segoe UI,system-ui,sans-serif;overflow:auto;padding:20px';ov.innerHTML='<div style="max-width:1280px;margin:0 auto"><div style="display:flex;align-items:center;gap:12px;margin-bottom:14px"><b style="font-size:18px;color:#d4af37">📊 Defter Beyan · Gider Kontrol</b><button id="__gkx" style="margin-left:auto;background:#af0003;color:#fff;border:0;padding:8px 16px;border-radius:8px;cursor:pointer;font-weight:700">✕ Kapat</button></div><div id="__gkb">Yükleniyor…</div></div>';document.body.appendChild(ov);document.getElementById('__gkx').onclick=()=>ov.remove();const bar=document.getElementById('__gkb');async function pull(bas,bit){let page=1,all=[],size=1/0,T={};while(all.length<size){const r=await fetch(B+'/giderliste/search',{method:'POST',headers:H,credentials:'include',body:JSON.stringify({attributes:{baslangicTarihi:bas,bitisTarihi:bit},pagingContext:{page:page,limit:200,orderContextMap:{'date(kayit_tarihi)':'DESC'}}})});const j=await r.json();const rc=j.resultContainer||{};const l=rc.resultList||[];size=rc.size||l.length;T={g:rc.toplamGider,k:rc.toplamKdv,s:rc.toplamStopajTutari};all=all.concat(l);bar.textContent='Çekiliyor… '+all.length+'/'+size;if(!l.length)break;page++;if(page>100)break}return{all:all,T:T}}let R;try{R=await pull(yil+'-01-01 00:00:00',yil+'-12-31 23:59:59')}catch(e){bar.innerHTML='<span style="color:#fca5a5">Hata: '+e.message+'</span>';return}const all=R.all,T=R.T;const f=n=>(+n||0).toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2});const seen={},dup=[];all.forEach(r=>{const k=(r.tcknVkn||'')+'|'+(r.belgeSiraNo||'')+'|'+r.tutar;if(seen[k])dup.push(r);else seen[k]=1});const kdvE=all.filter(r=>{if(r.kdvsizIslem)return false;const b=Math.round(r.tutar*r.kdvOrani)/100;return Math.abs(b-(r.kdv||0))>0.05});const bos=all.filter(r=>!r.aciklama||!r.aciklama.trim());const chip=(t,n,c)=>'<span style="display:inline-block;background:'+c+';padding:6px 12px;border-radius:20px;margin:0 8px 8px 0;font-weight:700">'+t+': '+n+'</span>';let h='<div style="margin-bottom:12px">'+chip('Kayıt',all.length,'#1f2937')+chip('Toplam Gider','&#8378;'+f(T.g),'#1e3a2f')+chip('İnd. KDV','&#8378;'+f(T.k),'#1e2f3a')+chip('Stopaj','&#8378;'+f(T.s),'#2f1e3a')+chip('Mükerrer',dup.length,dup.length?'#5b1a1a':'#1f2937')+chip('KDV Uyumsuz',kdvE.length,kdvE.length?'#5b3a1a':'#1f2937')+chip('Boş Açıklama',bos.length,bos.length?'#5b3a1a':'#1f2937')+'</div>';const flag=r=>{const a=[];if(dup.indexOf(r)>=0)a.push('MÜKERRER');if(kdvE.indexOf(r)>=0)a.push('KDV?');if(bos.indexOf(r)>=0)a.push('AÇIKLAMA?');return a.length?'<span style="color:#fca5a5;font-weight:700">'+a.join(' ')+'</span>':'<span style="color:#6ee7b7">&#10003;</span>'};h+='<div style="overflow:auto;border:1px solid #2a3550;border-radius:8px"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#141c2e;text-align:left">'+['Belge Tarihi','Belge No','VKN/TC','Açıklama','Matrah','KDV%','KDV','Stopaj','Kontrol'].map(x=>'<th style="padding:8px">'+x+'</th>').join('')+'</tr></thead><tbody>';all.forEach(r=>{h+='<tr style="border-top:1px solid #1f2840"><td style="padding:7px">'+(r.belgeTarihi||'').slice(0,10)+'</td><td style="padding:7px">'+(r.belgeSiraNo||'')+'</td><td style="padding:7px">'+(r.tcknVkn||'')+'</td><td style="padding:7px">'+((r.aciklama||'').slice(0,60))+'</td><td style="padding:7px;text-align:right">'+f(r.tutar)+'</td><td style="padding:7px;text-align:right">'+(r.kdvOrani||0)+'</td><td style="padding:7px;text-align:right">'+f(r.kdv)+'</td><td style="padding:7px;text-align:right">'+f(r.stopajTutari)+'</td><td style="padding:7px">'+flag(r)+'</td></tr>'});h+='</tbody></table></div>';bar.innerHTML=h})();</script>
+<script>
+(function(){var bm=document.getElementById('bmGiderKontrol').textContent.trim();var a=document.getElementById('giderKontrolBm');if(a){a.href=bm;a.addEventListener('click',function(e){e.preventDefault();alert('Bu butonu BİR KEZ tarayıcının yer imi çubuğuna sürükle. Sonra Defter Beyan açıkken o yer imine tıkla — gider kontrol tablosu açılır. (Tarayıcı güvenliği gereği panelden direkt çalışamaz.)');});}})();
 </script>
 
 </body>

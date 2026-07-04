@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "BATTAL · Defter Beyan + Uyumsoft Kontrol",
+  "version": "2.35",
+  "description": "Defter Beyan'da gider kontrolu, Uyumsoft'ta gelen fatura cekme, alici bilgi (levha) kontrolu ve iki sistem arasinda capraz eslestirme (eksik fatura tespiti). Salt-okuma, guvenli.",
+  "permissions": ["storage"],
+  "host_permissions": [
+    "https://*.defterbeyan.gov.tr/*",
+    "https://*.uyum.com.tr/*",
+    "https://*.uyumsoft.com.tr/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://portal.defterbeyan.gov.tr/*",
+        "https://edonusum.uyum.com.tr/*",
+        "https://portal.uyumsoft.com.tr/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["injected.js"],
+      "matches": [
+        "https://portal.defterbeyan.gov.tr/*",
+        "https://edonusum.uyum.com.tr/*"
+      ]
+    }
+  ]
+}

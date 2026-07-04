@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<title>Battal Muhasebe · Defter Beyan Pro · v10.0</title>
+<title>Battal Muhasebe · Defter Beyan Pro · v10.2</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{
@@ -332,7 +332,7 @@ footer.btmbar b{color:var(--acc-2)}
     <div class="logo-icon">⚡</div>
     <div class="logo-text">
       <div class="t1">BATTAL MUHASEBE · DB PRO</div>
-      <div class="t2">DEFTER BEYAN OTOMASYONU · v10.0</div>
+      <div class="t2">DEFTER BEYAN OTOMASYONU · v10.2</div>
     </div>
   </div>
   <div class="spc"></div>
@@ -367,8 +367,9 @@ footer.btmbar b{color:var(--acc-2)}
   </div>
 
   <div class="tabs">
-    <button class="tab active" data-tab="gelir" onclick="App.tab('gelir')">💰 Gelir / e-SMM</button>
+    <button class="tab active" data-tab="gelir" id="tabGelirBtn" onclick="App.tab('gelir')">💰 Gelir / e-SMM</button>
     <button class="tab" data-tab="gider" onclick="App.tab('gider')">📥 Gider / e-Fatura</button>
+    <button class="tab" data-tab="zrapor" id="tabZraporBtn" onclick="App.tab('zrapor')" style="display:none">📊 Z Raporu</button>
     <button class="tab" data-tab="sabit" onclick="App.tab('sabit')">🏛️ Sabit Kıymet</button>
     <button class="tab" data-tab="vuk" onclick="App.tab('vuk')">📚 VUK 333 & Levha</button>
   </div>
@@ -377,8 +378,8 @@ footer.btmbar b{color:var(--acc-2)}
   <div class="tab-content active" id="tab-gelir">
     <div class="dropzone" id="dz-gelir" onclick="document.getElementById('f-gelir').click()">
       <div class="dz-icon">📥</div>
-      <div class="dz-title">Uyumsoft Gelir (e-SMM) CSV/Excel'ini buraya bırak</div>
-      <div class="dz-sub">Tüm dönem gelse de filtreliyorum · İptaller otomatik elenir</div>
+      <div class="dz-title" id="dzGelirTitle">Uyumsoft Gelir (e-SMM) CSV/Excel'ini buraya bırak</div>
+      <div class="dz-sub" id="dzGelirSub">Tüm dönem gelse de filtreliyorum · İptaller otomatik elenir</div>
       <input type="file" id="f-gelir" accept=".csv,.xlsx,.xls">
     </div>
 
@@ -449,6 +450,38 @@ footer.btmbar b{color:var(--acc-2)}
     </div>
   </div>
 
+  <!-- Z RAPORU TAB -->
+  <div class="tab-content" id="tab-zrapor">
+    <div class="dropzone" id="dz-zrapor" onclick="document.getElementById('f-zrapor').click()">
+      <div class="dz-icon">📊</div>
+      <div class="dz-title">Z Raporu Excel'ini buraya bırak (Z_RAPORU_YYYY-MM.xlsx)</div>
+      <div class="dz-sub">Tüm firma sayfaları okunur · Nakit+Kredi=Tutar ve KDV kontrolü otomatik · Karışık oran desteklenir</div>
+      <input type="file" id="f-zrapor" accept=".csv,.xlsx,.xls">
+    </div>
+
+    <div id="zrapor-panel" style="display:none">
+      <div class="kpis" id="z-kpi"></div>
+      <div class="warn-banner" id="z-warn" style="display:none"></div>
+
+      <div class="tablewrap">
+        <div class="tablewrap-h">📋 Z Raporu Önizleme · Firma bazlı · Kontrolden geçti</div>
+        <div style="max-height:460px;overflow:auto">
+          <table id="z-tab">
+            <thead><tr><th>Firma</th><th>Tarih</th><th>Z No</th><th class="r">Tutar</th><th class="r">KDV%</th><th class="r">Nakit</th><th class="r">Kredi</th><th class="r">Hes. KDV</th><th>Kontrol</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn secondary" onclick="App.tekrarYukle('zrapor')">🔄 Tekrar Yükle</button>
+        <button class="btn big" onclick="App.uretZrapor()">📊 Z Raporlarını Panoya Kopyala (Eklenti Gönderir)</button>
+      </div>
+
+      <div class="log" id="z-log" style="display:none"></div>
+    </div>
+  </div>
+
   <!-- SABİT KIYMET TAB -->
   <div class="tab-content" id="tab-sabit">
     <div class="help-card">
@@ -509,19 +542,19 @@ footer.btmbar b{color:var(--acc-2)}
 <!-- SCRIPT KOPYALANDI MODAL -->
 <div class="modal" id="modal-script">
   <div class="modal-box">
-    <h2>✅ Script Klibborda Kopyalandı</h2>
-    <div class="ok-banner">📋 Defter Beyan'a giden script hazır ve klibborda kopyalandı. Şimdi:</div>
-    <ol style="margin-left:22px;color:var(--txt-soft);line-height:2;font-size:13px">
+    <h2 id="modal-script-h2">✅ Script Klibborda Kopyalandı</h2>
+    <div class="ok-banner" id="modal-script-banner">📋 Defter Beyan'a giden script hazır ve klibborda kopyalandı. Şimdi:</div>
+    <ol style="margin-left:22px;color:var(--txt-soft);line-height:2;font-size:13px" id="modal-script-steps">
       <li><b>Defter Beyan</b> sekmesini aç (giriş yapmışsın) ve <b>mükellefe geç</b>: <span id="modal-mukname"></span></li>
       <li>Klavyeden <b>F12</b> → üstten <b>"Konsol"</b> sekmesine tıkla</li>
       <li>Konsol kapalıysa "Yapıştırmaya izin ver" diye yaz Enter → açılır</li>
       <li>Konsola <b>Ctrl+V</b> ile yapıştır → <b>Enter</b></li>
       <li>Hepsi otomatik gider, başarılı/hatalı sayısı konsola düşer ✅</li>
     </ol>
-    <p style="font-size:11px;color:var(--txt-dim);margin-top:8px">Script tarayıcında o anda token'ı ile çalışır, Defter Beyan API'sine direkt POST atar.</p>
+    <p style="font-size:11px;color:var(--txt-dim);margin-top:8px" id="modal-script-not">Script tarayıcında o anda token'ı ile çalışır, Defter Beyan API'sine direkt POST atar.</p>
     <div class="modal-actions">
       <button class="btn secondary" onclick="App.modalKapat('modal-script')">Tamam</button>
-      <button class="btn" onclick="App.scriptKopyala()">📋 Tekrar Kopyala</button>
+      <button class="btn" onclick="App.scriptKopyala()" id="modal-script-tekrar">📋 Tekrar Kopyala</button>
     </div>
   </div>
 </div>
@@ -533,7 +566,7 @@ footer.btmbar b{color:var(--acc-2)}
     <ol style="margin-left:22px;color:var(--txt-soft);line-height:2;font-size:13px">
       <li>Üst yeşil "🔑 Token" butonuna tıkla, Defter Beyan'a giriş yapıp token'ı al ve yapıştır (bir kez)</li>
       <li>Mükellef kartlarından seç</li>
-      <li>"Gelir / e-SMM" veya "Gider / e-Fatura" sekmesinden Uyumsoft Excel/CSV bırak</li>
+      <li>"Gelir" (e-SMM veya E-Fatura·E-Arşiv satış) ya da "Gider / e-Fatura" sekmesinden Uyumsoft Excel/CSV bırak</li>
       <li>Dönem (ay/yıl) seç → otomatik mevcut ay seçili</li>
       <li>Tabloda kontrol et: ✅ temiz / ⚠️ uyarı / ❌ iptal-mükerrer</li>
       <li>"🚀 Defter Beyan Scripti Üret + Kopyala" butonuna tıkla</li>
@@ -548,7 +581,7 @@ footer.btmbar b{color:var(--acc-2)}
 </div>
 
 <footer class="btmbar">
-  <span>v10.0 · 15 mükellef · Defter Beyan API · VUK 333</span>
+  <span>v10.2 · 15 mükellef · Defter Beyan API · VUK 333</span>
   <div style="flex:1"></div>
   <span id="ftrInfo">Hazır</span>
 </footer>
@@ -564,21 +597,28 @@ const MUKELLEFLER = {
     sektor:'Mali Müşavir', nace:'692001',
     altKod:'22936', altAd:'MUHASEBE GELİRİ',
     kdvOrani:20, stopaj:true, stopajOran:20, nihaiTuketici:false, kdvDahil:false,
-    levha:'Terazidere Mah. Taş Sk. Bayrampaşa'
+    levha:'Terazidere Mah. Taş Sk. Bayrampaşa',
+    tckn:'24679499156',
+    adres:'TERAZİDERE MAH. TAŞ SK. BATTAL AP NO: 5 İÇ KAPI NO: 2 BAYRAMPAŞA/ İSTANBUL',
+    aracIzinli:true // araç giderleri otomatik işlenebilir (kısıtlama yok)
   },
   '1500360006':{
     ad:'Emir Battal', emoji:'⚖️', tip:'SMM', vd:'BEŞİKTAŞ',
     sektor:'Avukat', nace:'691003',
     altKod:'2368273', altAd:'AVUKATLIK HİZMET BEDELİ',
     kdvOrani:20, stopaj:true, stopajOran:20, nihaiTuketici:false, kdvDahil:false,
-    levha:'Abbasağa Mah. Beşiktaş'
+    levha:'Abbasağa Mah. Beşiktaş',
+    tckn:'27286976096',
+    adres:'ABBASAĞA MAH. KEŞŞAF SK. ŞATIROĞLU IS MERKEZI NO: 4 İÇ KAPI NO: 10 BEŞİKTAŞ/ İSTANBUL'
   },
   '6630177279':{
     ad:'Müge Özarmağan', emoji:'⚖️', tip:'SMM', vd:'MECİDİYEKÖY',
     sektor:'Avukat', nace:'691003',
     altKod:'28186', altAd:'AVUKATLIK HİZMETİ',
     kdvOrani:20, stopaj:true, stopajOran:20, nihaiTuketici:false, kdvDahil:false,
-    levha:'Meşrutiyet Mah. Valikonağı Cad.'
+    levha:'Meşrutiyet Mah. Valikonağı Cad.',
+    tckn:'47707497320',
+    adres:'MEŞRUTİYET MAH. VALİ KONAĞI CAD. POLAT APT NO: 99 İÇ KAPI NO: 10 YOK/ ŞİŞLİ/ İSTANBUL'
   },
   '7850427089':{
     ad:'Devran Süer', emoji:'⚖️', tip:'SMM', vd:'KARTAL',
@@ -586,6 +626,8 @@ const MUKELLEFLER = {
     altKod:'', altAd:'AVUKATLIK HİZMETİ',
     kdvOrani:20, stopaj:true, stopajOran:20, nihaiTuketici:false, kdvDahil:false,
     levha:'Orhantepe Mah. Kartal',
+    tckn:'59275233118',
+    adres:'ORHANTEPE MAH. SARAYLAR CAD. TUFANOĞLU PLAZA NO: 80 İÇ KAPI NO: 6 KARTAL/ İSTANBUL',
     notlar:'Alt türü kodu yakalanmadı — ilk gönderimde interceptor yakalayacak'
   },
   '1500459508':{
@@ -593,7 +635,9 @@ const MUKELLEFLER = {
     sektor:'Diş Hekimi', nace:'862303',
     altKod:'1957916', altAd:'TEDAVİ BEDELİ',
     kdvOrani:10, stopaj:false, nihaiTuketici:false, kdvDahil:false,
-    levha:'Teşvikiye Mah. Nişantaşı'
+    levha:'Teşvikiye Mah. Nişantaşı',
+    tckn:'26929736554',
+    adres:'TEŞVİKİYE MAH. NİŞANTAŞI IHLAMUR YOLU SK. BELDE APT. NO: 1 İÇ KAPI NO: 5 ŞİŞLİ/ İSTANBUL'
   },
   '3750072366':{
     ad:'Cihan Güneş Ertürk', emoji:'🩺', tip:'SMM', vd:'GÖZTEPE',
@@ -601,7 +645,10 @@ const MUKELLEFLER = {
     altKod:'1069982', altAd:'MUAYENE-TEDAVİ BEDELİ',
     kdvOrani:10, stopaj:false, nihaiTuketici:true, kdvDahil:true,
     levha:'Göztepe Mah. İkar İş Mrk.',
-    kkAyrim:true // POS/Banka/Nakit kontrolü
+    tckn:'40402335348',
+    adres:'GÖZTEPE MAH. TEPEGÖZ SK. IKAR IŞ MERKEZI NO: 1 İÇ KAPI NO: 7 KADIKÖY/ İSTANBUL',
+    kkAyrim:true, // POS/Banka/Nakit kontrolü
+    aracIzinli:true // araç giderleri otomatik işlenebilir (kısıtlama yok)
   },
   '1500127919':{
     ad:'İskender Mehmet Nuri Battal', emoji:'🩺', tip:'SMM', vd:'MECİDİYEKÖY',
@@ -609,6 +656,9 @@ const MUKELLEFLER = {
     altKod:'', altAd:'MUAYENE GELİRİ',
     kdvOrani:20, stopaj:false, nihaiTuketici:true, kdvDahil:true,
     levha:'Meşrutiyet Mah. Valikonağı',
+    tckn:'26968735242',
+    adres:'MEŞRUTİYET MAH VALİKONAĞI CAD NO: 83 İÇ KAPI NO: 5 ŞİŞLİ/ İSTANBUL',
+    aracIzinli:true, // araç giderleri otomatik işlenebilir (kısıtlama yok)
     manuel:true,
     notlar:'MANUEL işleniyor (kızlar elle giriyor) — API otomatik gönderim YAPMA'
   },
@@ -617,12 +667,36 @@ const MUKELLEFLER = {
     sektor:'Psikolog', nace:'869300',
     altKod:'', altAd:'PSİKOLOG HİZMET BEDELİ',
     kdvOrani:20, stopaj:false, nihaiTuketici:false, kdvDahil:false,
-    levha:'Kartaltepe Mah. Bakırköy'
+    levha:'Kartaltepe Mah. Bakırköy',
+    tckn:'11681662708',
+    adres:'KARTALTEPE MAH. ŞEHİT ER RIDVAN MERT SK. GURSESLI SITESI A1BLOK NO: 4/2 İÇ KAPI NO: 4 BAKIRKÖY/ İSTANBUL'
+  },
+  '32893788086':{
+    ad:'Serra Hekimoğlu', emoji:'🦷', tip:'SMM', vd:'MECİDİYEKÖY',
+    sektor:'Diş Hekimi', nace:'862303',
+    altKod:'', altAd:'TEDAVİ BEDELİ',
+    kdvOrani:10, stopaj:false, nihaiTuketici:false, kdvDahil:false,
+    tckn:'32893788086',
+    levha:'Teşvikiye Mah. Şişli',
+    adres:'TEŞVİKİYE MAH. NİŞANTAŞI IHLAMUR YOLU SK. BELDE APT. NO: 1 İÇ KAPI NO: 5 ŞİŞLİ/ İSTANBUL',
+    notlar:'Levhada VKN boş — TCKN anahtar. Alt tür kodu ilk gönderimde interceptor yakalar.'
+  },
+  '32635597426':{
+    ad:'Suyum Bige Tilkici', emoji:'⚖️', tip:'SMM', vd:'GÖZTEPE',
+    sektor:'Avukat', nace:'691003',
+    altKod:'', altAd:'AVUKATLIK HİZMETİ',
+    kdvOrani:20, stopaj:true, stopajOran:20, nihaiTuketici:false, kdvDahil:false,
+    tckn:'32635597426',
+    levha:'Göztepe Mah. Kadıköy',
+    adres:'GÖZTEPE MAH. TAŞMEKTEP SK. NUR NO: 21 İÇ KAPI NO: 17 KADIKÖY/ İSTANBUL',
+    notlar:'20.01.2026 yeni işe başlama. Levhada VKN boş — TCKN anahtar. Alt tür kodu ilk gönderimde interceptor yakalar.'
   },
   '3750384725':{
     ad:'Çağrı Ertürk', emoji:'📸', tip:'ISL', vd:'GÖZTEPE',
     sektor:'Etkinlik Fotoğrafçılığı', nace:'742027',
     levha:'Zühtüpaşa Mah. Kadıköy',
+    tckn:'40396335508',
+    adres:'ZÜHTÜPAŞA MAH. KOLEJ SK. KISMET APT NO: 11 İÇ KAPI NO: 5 KADIKÖY/ İSTANBUL',
     girisYok:true, // gelir kesmiyor (Haziran)
     giderEvet:true,
     hizmet:true // hizmet işletmesi — mal alışı YOK, sarf veya demirbaş
@@ -632,12 +706,16 @@ const MUKELLEFLER = {
     sektor:'Emlak/Araç', nace:'683101',
     altKod:'', altAd:'EMLAK KOMİSYON',
     kdvOrani:20, stopaj:false, nihaiTuketici:false, kdvDahil:false,
-    levha:'Bahçelievler Merter'
+    levha:'Bahçelievler Merter',
+    tckn:'37900621974',
+    adres:'BAHÇELİEVLER MAH. RESSAM HALİM SK. KADİR HAS NO: 7 İÇ KAPI NO: 33 BAHÇELİEVLER/ İSTANBUL'
   },
   // === İŞLETME DEFTERİ — Gider tarafı (alım-satım) ===
   '0960155134':{
     ad:'Sinan Atalay', emoji:'🛒', tip:'ISL', vd:'-',
     sektor:'İnternet/E-ticaret (Kuyum/Gümüş)', nace:'479114',
+    tckn:'10097926060', vd2:'BEYLİKDÜZÜ',
+    adres:'YAKUPLU MAH. KANUNİ CAD. MENEKŞE EVLERİ B BLOK NO: 16 A İÇ KAPI NO: 19 BEYLİKDÜZÜ/ İSTANBUL',
     girisVar:true, // Trendyol/Hepsi gelir
     giderEvet:true, malAlis:true // alım-satım, mal alışı GEÇERLİ
   },
@@ -645,23 +723,33 @@ const MUKELLEFLER = {
     ad:'Altuğ Erden', emoji:'☕', tip:'ISL', vd:'ÜSKÜDAR',
     sektor:'Çay/Kahve/Baharat Perakende', nace:'472704',
     levha:'İcadiye Mah. Üsküdar',
-    girisVar:true, giderEvet:true, malAlis:true
+    tckn:'14558014020',
+    adres:'İCADİYE MAH. CEMİL MERİÇ SK. KOC NO: 23 A ÜSKÜDAR/ İSTANBUL',
+    girisVar:true, giderEvet:true, malAlis:true, zRapor:true
   },
   '2640193570':{
     ad:'Muzaffer Murat Çubukçuoğlu', emoji:'☕', tip:'ISL', vd:'ÜSKÜDAR',
     sektor:'Çay/Kahve/Baharat Perakende', nace:'472704',
     levha:'Selimiye Mah. Üsküdar',
-    girisVar:true, giderEvet:true, malAlis:true
+    tckn:'41167543450',
+    adres:'SELİMİYE MAH. HAREM İSKELESİ CAD. HERA APT. NO: 13 İÇ KAPI NO: 1 ÜSKÜDAR/ İSTANBUL',
+    girisVar:true, giderEvet:true, malAlis:true, zRapor:true
   },
   '0250587861':{
     ad:'Kadir Akıllı', emoji:'🥜', tip:'ISL', vd:'-',
     sektor:'Kuru Yemiş', nace:'472105',
+    tckn:'34562272988', vd2:'KÜÇÜKKÖY',
+    adres:'FEVZİ ÇAKMAK MAH. İSTANBUL CAD. NO: 61 A GAZİOSMANPAŞA/ İSTANBUL',
+    notlar:'17.04.2026 yeni işe başlama',
     girisVar:true, giderEvet:true, malAlis:true
   },
   '7680418539':{
     ad:'Dilek Öztürk', emoji:'💄', tip:'ISL', vd:'ÜSKÜDAR',
     sektor:'Kozmetik E-ticaret', nace:'479114',
     levha:'Acıbadem Mah. Üsküdar',
+    tckn:'43684215698',
+    adres:'ACIBADEM MAH. ÇEÇEN SK. B 10 BLOK NO: 19 H İÇ KAPI NO: 8 ÜSKÜDAR/ İSTANBUL',
+    nace2:'731202', // 2. faaliyet kodu — Çeşitli medya reklam alanı satışı (levha)
     girisVar:true, giderEvet:true, malAlis:true
   }
 };
@@ -686,9 +774,9 @@ Object.assign(GIDER_KOD, KAYDEDILEN_KOD);
 const SINIF_KURALLAR = [
   {p:/i.?g.?d.?a.?ş|igdaş|gaz dağıt/i, sinif:'Doğalgaz', altKod:84, altAd:'Doğalgaz Giderleri (GVK 40/1)'},
   {p:/enerjisa|bedaş|ayedaş|boğaziçi elektrik|elektrik perakende|elektrik dağıt/i, sinif:'Elektrik', altKod:0, altAd:'Elektrik Giderleri (GVK 40/1)'},
-  {p:/iski|aski|su dağıt|su şebek/i, sinif:'Su', altKod:0, altAd:'Su Giderleri (GVK 40/1)'},
-  {p:/turkcell|vodafone|türk ?telekom|ttnet|superonline|millennium|net|telefon/i, sinif:'Telefon+ÖİV', altKod:87, altAd:'Telefon Giderleri (GVK 40/1)', oiv:true},
-  {p:/kargo|aras|mng|yurtiçi kargo|ptt kargo|sürat|hepsijet|sendeo|trendyol express/i, sinif:'Kargo', altKod:0, altAd:'Kargo Posta ve Kurye Giderleri (GVK 40/1)'},
+  {p:/iski|aski|su dağıt|su şebek/i, sinif:'Su', altKod:83, altAd:'Su Giderleri (GVK 40/1)'},
+  {p:/turkcell|vodafone|türk ?telekom|ttnet|superonline|millennium|net|telefon|tt ?mob[iı]l|andromeda|dijital platform|d.?smart|digiturk|turksat|kablonet|haberleşme|iletişim hizmet/i, sinif:'Telefon+ÖİV', altKod:87, altAd:'Telefon Giderleri (GVK 40/1)', oiv:true},
+  {p:/kargo|aras|mng|yurtiçi kargo|ptt kargo|sürat|hepsijet|sendeo|trendyol express/i, sinif:'Kargo', altKod:193, altAd:'Kargo Posta ve Kurye Giderleri (GVK 40/1)'},
   {p:/google ireland|meta platforms|facebook|instagram reklam/i, sinif:'İnternet Reklam', altKod:0, altAd:'İnternet Reklam Hizmet Alım Giderleri (GVK 40/1)'},
   {p:/dsm grup|d-market|hepsiburada komisyon|trendyol komisyon|n11|amazon komisyon|gittigid|pttavm|çiçek ?sepeti|pos komis/i, sinif:'Komisyon/POS', altKod:0, altAd:'Komisyon ve Pos Giderleri (GVK 40/1)'},
   {p:/kira gideri|kiraladığı|gayrimenkul kira|işyeri kira/i, sinif:'Kira', altKod:0, altAd:'Kira Gideri (GVK 40/1)'},
@@ -697,9 +785,55 @@ const SINIF_KURALLAR = [
   {p:/avukat|hukuk büro|hukuk müşavir/i, sinif:'Avukatlık', altKod:0, altAd:'Avukatlık, Hukuk ve Müşavirlik Giderleri (GVK 40/1)', stopaj:20},
   {p:/teknik servis|bakım onarım|tamir|servis hizmet/i, sinif:'Bakım/Onarım', altKod:0, altAd:'Normal Bakım Onarım Giderleri (GVK 40/1)'},
   {p:/temizlik|hijyen/i, sinif:'Ofis (Temizlik)', altKod:0, altAd:'Ofis Giderleri (Çay, Kahve, Şeker, Temizlik vb.) (GVK 40/1)'},
-  {p:/yemek|gıda|yemek sepeti|getir/i, sinif:'Yemek', altKod:0, altAd:'Gıda ve Yemek Harcamaları (GVK 40/1-40/2)'},
+  // "gıda" kelimesi bilerek dahil edilmedi — malAlis mükelleflerde (Muzaffer gibi) toptan gıda/baharat
+  // tedarikçileriyle karışıyordu (Mal Alışı olması gerekirken Yemek Harcaması'na düşüyordu).
+  {p:/yemek sepeti|getir\b|personel yemeği/i, sinif:'Yemek', altKod:90, altAd:'Gıda ve Yemek Harcamaları (GVK 40/1-40/2)'},
+  {p:/iş yemeği|ağırlama|temsil/i, sinif:'Temsil ve Ağırlama Gideri', altKod:97, altAd:'Temsil ve Ağırlama Gideri (İş yemeği vb.) (GVK 40/1)'},
   {p:/akaryakıt|benzin|motorin|opet|shell|petrol ofisi|po petrol|aytemiz/i, sinif:'Akaryakıt', altKod:0, altAd:'Taşıt Akaryakıt Giderleri (GVK 40/1-40/5)'}
 ];
+
+/* ════════════════════════════════════════════════════════════════════
+   SMM (SERBEST MESLEK) — GVK Md. 68 GİDER ALT KODLARI
+   İşletme mükellefleri GVK Md. 40 (tür kodu 4) kullanır; serbest meslek
+   erbabı GVK Md. 68 (tür kodu 3) kullanır ve alt kodları FARKLIDIR.
+   Sınıf adı (SINIF_KURALLAR'daki 'sinif') -> GVK 68 alt kodu eşlemesi.
+   Öğrenildikçe eklenir (eklentide "Belgeyi Güncelle" ile yakalanan kod).
+   ════════════════════════════════════════════════════════════════════ */
+const SMM_TUR_KODU = '3'; // Serbest Meslek Kazancına Ait Giderler (GVK Md. 68)
+const SMM_GIDER_KOD = {
+  'Elektrik': {altKod:2, altAd:'Elektrik Giderleri (GVK 68/1)'},
+  'Telefon+ÖİV': {altKod:7, altAd:'Telefon, Faks, İnternet ve Diğer Haberleşme Giderleri (GVK 68/1)'},
+  'Özel İletişim Vergisi': {altKod:218, turKod:'5', altAd:'Özel İletişim Vergisi'},
+  'Doğalgaz': {altKod:30, altAd:'Yakıt, Doğalgaz ve Isı Giderleri (GVK 68/1)'}
+  // Öğrenilecek: Diğer Hizmet, Su, Kira, Ofis (Temizlik), Ulaşım...
+};
+try{ Object.assign(SMM_GIDER_KOD, JSON.parse(localStorage.getItem('smmGiderKodlari')||'{}')); }catch(e){}
+
+/* ════════════════════════════════════════════════════════════════════
+   TEDARİKÇİ ÖZEL EŞLEŞTİRME (VKN bazlı)
+   Genel regex kurallarının yanılabileceği durumlar için — kullanıcı
+   tarafından doğrulanmış gerçek bilgi, tahmin/varsayım DEĞİL.
+   Yeni tedarikçi eklemek için: "vkn": {sinif, altKod, altAd, turKod}
+   turKod: '1'=Mal Alışı, '4'=Normal İndirilecek Gider
+   ════════════════════════════════════════════════════════════════════ */
+// demirbasAdayi:true olan tedarikçilerde 12.000 TL (KDV hariç) eşiği uygulanır:
+//   matrah <= 12.000  → "Doğrudan Gider Yazılan Demirbaş (GVK 40/1)" (kod 185, doğrulandı)
+//   matrah  > 12.000  → mevcut "SABİT KIYMET (>12.000)" / Amortisman akışına (kod 255) düşer
+const TEDARIKCI_OZEL = {
+  '3100018644': {sinif:'Mal Alışı', altKod:186, altAd:'Mal Alışı', turKod:'1'}, // CSK Farma Pazarlama — baharat/gıda tedarikçisi (Muzaffer)
+  '1500053692': {demirbasAdayi:true, altAdBase:'Bauhaus (yapı/inşaat malzemesi)'}, // Bauhaus
+  '6120379680': {demirbasAdayi:true, altAdBase:'MAPA Mobilya ve Aksesuar'}, // MAPA — dükkan ekipmanı, satılık mal DEĞİL
+  '5820492073': {sinif:'Yemek', altKod:90, altAd:'Gıda ve Yemek Harcamaları (GVK 40/1-40/2)', turKod:'4'} // KÖFTECİ YUSUF — yemek/catering hizmeti, Mal Alışı DEĞİL (kullanıcı onayı)
+};
+// Kod 194 = "Dışarıdan Sağlanan Fayda ve Hizmetler" — kullanıcı test faturasında doğrulandı
+// ama henüz otomatik tetikleyici anahtar kelime/kural belirlenmedi. İleride ihtiyaç olursa
+// SINIF_KURALLAR veya TEDARIKCI_OZEL'e altKod:194 ile eklenebilir.
+// Fiziki/somut ürün ama satılık mal DEĞİL (dükkan ekipmanı, demirbaş) — bu kelimeler geçerse
+// Mal Alışı varsayılanına DÜŞMEZ, Sarf Malzeme'ye gider (gerçek kod bilinmediği için elle kontrol)
+const EKIPMAN_RE = /mobilya|aksesuar|ekipman|demirbaş|makine|cihaz|yazılım|donanım|bilgisayar|elektronik|masa|sandalye|dekorasyon|tabela/i;
+// Kişisel bakım / alkol / sigara — ÖTV'li veya işle ilgisi tartışmalı ürünler, özel muamele
+// gerektirir (kanunen kabul edilmeyen gider olabilir). Araç gibi otomatik gönderilmez, elle kontrol.
+const KISISEL_RE = /alkol|içki|bira|şarap|votka|viski|rakı|likör|mey ?içki|sigara|tütün|puro|nargile|elektronik sigara|kozmetik|parfüm|makyaj|kişisel bakım|deodorant|tıraş/i;
 
 /* ════════════════════════════════════════════════════════════════════
    ANA UYGULAMA
@@ -710,6 +844,7 @@ const App = {
   aktifVkn: null,
   gelirData: [],
   giderData: [],
+  zData: [],
   uretilenScript: '',
   uretilenAd: '',
 
@@ -719,11 +854,11 @@ const App = {
     this.donemDoldur();
     this.bindDrop('dz-gelir','f-gelir','gelir');
     this.bindDrop('dz-gider','f-gider','gider');
+    this.bindDrop('dz-zrapor','f-zrapor','zrapor');
     // Restore last mükellef
     const son = localStorage.getItem('sonMukellef');
     if(son && MUKELLEFLER[son]){
-      // istersen otomatik aç:
-      // this.mukSec(son);
+      this.mukSec(son);
     }
   },
 
@@ -782,9 +917,21 @@ const App = {
     document.getElementById('levha-info').innerHTML = m.levha?
       `<b>${m.vd} Vergi Dairesi</b><br>${m.levha}<br><small style="color:var(--txt-dim)">Kaynak: 78 levha PDF okuması (IS_VERILERI/vergi_levhalari.json)</small>`:
       '<i style="color:var(--txt-dim)">Levha bilgisi yok</i>';
+    // Gelir sekmesi etiketleri — mükellef türüne göre (SMM=e-SMM makbuz / İşletme=E-Fatura·E-Arşiv satış)
+    const isl = (m.tip==='ISL');
+    document.getElementById('tabGelirBtn').innerHTML = isl ? '💰 Gelir / E-Fatura · E-Arşiv' : '💰 Gelir / e-SMM';
+    document.getElementById('dzGelirTitle').textContent = isl
+      ? 'Uyumsoft Satış (E-Fatura / E-Arşiv · GİDEN) CSV/Excel\'ini buraya bırak'
+      : 'Uyumsoft Gelir (e-SMM) CSV/Excel\'ini buraya bırak';
+    document.getElementById('dzGelirSub').textContent = isl
+      ? 'Giden satış faturaları · İptaller otomatik elenir · Z raporları ayrıca girilir'
+      : 'Tüm dönem gelse de filtreliyorum · İptaller otomatik elenir';
+    // Z Raporu sekmesi — sadece yazarkasa/perakende (zRapor:true) mükelleflerde
+    document.getElementById('tabZraporBtn').style.display = m.zRapor ? '' : 'none';
     // Reset
     this.gelirData=[];
     this.giderData=[];
+    this.zData=[];
     document.getElementById('gelir-panel').style.display='none';
     document.getElementById('gider-panel').style.display='none';
     document.getElementById('sk-list').innerHTML='<div class="empty">Önce Gider sekmesinden CSV yükle.</div>';
@@ -835,19 +982,22 @@ const App = {
 
   /* === Dönem dropdown === */
   donemDoldur(){
+    const bugun = new Date();
+    const buAy  = bugun.getMonth()+1;
+    const buYil = bugun.getFullYear();
     for(const id of ['g-ay','d-ay']){
       const sel = document.getElementById(id);
       AYLAR.forEach((a,i)=>{
         const o=document.createElement('option');o.value=i+1;o.textContent=a;sel.appendChild(o);
       });
-      sel.value=6; // varsayılan Haziran
+      sel.value=buAy;
     }
     for(const id of ['g-yil','d-yil']){
       const sel = document.getElementById(id);
-      [2026,2025,2024,2023].forEach(y=>{
+      [buYil,buYil-1,buYil-2,buYil-3].forEach(y=>{
         const o=document.createElement('option');o.value=y;o.textContent=y;sel.appendChild(o);
       });
-      sel.value=2026;
+      sel.value=buYil;
     }
     document.getElementById('g-ay').onchange=()=>this.gelirFilter();
     document.getElementById('g-yil').onchange=()=>this.gelirFilter();
@@ -867,11 +1017,22 @@ const App = {
 
   readFile(file,tip){
     if(!this.aktifVkn){alert('Önce mükellef seç');return;}
-    const id = tip==='gelir'?'g-file':'d-file';
-    document.getElementById(id).value = file.name;
+    if(tip!=='zrapor'){
+      const id = tip==='gelir'?'g-file':'d-file';
+      document.getElementById(id).value = file.name;
+    }
     const rd = new FileReader();
     rd.onload = e=>{
       try{
+        // Z Raporu: TÜM firma sayfalarını oku (çok sayfalı workbook)
+        if(tip==='zrapor'){
+          if(!/\.(xlsx|xls)$/i.test(file.name)){alert('Z Raporu için Excel (.xlsx) gerekir');return;}
+          const wb = XLSX.read(e.target.result,{type:'array'});
+          const sheets = {};
+          wb.SheetNames.forEach(sn=>{ sheets[sn]=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,defval:''}); });
+          this.zRaporIsle(sheets, file.name);
+          return;
+        }
         let rows = [];
         if(/\.(xlsx|xls)$/i.test(file.name)){
           const wb = XLSX.read(e.target.result,{type:'array'});
@@ -913,7 +1074,7 @@ const App = {
   /* === GELİR === */
   gelirIsle(rows){
     const cm = this.colMap(rows,'gelir');
-    if(!cm.headerIdx<0){alert('Header satırı bulunamadı');return;}
+    if(cm.headerIdx<0){alert('Header satırı bulunamadı');return;}
     const out=[];
     for(let i=cm.headerIdx+1;i<rows.length;i++){
       const r=rows[i];if(!r||r.every(c=>c==='')) continue;
@@ -951,7 +1112,7 @@ const App = {
 
   gelirFilter(){
     if(!this.gelirData.length) return;
-    const ay = +document.getElementById('g-ay').value;
+    const ay  = +document.getElementById('g-ay').value;
     const yil = +document.getElementById('g-yil').value;
     const arr = this.gelirData.filter(r=>{
       if(r.iptal) return false;
@@ -1028,23 +1189,24 @@ const App = {
       const vkn = (g('vkn').match(/\b(\d{10,11})\b/)||[,''])[1];
       let unvan = g('unvan').replace(vkn,'').replace(/\s+/g,' ').trim();
       const odenecek = this.num(g('odenecek'));
-      // KDV oranları
+      // KDV oranları — HER ORANI AYRI SATIR OLARAK İŞLE (mixed-oran faturalarda veri kaybı/hayali ÖİV önlenir)
       const k0=this.num(g('kdv0m')), k1=this.num(g('kdv1m')), k8=this.num(g('kdv8m')), k10=this.num(g('kdv10m')), k18=this.num(g('kdv18m')), k20=this.num(g('kdv20m'));
       const v1=this.num(g('kdv1v')), v8=this.num(g('kdv8v')), v10=this.num(g('kdv10v')), v18=this.num(g('kdv18v')), v20=this.num(g('kdv20v'));
       const toplamKdv=this.num(g('topkdv'))||(v1+v8+v10+v18+v20);
       const haricToplam=this.num(g('haric'))||(k0+k1+k8+k10+k18+k20);
-      let matrah=haricToplam, kdv=toplamKdv, oran=0;
-      if(k20>0&&v20>0){oran=20;matrah=k20;kdv=v20}
-      else if(k10>0&&v10>0){oran=10;matrah=k10;kdv=v10}
-      else if(k18>0&&v18>0){oran=18;matrah=k18;kdv=v18}
-      else if(k8>0&&v8>0){oran=8;matrah=k8;kdv=v8}
-      else if(k1>0&&v1>0){oran=1;matrah=k1;kdv=v1}
-      else if(matrah>0&&kdv>0){oran=Math.round(kdv/matrah*100)}
-      // ÖİV tespiti: ödenecek > matrah+KDV → fark ÖİV
-      let oiv=0;
-      if(odenecek>matrah+kdv+1){oiv=this.r2(odenecek-matrah-kdv)}
       const iptal=/iptal|red|reddedildi/i.test(g('durum'));
-      out.push({belgeNo:bn,tarih:tar,vkn,unvan,matrah,kdv,oran,oiv,odenecek,iptal});
+      // İADE faturası: normal alış gibi işlenmemeli — iade/return olarak ayrı kaydedilir.
+      // Fatura Tipi "İade" ise (veya durum/ünvanda "iade" geçiyorsa) işaretle, otomatik gönderme.
+      const iade=/iade/i.test(g('faturaTipi'))||/iade/i.test(g('durum'));
+      const oranlar=[{oran:20,matrah:k20,kdv:v20},{oran:10,matrah:k10,kdv:v10},{oran:18,matrah:k18,kdv:v18},{oran:8,matrah:k8,kdv:v8},{oran:1,matrah:k1,kdv:v1}].filter(x=>x.matrah>0);
+      if(!oranlar.length && haricToplam>0) oranlar.push({oran:toplamKdv>0?Math.round(toplamKdv/haricToplam*100):0,matrah:haricToplam,kdv:toplamKdv});
+      // ÖİV: ödenecek, oran toplamından fazlaysa gerçek fark ÖİV'dir.
+      // ÖİV'i AYRI satır/belge yapma — ana (ilk oran) satırına iliştir; gönderimde AYNI belgeye
+      // 2. kayıt olarak eklenir (turKod 5, altKod 218). Böylece mükerrer belge-no ve GVK40 hatası önlenir.
+      const oivFark = this.r2(odenecek - haricToplam - toplamKdv);
+      oranlar.forEach((x,idx)=>{
+        out.push({belgeNo:bn,tarih:tar,vkn,unvan,matrah:x.matrah,kdv:x.kdv,oran:x.oran,oiv:(idx===0 && oivFark>1)?oivFark:0,odenecek,iptal,iade});
+      });
     }
     this.giderData = out;
     this.giderFilter();
@@ -1068,33 +1230,103 @@ const App = {
 
   giderSinifla(arr){
     const m = MUKELLEFLER[this.aktifVkn];
-    const say={};arr.forEach(r=>{if(r.belgeNo)say[r.belgeNo]=(say[r.belgeNo]||0)+1});
+    // Mükerrer: ayni belge + ayni matrah + ayni KDV + ayni oran ikinci kez varsa (mixed-oran/ÖİV satırlari farkli sayilir)
+    const mkey = r=>r.belgeNo+'|'+r.matrah+'|'+r.kdv+'|'+r.oran+'|'+(r.isOivRow?'oiv':'');
+    const say={};arr.forEach(r=>{const k=mkey(r);say[k]=(say[k]||0)+1});
     arr.forEach(r=>{
       const u=[];
-      if(say[r.belgeNo]>1)u.push('MÜKERRER');
+      if(say[mkey(r)]>1)u.push('MÜKERRER');
       if(!r.vkn||r.vkn.length<10)u.push('VKN?');
+      if(r.iade)u.push('🔁 İADE FATURASI — iade/return olarak elle kaydet, normal alış değil');
+      // ÖİV satırı: matrah=0 olması normal, ayrı kayıt olarak deftere yazılır
+      if(r.isOivRow){
+        r.sinif='Özel İletişim Vergisi'; r.altKod=218; r.altAd='Özel İletişim Vergisi'; r.stopajGider=0; r.hasOIV=false; r.sabitKiymet=false;
+        r.uyari=u; return;
+      }
       if(!(r.matrah>0))u.push('Matrah?');
       // Sınıflandırma
-      let sinif='Diğer Hizmet', altKod=0, altAd='Diğer Hizmet Giderleri (GVK 40/1)', stopajGider=0, hasOIV=false;
+      let sinif='Diğer Hizmet', altKod=195, altAd='Diğer Hizmet Giderleri (GVK 40/1)', stopajGider=0, hasOIV=false;
       const txt = (r.unvan||'').toLocaleLowerCase('tr');
-      for(const rule of SINIF_KURALLAR){
-        if(rule.p.test(txt)){
-          sinif=rule.sinif; altKod=rule.altKod; altAd=rule.altAd;
-          stopajGider=rule.stopaj||0; hasOIV=!!rule.oiv;
-          break;
+      // Araç gideri tespiti — özel kısıtlamaya tabi (binek oto gider/KDV kısıtı)
+      // İstisna: aracIzinli:true olan mükelleflerde (Taner Battal, Cihan Güneş Ertürk, İskender Mehmet Nuri Battal)
+      // araç giderleri DOĞRU ALT KIRILIMA (Akaryakıt/Bakım-Onarım/Geçiş Ücreti) sınıflanır — gerçek Defter Beyan
+      // kodu henüz doğrulanmadığı için altKod=0 kalır (elle seçilir), yanlış kodla otomatik gönderilmez.
+      const aracIzinli = !!(m && m.aracIzinli);
+      const akaryakitRe = /akaryakıt|akaryakit|petrol ofisi|opet|shell|aytemiz|po petrol|benzin|motorin|lpg/i;
+      const bakimOnarimRe = /oto ?lastik|lastik|oto ?yıkama|oto ?servis|oto ?tamir|araç bakım|taşıt bakım|servis hizmet|bakım onarım/i;
+      const gecisRe = /hgs|ogs|otoyol|köprü geçiş|otopark|gişe/i;
+      const tuvturkRe = /tüvturk|tuvturk|muayene istasyon/i;
+      const digerAracRe = /kasko|trafik sigorta|rent ?a ?car|oto ?kiralama/i;
+      const aracRe = aracIzinli ? /(?!)x/ : new RegExp(akaryakitRe.source+'|'+bakimOnarimRe.source+'|'+gecisRe.source+'|'+tuvturkRe.source+'|'+digerAracRe.source,'i');
+      // Kişisel bakım / alkol / sigara — özel muamele gerekir, otomatik gönderilmez (araç gibi)
+      let demirbasZorunlu=false;
+      const ozel = TEDARIKCI_OZEL[r.vkn]; // VKN bazlı özel eşleştirme — kullanıcı onaylı gerçek bilgi
+      if(KISISEL_RE.test(txt)){
+        sinif='🔞 ÖZEL ÜRÜN (elle kontrol)'; altKod=0; altAd='Alkol/Sigara/Kişisel Bakım — özel muamele gerekir, elle işlenmeli';
+      } else if(ozel){
+        if(ozel.demirbasAdayi){
+          if(r.matrah<=12000){
+            sinif='Doğrudan Gider Yazılan Demirbaş'; altKod=185; altAd='Doğrudan Gider Yazılan Demirbaş (GVK 40/1) — '+ozel.altAdBase;
+          } else {
+            sinif='SABİT KIYMET (>12.000)'; altKod=255; altAd='Amortisman Giderleri (GVK 40/7)'; demirbasZorunlu=true;
+          }
+        } else {
+          sinif=ozel.sinif; altKod=ozel.altKod; altAd=ozel.altAd;
+          if(ozel.turKod==='1'){ r.malAlisRow=true; r.giderTuruKodu='1'; }
+        }
+      } else if(aracIzinli && akaryakitRe.test(txt)){
+        sinif='Taşıt Akaryakıt Giderleri'; altKod=0; altAd='Taşıt Akaryakıt Giderleri (GVK 40/1-40/5)';
+      } else if(aracIzinli && bakimOnarimRe.test(txt)){
+        sinif='Taşıt Bakım Onarım Giderleri'; altKod=0; altAd='Taşıt Bakım Onarım Giderleri (GVK 40/5)';
+      } else if(aracIzinli && gecisRe.test(txt)){
+        sinif='Otoyol ve Gişe Giderleri'; altKod=0; altAd='Otoyol ve Gişe Giderleri (OGS, HGS vb.) (GVK 40/4-5)';
+      } else if(aracIzinli && (tuvturkRe.test(txt) || digerAracRe.test(txt))){
+        sinif='Araç Gideri (tür belirle)'; altKod=0; altAd='Muayene/Kasko/Kiralama — Defter Beyan\'da uygun türü seç';
+      } else if(aracRe.test(txt)){
+        sinif='🚗 ARAÇ (elle kontrol)'; altKod=0; altAd='Araç gideri — kısıtlamaya tabi, elle işlenmeli';
+      } else {
+        let eslesti=false;
+        for(const rule of SINIF_KURALLAR){
+          if(rule.p.test(txt)){
+            sinif=rule.sinif; altKod=rule.altKod; altAd=rule.altAd;
+            stopajGider=rule.stopaj||0; hasOIV=!!rule.oiv;
+            eslesti=true;
+            break;
+          }
+        }
+        // Hiçbir spesifik hizmet kuralına uymadı: mükellef mal alan bir perakendeci/toptancıysa
+        // (m.malAlis:true) varsayılan "Diğer Hizmet" değil "Mal Alışı"dır — çünkü bu mükellefe
+        // gelen faturaların çoğu hizmet değil, satacağı/kullanacağı maldır.
+        // İSTİSNA: fatura fiziki ama satılık mal değilse (mobilya/ekipman/demirbaş — EKIPMAN_RE),
+        // Mal Alışı değil Sarf Malzeme'ye düşer (gerçek kod bilinmediği için elle kontrol).
+        if(!eslesti && EKIPMAN_RE.test(txt)){
+          sinif='Diğer Sarf Malzeme'; altKod=0; altAd='Diğer Sarf Malzeme Giderleri (GVK 40/1)';
+        } else if(!eslesti && m && m.malAlis){
+          sinif='Mal Alışı'; altKod=186; altAd='Mal Alışı'; r.malAlisRow=true; r.giderTuruKodu='1';
         }
       }
-      // Sabit kıymet kontrolü
-      let sabitKiymet=false;
-      if(r.matrah>12000 && m && m.hizmet){
+      // Sabit kıymet kontrolü — demirbasZorunlu (TEDARIKCI_OZEL'den 12.000 üstü) zaten sabit kıymete işaretlenmiş
+      let sabitKiymet = demirbasZorunlu;
+      if(!sabitKiymet && !aracRe.test(txt) && r.matrah>12000 && m && m.hizmet){
         sabitKiymet=true; sinif='SABİT KIYMET (>12.000)'; altKod=255; altAd='Amortisman Giderleri (GVK 40/7)';
-      } else if(m && m.hizmet && /fujifilm|sarf|malzeme/i.test(txt) && r.matrah<=12000){
+      } else if(!sabitKiymet && !ozel && !aracRe.test(txt) && m && m.hizmet && /fujifilm|sarf|malzeme/i.test(txt) && r.matrah<=12000){
         sinif='Sarf Malzeme'; altKod=0; altAd='Diğer Sarf Malzeme Giderleri (GVK 40/1)';
-      } else if(m && m.malAlis && /(?:gıda|ürün|toptan|baharat|çay|kahve|tedarik|aktar|kozmetik|tekstil|kuru ?yemiş|fındık|fıstık)/i.test(txt)){
-        sinif='Mal Alışı'; altKod=0; altAd='Mal Alışı';
       }
       r.sinif=sinif; r.altKod=altKod; r.altAd=altAd; r.stopajGider=stopajGider; r.hasOIV=hasOIV; r.sabitKiymet=sabitKiymet;
-      if(altKod===0 && !sabitKiymet)u.push('Kod henüz yok — Defter Beyan\'da Gider Ekle\'de dropdown\'dan seç');
+      // ── SMM (Serbest Meslek) GVK 68 dönüşümü ──
+      // Serbest meslekte gider türü GVK Md.40 değil GVK Md.68'dir → tür kodu 3, alt kodlar farklı.
+      // İşletme (GVK 40) kodunu, öğrenilmiş SMM (GVK 68) karşılığıyla değiştir; yoksa gönderme.
+      if(m && m.tip==='SMM' && !r.malAlisRow && !sabitKiymet && !/elle kontrol/i.test(sinif)){
+        const sk = SMM_GIDER_KOD[sinif];
+        r.giderTuruKodu = (sinif==='Özel İletişim Vergisi') ? (sk&&sk.turKod||'5') : SMM_TUR_KODU;
+        if(sk && sk.altKod>0){ r.altKod=sk.altKod; r.altAd=sk.altAd; altKod=sk.altKod; }
+        else { r.altKod=0; altKod=0; r.smmKodYok=sinif; } // GVK 68 karşılığı öğrenilmedi → atla
+      }
+      if(r.smmKodYok)u.push('SMM (GVK 68) kodu yok: "'+r.smmKodYok+'" — Defter Beyan\'da 1 kez elle gir, kod yakalansın');
+      else if(altKod===0 && !sabitKiymet && !r.malAlisRow && sinif!=='🚗 ARAÇ (elle kontrol)' && sinif!=='🔞 ÖZEL ÜRÜN (elle kontrol)')u.push('Kod henüz yok — Defter Beyan\'da Gider Ekle\'de dropdown\'dan seç');
+      if(sinif==='🚗 ARAÇ (elle kontrol)')u.push('🚗 ARAÇ — otomatik gönderilmez, elle kontrol et');
+      if(sinif==='🔞 ÖZEL ÜRÜN (elle kontrol)')u.push('🔞 ALKOL/SİGARA/KİŞİSEL BAKIM — otomatik gönderilmez, elle kontrol et');
+      if(sabitKiymet)u.push('🏛️ SABİT KIYMET (>12.000) — Aktifleştirme menüsünden elle işlenmeli, otomatik gönderilmez');
       r.uyari=u;
     });
   },
@@ -1242,7 +1474,8 @@ if(fails.length)console.log('Hatalı: '+fails.slice(0,10).join(' | '));
     const m = MUKELLEFLER[this.aktifVkn];
     const veri = gonderilebilir.map(r=>{
       const oiv = r.oiv?`,${r.oiv}`:',0';
-      return `["${r.belgeNo}","${r.vkn}",${r.matrah},${r.kdv},${r.oran},"${r.tarih}","${r.altKod}",${oiv},"${(r.altAd||'').replace(/"/g,'\\"')}"]`;
+      const turKod = r.giderTuruKodu||'4'; // Mal Alışı="1" (API'den doğrulandı), normal gider="4"
+      return `["${r.belgeNo}","${r.vkn}",${r.matrah},${r.kdv},${r.oran},"${r.tarih}","${r.altKod}",${oiv},"${(r.altAd||'').replace(/"/g,'\\"')}","${turKod}"]`;
     }).join(',\n  ');
 
     const script = `(async()=>{
@@ -1254,12 +1487,12 @@ const DATA=[
   ${veri}
 ];
 const iso=t=>{const a=t.split('.');return a[2]+'-'+a[1]+'-'+a[0]+' 00:00:00';};
-async function islem(d){const[bno,vkn,matrah,kdv,oran,tar,altKod,oiv,altAd]=d;try{
+async function islem(d){const[bno,vkn,matrah,kdv,oran,tar,altKod,oiv,altAd,turKod]=d;try{
 const lj=await(await fetch(B+'/adresdefteri/findbytckn/'+vkn,{method:'POST',headers:H,body:'{}',credentials:'include'})).json();
 const rc=lj.resultContainer;if(!rc)return{bno,s:'❌',m:'Tedarikçi sorgu boş'};
 const t=iso(tar);
 const ad=((rc.soyad||'')+' '+(rc.ad||'')).trim().toLocaleUpperCase('tr');
-const kayitlar=[{deleted:false,alisTuruKodu:"1",giderKayitTuruKodu:"4",giderKayitAltTuruKodu:String(altKod),aciklama:ad+' - '+altAd,tutar:matrah,gercekTutar:matrah,naceKodu:NACE,kdv:kdv,kdvOrani:oran,kdvsizIslem:false,donemsellik:false}];
+const kayitlar=[{deleted:false,alisTuruKodu:"1",giderKayitTuruKodu:turKod,giderKayitAltTuruKodu:String(altKod),aciklama:ad+' - '+altAd,tutar:matrah,gercekTutar:matrah,naceKodu:NACE,kdv:kdv,kdvOrani:oran,kdvsizIslem:false,donemsellik:false}];
 if(oiv>0){
   kayitlar.push({deleted:false,alisTuruKodu:"1",giderKayitTuruKodu:"5",giderKayitAltTuruKodu:"218",aciklama:ad+' - ÖZEL İLETİŞİM VERGİSİ',tutar:oiv,gercekTutar:oiv,naceKodu:NACE,kdvsizIslem:true,donemsellik:false});
 }
@@ -1281,9 +1514,171 @@ if(fails.length)console.log('Hatalı: '+fails.slice(0,10).join(' | '));
     this.uretilenScript = script;
     this.uretilenAd = m.ad+' (Gider)';
     document.getElementById('modal-mukname').textContent = m.ad+' ('+this.aktifVkn+')';
-    this.scriptKopyala();
+
+    // Eklenti için JSON paketi (F12 gerektirmeyen otomatik gönderim)
+    const paket = {
+      tip:'battal-gider-gonder',
+      nace: m.nace||'742027',
+      mukellefAdi: m.ad,
+      items: gonderilebilir.map(r=>({
+        bno:r.belgeNo, vkn:r.vkn, matrah:r.matrah, kdv:r.kdv, oran:r.oran,
+        tarih:r.tarih, altKod:String(r.altKod), oiv:r.oiv||0, altAd:r.altAd||'',
+        turKod:r.giderTuruKodu||'4'
+      }))
+    };
+    navigator.clipboard.writeText(JSON.stringify(paket)).then(()=>{
+      this.log('d-log', `✅ ${gonderilebilir.length} fatura panoya kopyalandı ${atlanan>0?'· '+atlanan+' fatura ATLANDI (eksik kod/sabit kıymet/uyarı)':''}\n💡 Defter Beyan'a geç → sağ alttaki "📥 Panodan Gider Gönder" butonuna bas (eklenti otomatik gönderir, F12 yok).`);
+    });
+    document.getElementById('modal-script-h2').textContent = '✅ '+gonderilebilir.length+' Fatura Panoya Kopyalandı';
+    document.getElementById('modal-script-banner').textContent = '📥 Eklenti ile otomatik gönderim hazır — F12 yok. Şimdi:';
+    document.getElementById('modal-script-steps').innerHTML = `
+      <li><b>Defter Beyan</b> sekmesini aç ve <b>mükellefe geç</b>: <span id="modal-mukname"></span></li>
+      <li>Sağ altta beliren altın <b>"📥 Panodan Gider Gönder"</b> butonuna tıkla</li>
+      <li>Eklenti panodaki ${gonderilebilir.length} faturayı otomatik okuyup Defter Beyan'a tek tek gönderir</li>
+      <li>Sonuç ekranda ✅/❌ olarak anında görünür</li>`;
+    document.getElementById('modal-mukname').textContent = m.ad+' ('+this.aktifVkn+')';
+    document.getElementById('modal-script-not').textContent = 'Battal · Defter Beyan Eklentisi kurulu olmalı (chrome://extensions). Kurulu değilse panoya kopyalanan JSON\'u eklenti kurulumundan sonra tekrar gönderebilirsin.';
+    document.getElementById('modal-script-tekrar').onclick = ()=>{ navigator.clipboard.writeText(JSON.stringify(paket)); };
     this.modalAc('modal-script');
-    this.log('d-log', `✅ Script üretildi: ${gonderilebilir.length} fatura · ${atlanan>0?atlanan+' fatura ATLANDI (eksik kod/sabit kıymet/uyarı)':''}\n📋 Klibborda kopyalandı.\n💡 Defter Beyan'a geç → F12 → Konsol → Ctrl+V → Enter`);
+  },
+
+  /* ═══════════════ Z RAPORU ═══════════════
+     Excel düzeni (firma başına ayrı sayfa):
+       satır 3 B: TCKN/VKN · satır 4 B: Faaliyet Kodu (NACE)
+       başlık satırı: Tarih | Gün | Z No | Tutar(KDV Dahil) | KDV% | Nakit | Kredi | Hes.KDV | Açıklama
+     Kontroller: Nakit+Kredi=Tutar · Hesaplanan KDV doğru mu · Z No mükerrer · tarih formatı  */
+  zRaporIsle(sheets, dosyaAdi){
+    const norm = s => (s||'').toString().trim().toLocaleUpperCase('tr').replace(/İ/g,'I').replace(/[ĞÜŞÖÇ]/g,c=>({Ğ:'G',Ü:'U',Ş:'S',Ö:'O',Ç:'C'}[c]));
+    const firmalar = [];
+    Object.keys(sheets).forEach(sn=>{
+      if(/ANA SAYFA/i.test(sn)) return;
+      const rows = sheets[sn];
+      if(!rows||!rows.length) return;
+      // VKN & NACE (etikete bakarak bul — satır kayması olsa da tutar)
+      let vkn='', nace='';
+      for(let i=0;i<Math.min(rows.length,12);i++){
+        const a=(rows[i]||[]).map(x=>String(x||''));
+        const lab=(a[0]||'').toLocaleUpperCase('tr');
+        if(/VKN|TCKN/.test(lab)){ const m=a.join(' ').match(/\b(\d{10,11})\b/); if(m)vkn=m[1]; }
+        if(/FAALİYET|FAALIYET|NACE/.test(lab)){ const m=a.join(' ').match(/\b(\d{6})\b/); if(m)nace=m[1]; }
+      }
+      // Başlık satırını bul (Z No içeren)
+      let hi=-1;
+      for(let i=0;i<rows.length;i++){ if((rows[i]||[]).some(c=>/^z\s*no$/i.test(String(c||'').trim()))){hi=i;break;} }
+      if(hi<0) hi=11; // varsayılan (13. satır → index 12, başlık 12→index 11)
+      // Mükellef eşleştir (önce VKN, sonra ada göre)
+      let mvkn='', mad=sn;
+      if(vkn && MUKELLEFLER[vkn]){ mvkn=vkn; mad=MUKELLEFLER[vkn].ad; }
+      else { for(const k in MUKELLEFLER){ if(norm(MUKELLEFLER[k].ad).includes(norm(sn).slice(0,8))||norm(sn).includes(norm(MUKELLEFLER[k].ad).slice(0,8))){ mvkn=k; mad=MUKELLEFLER[k].ad; break; } } }
+      const naceFinal = nace || (mvkn&&MUKELLEFLER[mvkn]?MUKELLEFLER[mvkn].nace:'');
+      // Kayıtları oku
+      const raporlar=[];
+      for(let i=hi+1;i<rows.length;i++){
+        const r=rows[i]||[];
+        const zno=String(r[2]||'').trim();
+        const tutar=this.num(r[3]);
+        if(!zno||!(tutar>0)) continue;
+        let tar=String(r[0]||'').split(' ')[0];
+        if(/^\d{4}-\d{2}-\d{2}/.test(tar)){const p=tar.split('-');tar=p[2].slice(0,2)+'.'+p[1]+'.'+p[0];}
+        const oran=this.num(r[4])||0;
+        const nakit=this.num(r[5]);
+        const kredi=this.num(r[6]);
+        const hesKdv=this.num(r[7]);
+        const acik=String(r[8]||'').trim()||`${zno} NL. Z RAPORU Mal Satışı`;
+        raporlar.push({tarih:tar, zno, tutar, oran, nakit, kredi, hesKdv, aciklama:acik, uyari:[]});
+      }
+      if(!raporlar.length) return;
+      // Kontroller
+      const seen={};
+      raporlar.forEach(x=>{
+        if(!/^\d{2}\.\d{2}\.\d{4}$/.test(x.tarih)) x.uyari.push('TARİH?');
+        if([0,1,8,10,18,20].indexOf(x.oran)<0) x.uyari.push('KDV ORANI?');
+        // Nakit+Kredi = Tutar
+        if(Math.abs((x.nakit+x.kredi)-x.tutar)>0.05) x.uyari.push('NAKİT+KREDİ≠TUTAR');
+        // Hesaplanan KDV doğrulama (KDV dahil → matrah=tutar/(1+oran))
+        const beklenenKdv=this.r2(x.tutar-x.tutar/(1+x.oran/100));
+        if(x.hesKdv>0 && Math.abs(beklenenKdv-x.hesKdv)>0.05) x.uyari.push('KDV HESAP?');
+        x.hesKdvBeklenen=beklenenKdv;
+        // Mükerrer Z No
+        if(seen[x.zno]) x.uyari.push('MÜKERRER Z NO'); else seen[x.zno]=1;
+      });
+      firmalar.push({ sheet:sn, vkn:mvkn||vkn, ad:mad, nace:naceFinal, eslesti:!!mvkn, raporlar });
+    });
+    this.zData = firmalar;
+    this.zRaporGoster(dosyaAdi);
+  },
+
+  zRaporGoster(dosyaAdi){
+    document.getElementById('dz-zrapor').style.display='none';
+    document.getElementById('zrapor-panel').style.display='block';
+    const firmalar=this.zData;
+    const tumRap=[].concat(...firmalar.map(f=>f.raporlar));
+    const hatali=tumRap.filter(r=>r.uyari.length).length;
+    const toplam=tumRap.reduce((a,r)=>a+r.tutar,0);
+    const esleşmeyen=firmalar.filter(f=>!f.eslesti);
+    document.getElementById('z-kpi').innerHTML =
+      `<div class="kpi"><div class="l">Firma</div><div class="v">${firmalar.length}</div></div>`+
+      `<div class="kpi"><div class="l">Z Raporu</div><div class="v">${tumRap.length}</div></div>`+
+      `<div class="kpi"><div class="l">Toplam Satış</div><div class="v">₺${this.f(toplam)}</div></div>`+
+      `<div class="kpi ${hatali?'warn':''}"><div class="l">Uyarılı</div><div class="v">${hatali}</div></div>`;
+    const w=document.getElementById('z-warn');
+    const uyarilar=[];
+    if(esleşmeyen.length) uyarilar.push('⚠️ Eşleşmeyen firma sayfası: '+esleşmeyen.map(f=>f.sheet).join(', ')+' — bu sayfalar gönderilmez (VKN paneldeki mükelleflerle tutmuyor).');
+    if(hatali) uyarilar.push('🔴 '+hatali+' Z raporunda uyarı var (aşağıda kırmızı). Nakit+Kredi=Tutar tutmuyorsa veya KDV hesabı hatalıysa Excel\'i düzelt — bunlar gönderilmez.');
+    if(uyarilar.length){ w.style.display='block'; w.innerHTML=uyarilar.join('<br>'); } else { w.style.display='none'; }
+    const tb=document.querySelector('#z-tab tbody'); tb.innerHTML='';
+    firmalar.forEach(f=>{
+      f.raporlar.forEach(r=>{
+        const bad=r.uyari.length;
+        tb.innerHTML+=`<tr${bad?' style="background:rgba(239,68,68,.08)"':''}>`+
+          `<td>${f.ad}${f.eslesti?'':' <span style="color:#fca5a5">(eşleşmedi)</span>'}</td>`+
+          `<td>${r.tarih}</td><td><b>${r.zno}</b></td>`+
+          `<td class="r">${this.f(r.tutar)}</td><td class="r">${r.oran}</td>`+
+          `<td class="r">${this.f(r.nakit)}</td><td class="r">${this.f(r.kredi)}</td>`+
+          `<td class="r">${this.f(r.hesKdv||r.hesKdvBeklenen)}</td>`+
+          `<td>${bad?'<span style="color:#fca5a5;font-weight:700">'+r.uyari.join(' ')+'</span>':'<span style="color:#6ee7b7">✓</span>'}</td>`+
+          `</tr>`;
+      });
+    });
+    this.log('z-log', `📊 ${dosyaAdi} okundu · ${firmalar.length} firma · ${tumRap.length} Z raporu${hatali?' · ⚠️ '+hatali+' uyarılı':''}`);
+  },
+
+  uretZrapor(){
+    const firmalar=(this.zData||[]).filter(f=>f.eslesti);
+    if(!firmalar.length){alert('Gönderilecek eşleşen firma yok. Excel sayfa adları/VKN paneldeki mükelleflerle tutmuyor.');return;}
+    // Sadece uyarısız kayıtlar; Z No bazında grupla (karışık KDV → aynı Z No çok satır)
+    const paketFirmalar=[];
+    let toplamRap=0, atlanan=0;
+    firmalar.forEach(f=>{
+      const temiz=f.raporlar.filter(r=>!r.uyari.length);
+      atlanan += f.raporlar.length-temiz.length;
+      const grup={};
+      temiz.forEach(r=>{
+        const key=r.zno+'|'+r.tarih;
+        if(!grup[key]) grup[key]={zno:r.zno, tarih:r.tarih, nakit:0, kredi:0, satirlar:[]};
+        grup[key].nakit+=r.nakit; grup[key].kredi+=r.kredi;
+        grup[key].satirlar.push({tutar:r.tutar, oran:r.oran, aciklama:r.aciklama});
+      });
+      const belgeler=Object.values(grup);
+      if(belgeler.length){ paketFirmalar.push({vkn:f.vkn, ad:f.ad, nace:f.nace, belgeler}); toplamRap+=belgeler.length; }
+    });
+    if(!toplamRap){alert('Temiz (uyarısız) Z raporu yok. Önce Excel\'deki uyarıları düzelt.');return;}
+    const paket={tip:'battal-zrapor-gonder', donem:'', firmalar:paketFirmalar};
+    navigator.clipboard.writeText(JSON.stringify(paket)).then(()=>{
+      this.log('z-log', `✅ ${toplamRap} Z raporu (${paketFirmalar.length} firma) panoya kopyalandı${atlanan?' · '+atlanan+' kayıt ATLANDI (uyarılı)':''}\n💡 Defter Beyan'a geç → mükellefe gir → sağ alttaki "📊 Z Raporu Gönder" butonuna bas. Eklenti aktif mükellefin Z raporlarını otomatik girer; bittiğinde diğer firmaya geçmen için uyarır.`);
+    });
+    document.getElementById('modal-script-h2').textContent = '✅ '+toplamRap+' Z Raporu Panoya Kopyalandı';
+    document.getElementById('modal-script-banner').textContent = '📊 Eklenti ile otomatik Z raporu girişi hazır. Şimdi:';
+    document.getElementById('modal-script-steps').innerHTML = `
+      <li><b>Defter Beyan</b>'ı aç ve <b>ilk firmaya geç</b> (${paketFirmalar.map(f=>f.ad).join(', ')})</li>
+      <li>Sağ altta beliren <b>"📊 Z Raporu Gönder"</b> butonuna tıkla</li>
+      <li>Eklenti aktif mükellefin Z raporlarını Gelir Ekle → Belge Türü "Z Raporu" formuna otomatik girer</li>
+      <li><b>🧪 Test modu</b> açıkken sadece 1 tanesini doldurur, Kaydet basmaz — kontrol et, doğruysa testi kapatıp tekrar bas</li>
+      <li>Bir firma bitince eklenti "diğer firmaya geç" der; mükellefi değiştirip tekrar bas</li>`;
+    document.getElementById('modal-mukname').textContent = paketFirmalar.map(f=>f.ad).join(', ');
+    document.getElementById('modal-script-not').textContent = 'Nakit+Kredi=Tutar ve KDV hesabı tutmayan kayıtlar gönderilmez (uyarılı). Karışık KDV oranlı Z raporu, aynı Z No altında birden fazla satır olarak girilir.';
+    document.getElementById('modal-script-tekrar').onclick = ()=>{ navigator.clipboard.writeText(JSON.stringify(paket)); };
+    this.modalAc('modal-script');
   },
 
   scriptKopyala(){
@@ -1299,6 +1694,7 @@ if(fails.length)console.log('Hatalı: '+fails.slice(0,10).join(' | '));
 
   tekrarYukle(tip){
     if(tip==='gelir'){this.gelirData=[];document.getElementById('gelir-panel').style.display='none';document.getElementById('dz-gelir').style.display='block';document.getElementById('f-gelir').value=''}
+    else if(tip==='zrapor'){this.zData=[];document.getElementById('zrapor-panel').style.display='none';document.getElementById('dz-zrapor').style.display='block';document.getElementById('f-zrapor').value=''}
     else{this.giderData=[];document.getElementById('gider-panel').style.display='none';document.getElementById('dz-gider').style.display='block';document.getElementById('f-gider').value=''}
   },
 
@@ -1330,6 +1726,7 @@ if(fails.length)console.log('Hatalı: '+fails.slice(0,10).join(' | '));
       stopaj:f('toplam stopaj'),
       vergi: f('toplam vergi'),
       durum: f('durum','makbuz durumu','fatura durumu'),
+      faturaTipi: f('fatura tipi','fatura tı','senaryo tipi','tip'),
       // Gider: KDV oranlı kolonlar
       kdv0m: f('%0 kdv matrah'),
       kdv1m: f('%1 kdv matrah'),
@@ -1360,6 +1757,15 @@ if(fails.length)console.log('Hatalı: '+fails.slice(0,10).join(' | '));
 // İlk yükleme
 window.addEventListener('DOMContentLoaded', ()=>App.init());
 </script>
+
+<!-- ════ ÖMER YILMAZ İMZA ════ -->
+<div id="oyImza" style="position:fixed;bottom:14px;right:16px;z-index:99999;display:flex;align-items:center;gap:9px;padding:6px 13px 6px 7px;background:rgba(13,18,32,.85);border:1px solid rgba(212,175,55,.32);border-radius:30px;backdrop-filter:blur(8px);box-shadow:0 4px 16px rgba(0,0,0,.45);font-family:'Segoe UI','Inter',system-ui,sans-serif;pointer-events:none;user-select:none">
+  <span style="width:27px;height:27px;border-radius:50%;background:linear-gradient(135deg,#d4af37,#b8941f);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#0b1224;letter-spacing:.5px">ÖY</span>
+  <span style="display:flex;flex-direction:column;line-height:1.25">
+    <span style="font-size:11.5px;font-weight:700;color:#e8edf5">Ömer Yılmaz</span>
+    <span style="font-size:8px;color:#9aa6c0;letter-spacing:1px;text-transform:uppercase">BATTAL MUHASEBE</span>
+  </span>
+</div>
 
 </body>
 </html>
