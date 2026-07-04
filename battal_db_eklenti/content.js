@@ -1272,6 +1272,19 @@
           await bekle(3000);
         }
       }
+      // 1.5) 1. sayfaya dön (kullanıcı geç sayfada kalmış olabilir — 2026 kayıtlarını kaçırmayalım)
+      if (bar) bar.textContent = '📄 1. sayfaya dönülüyor…';
+      let sifirlaGuard = 0;
+      while (sifirlaGuard++ < 200) {
+        const prev = document.querySelector('a.paginate_button.previous, li.previous a, a[title="Önceki" i], a[aria-label="Previous" i], .pagination .prev a');
+        if (!prev) break;
+        const kapali = /disabled/i.test((prev.className || '') + ' ' + ((prev.parentElement && prev.parentElement.className) || ''));
+        if (kapali) break;
+        const onceki = ilkUuid();
+        prev.click();
+        let t = 0; while (t++ < 40) { await bekle(200); if (ilkUuid() !== onceki) break; }
+        if (ilkUuid() === onceki) break;
+      }
       // 2) Tüm sayfaları gez
       let guard = 0;
       while (guard++ < 300) {
