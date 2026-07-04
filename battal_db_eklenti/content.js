@@ -1266,9 +1266,56 @@
     const bekle = ms => new Promise(r => setTimeout(r, ms));
     const ilkUuid = () => { const l = faturalariTopla(); return l.length ? l[0].uuid : ''; };
 
-    // TAM OTOMATİK toplama: sayfa boyutunu en büyüğe (250) kendisi çeker,
-    // "Sonraki" ile TÜM sayfaları kendisi gezer, bütün faturaları toplar.
+    // API tabanlı toplama: DataTables'ın kendi JSON endpoint'ine direkt istek atar,
+    // sayfa DOM'una hiç dokunmaz. Sayfa gezmek yok, click yok, race condition yok.
+    // Her satırdan uuid'yi çıkarır (JSON string'inde regex ile).
+    async function tumFaturalariToplaAPI(bar) {
+      const all = new Map();
+      const uuidRe = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+      let start = 0, len = 250, total = Infinity;
+      while (start < total) {
+        const body = 'sEcho=1&iColumns=11&iDisplayStart=' + start + '&iDisplayLength=' + len +
+          '&mDataProp_1=InvoiceNumber&mDataProp_2=ExecutionDate&mDataProp_3=CreateDateUtc&mDataProp_4=Title&mDataProp_5=PayableAmount&mDataProp_6=TaxTotal&mDataProp_7=Type&mDataProp_8=Status&mDataProp_9=IsNew&mDataProp_10=InvoiceActions' +
+          '&IsNewFilter=3&IsSeenFilter=None&ShowOlderThanOneYear=true&iSortCol_0=0&sSortDir_0=asc&iSortingCols=1';
+        const r = await fetch('/Invoicebox/GetInboxInvoiceJsonList', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8', 'X-Requested-With': 'XMLHttpRequest' },
+          credentials: 'include', body
+        });
+        if (r.status !== 200) throw new Error('HTTP ' + r.status);
+        const j = await r.json();
+        total = j.iTotalRecords || (j.aaData || []).length;
+        (j.aaData || []).forEach(d => {
+          const asMe = JSON.stringify(d);
+          const um = asMe.match(uuidRe);
+          if (!um) return;
+          const uuid = um[0];
+          if (!all.has(uuid.toLowerCase())) {
+            all.set(uuid.toLowerCase(), { uuid, no: d.InvoiceNumber || '', satir: (d.Title || '').slice(0, 90) });
+          }
+        });
+        if (bar) bar.textContent = '📄 API\'den fatura listesi çekiliyor… ' + all.size + '/' + total;
+        if (!(j.aaData || []).length) break;
+        start += len;
+        if (start > 20000) break;
+      }
+      return [...all.values()];
+    }
+
+    // TAM OTOMATİK toplama: önce API dener, olmazsa DOM'a düşer.
     async function tumFaturalariTopla(bar) {
+      try {
+        const apiRes = await tumFaturalariToplaAPI(bar);
+        if (apiRes.length) return apiRes;
+      } catch (e) {
+        if (bar) bar.textContent = '⚠️ API başarısız, DOM üzerinden gezilecek: ' + e.message;
+        await bekle(800);
+      }
+      return await tumFaturalariToplaDOM(bar);
+    }
+
+    // Eski DOM tabanlı gezme (yedek).
+    async function tumFaturalariToplaDOM(bar) {
       const hepsi = new Map();
       // 1) Sayfa boyutu → mevcut en büyük seçenek
       const sel = document.querySelector('select[name$="_length"], .dataTables_length select, select.pageSize, select[onchange*="length" i]');
@@ -1341,7 +1388,7 @@
           return { f, a, uygun: k.uygun, sebep: k.sebep, detay: k.detay };
         } catch (e) { return { f, uygun: false, sebep: 'Hata: ' + e.message, detay: '' }; }
       }
-      const PAR_AK = 10;
+      const PAR_AK = 8;
       for (let i = 0; i < list.length; i += PAR_AK) {
         const res = await Promise.all(list.slice(i, i + PAR_AK).map(tekKontrol));
         res.forEach(r => sonuc.push(r));
@@ -1487,7 +1534,7 @@
 
       // Paralel indirme: 2 → 10. Aynı origin'e 6 socket sınırı var ama modern Chrome
       // HTTP/2 üzerinden çok daha fazla eşzamanlı istek destekliyor.
-      const PAR = 10;
+      const PAR = 8;
       for (let i = 0; i < list.length; i += PAR) {
         const res = await Promise.all(list.slice(i, i + PAR).map(detayCek));
         res.forEach(r => sonuclar.push(r));
