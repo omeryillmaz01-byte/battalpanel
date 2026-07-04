@@ -1341,10 +1341,11 @@
           return { f, a, uygun: k.uygun, sebep: k.sebep, detay: k.detay };
         } catch (e) { return { f, uygun: false, sebep: 'Hata: ' + e.message, detay: '' }; }
       }
-      for (let i = 0; i < list.length; i += 2) {
-        const res = await Promise.all(list.slice(i, i + 2).map(tekKontrol));
+      const PAR_AK = 10;
+      for (let i = 0; i < list.length; i += PAR_AK) {
+        const res = await Promise.all(list.slice(i, i + PAR_AK).map(tekKontrol));
         res.forEach(r => sonuc.push(r));
-        bitti = Math.min(i + 4, list.length);
+        bitti = Math.min(i + PAR_AK, list.length);
         const d = document.getElementById('__akDurum');
         if (d) d.textContent = '🔎 Kontrol ediliyor… ' + bitti + '/' + list.length;
       }
@@ -1484,8 +1485,11 @@
         }
       }
 
-      for (let i = 0; i < list.length; i += 2) {
-        const res = await Promise.all(list.slice(i, i + 2).map(detayCek));
+      // Paralel indirme: 2 → 10. Aynı origin'e 6 socket sınırı var ama modern Chrome
+      // HTTP/2 üzerinden çok daha fazla eşzamanlı istek destekliyor.
+      const PAR = 10;
+      for (let i = 0; i < list.length; i += PAR) {
+        const res = await Promise.all(list.slice(i, i + PAR).map(detayCek));
         res.forEach(r => sonuclar.push(r));
         bitti = sonuclar.length;
         const d = document.getElementById('__fdDurum');
