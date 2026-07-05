@@ -1337,14 +1337,27 @@
     }
 
     // Alıcıyı levhayla kıyasla → { uygun, sebep, detay }
+    // VD normalize: "GÖZTEPE V.D.", "GÖZTEPE VERGİ DAİRESİ", "GÖZTEPE VD MÜDÜRLÜĞÜ" → "GÖZTEPE"
+    const vdNorm = s => trAscii(s || '').replace(/V\.?D\.?|VERGI ?DAIRESI|MUDURLUGU|MUD\.?/g, '').replace(/\s+/g, ' ').trim();
+    // İki VD birbirini içeriyor mu? (token bazlı gevşek eşleşme)
+    const vdEsit = (v1, v2) => {
+      const a = vdNorm(v1), b = vdNorm(v2);
+      if (!a || !b) return !a && !b;
+      return a === b || a.includes(b) || b.includes(a);
+    };
     function aliciKiyasla(a) {
       const kim = a.tckn || a.vkn;
       const rec = kim ? LEVHA_BY_ID[kim] : null;
       if (!kim) return { uygun: false, sebep: 'Faturada alıcı TCKN/VKN yok', detay: '' };
       if (!rec) return { uygun: false, sebep: 'Levhada kayıtlı değil: ' + kim, detay: '' };
+      const saticiText = (a.satici||'') + ' ' + (a.saticiUnvan||'') + ' ' + (a.unvan||'');
       // 🚫 Mükellefin kayıtlı olmadığı doğalgaz aboneliği — eski ev/işyeri, dışlanır.
-      if (rec.dogalgazDisla && /igdaş|igdas|istanbul gaz|doğalgaz dağıt|dogalgaz dagit/i.test((a.satici||'') + ' ' + (a.saticiUnvan||'') + ' ' + (a.unvan||''))) {
+      if (rec.dogalgazDisla && /igdaş|igdas|istanbul gaz|doğalgaz dağıt|dogalgaz dagit/i.test(saticiText)) {
         return { uygun: false, sebep: 'Doğalgaz faturası — mükellefte kayıtlı doğalgaz aboneliği yok (eski adres)', detay: 'İGDAŞ DIŞLA', rec };
+      }
+      // 🚫 Aracı olmayan mükellefte akaryakıt/petrol/kasko/HGS/otoyol → sessiz dışla
+      if (rec.aracYok && ARAC_RE.test(saticiText)) {
+        return { uygun: false, sebep: 'Araç gideri — kayıtlı aracı yok', detay: 'ARAÇ DIŞLA', rec };
       }
       const adL = trAscii(rec.ad).split(' ').filter(x => x.length > 1);
       const adF = trAscii(a.ad);
@@ -1361,17 +1374,16 @@
         });
       }
       const karar = adresKarar(adr.skor);
-      // VD kuralı: TCKN'li şahısta faturada VD boş olabilir (normal). VKN tüzelde VD karşılaştırılır.
+      // VD normalize karşılaştırması (V.D., Vergi Dairesi, Müdürlüğü ekleri kaldır)
       const vdGerek = !a.tckn && !!a.vkn;
-      const vdOk = vdGerek ? (!!a.vd && trAscii(a.vd) === trAscii(rec.vd || '')) : (!a.vd || trAscii(a.vd) === trAscii(rec.vd || ''));
-      // 🔓 ESNEK MOD: bu mükellef için VKN+VD+ad kısmi eşleşiyorsa uygun (adres detayına bakma).
-      // Fatura kısaltmalı adres/ünvan gönderdiğinde geçir.
+      const vdOk = vdGerek ? (!!a.vd && vdEsit(a.vd, rec.vd)) : (!a.vd || vdEsit(a.vd, rec.vd));
+      // 🔓 ESNEK MOD: TCKN/VKN + VD (normalize) eşleşiyorsa YETERLİ. Ad ve adres detayına bakılmaz.
+      // Fatura kısaltmalı adres/ünvan/ad gönderdiğinde ret verilmez.
       if (rec.esnekAdres) {
-        const uygunEsnek = adKismiOk && vdOk;
-        const detayE = (a.tckn ? 'TCKN ✓' : 'VKN ✓') + ' · Ad kısmi ' + (adKismiOk ? '✓' : '✗') + ' · VD ' + (vdOk ? '✓' : '✗') + ' · Adres %'+Math.round(adr.skor*100)+' (esnek)';
+        const uygunEsnek = vdOk;
+        const detayE = (a.tckn ? 'TCKN ✓' : 'VKN ✓') + ' · VD ' + (vdOk ? '✓ (' + vdNorm(a.vd) + '≈' + vdNorm(rec.vd) + ')' : '✗') + ' · Ad "' + (a.ad||'—').slice(0,30) + '" (esnek — TCKN+VD yeterli)';
         let sebepE = '';
-        if (!adKismiOk) sebepE = 'Ad hiçbir kısmı tutmuyor: fatura "' + (a.ad || '—') + '"';
-        else if (!vdOk) sebepE = 'VD tutmuyor: fatura "' + (a.vd || '—') + '" / levha "' + (rec.vd || '—') + '"';
+        if (!vdOk) sebepE = 'VD tutmuyor (normalize sonrası): fatura "' + (a.vd || '—') + '" / levha "' + (rec.vd || '—') + '"';
         return { uygun: uygunEsnek, sebep: sebepE, detay: detayE, rec, yzd: Math.round(adr.skor*100) };
       }
       const uygun = adOk && vdOk && karar.islenir;
