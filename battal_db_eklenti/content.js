@@ -85,6 +85,9 @@
       {p:/temizlik|hijyen/i, sinif:'Ofis (Temizlik)', altKod:0, altAd:'Ofis Giderleri (Çay, Kahve, Şeker, Temizlik vb.) (GVK 40/1)'},
       {p:/yemek sepeti|getir\b|personel yemeği/i, sinif:'Yemek', altKod:90, altAd:'Gıda ve Yemek Harcamaları (GVK 40/1-40/2)'},
       {p:/iş yemeği|ağırlama|temsil/i, sinif:'Temsil ve Ağırlama Gideri', altKod:97, altAd:'Temsil ve Ağırlama Gideri (İş yemeği vb.) (GVK 40/1)'},
+      {p:/iş güvenliği|iş sağlığı|isg|osgb|periyodik muayene çalışan/i, sinif:'İş Güvenliği', altKod:0, altAd:'İş Güvenliği ve İş Sağlığı Hizmet Alımları (GVK 40/1)'},
+      {p:/yazılım|lisans|abonelik|software|saas|microsoft|adobe|windows/i, sinif:'Yazılım/Lisans', altKod:0, altAd:'Yazılım Lisans/Sözleşme Giderleri (GVK 40/1)'},
+      {p:/otel|konaklama|pansiyon|rezervasyon|booking|apart otel|hostel/i, sinif:'Konaklama', altKod:0, altAd:'Konaklama, İkamet (Otel, Pansiyon, Vb.) (GVK 40/3)'},
       {p:/akaryakıt|benzin|motorin|opet|shell|petrol ofisi|po petrol|aytemiz/i, sinif:'Akaryakıt', altKod:0, altAd:'Taşıt Akaryakıt Giderleri (GVK 40/1-40/5)'}
     ];
     const SMM_TUR_KODU = '3';
@@ -92,7 +95,20 @@
       'Elektrik': {altKod:2, altAd:'Elektrik Giderleri (GVK 68/1)'},
       'Telefon+ÖİV': {altKod:7, altAd:'Telefon, Faks, İnternet ve Diğer Haberleşme Giderleri (GVK 68/1)'},
       'Özel İletişim Vergisi': {altKod:218, turKod:'5', altAd:'Özel İletişim Vergisi'},
-      'Doğalgaz': {altKod:30, altAd:'Yakıt, Doğalgaz ve Isı Giderleri (GVK 68/1)'}
+      'Doğalgaz': {altKod:30, altAd:'Yakıt, Doğalgaz ve Isı Giderleri (GVK 68/1)'},
+      // SMM ek kategoriler (Cihan Güneş DB kayıtlarından):
+      'Tedavi ve İlaç': {altKod:0, altAd:'Tedavi ve İlaç Giderleri (GVK 68/2)'},
+      'Yemek': {altKod:0, altAd:'Yemek, Market vs. Gıda Harcamaları (GVK 68/1)'},
+      'İş Güvenliği': {altKod:0, altAd:'İş Güvenliği ve İş Sağlığı Hizmet Alımları (GVK 68/1)'},
+      'Yazılım/Lisans': {altKod:0, altAd:'Yazılım Lisans/Sözleşme Giderleri (GVK 68/1)'},
+      'Konaklama': {altKod:0, altAd:'Konaklama, İkamet (Otel, Pansiyon, Vb.) (GVK 68/3)'},
+      'Temsil ve Ağırlama Gideri': {altKod:0, altAd:'Temsil ve Ağırlama Gideri (İş yemeği vb.) (GVK 68/1)'},
+      'Kira': {altKod:0, altAd:'Kira Giderleri (GVK 68/1)'},
+      'Avukatlık': {altKod:0, altAd:'Avukatlık, Hukuk ve Müşavirlik Giderleri (GVK 68/1)'},
+      'Muhasebe': {altKod:0, altAd:'Muhasebe/Mali Müşavirlik Giderleri (GVK 68/1)'},
+      'Amortisman': {altKod:252, altAd:'Amortisman Giderleri (GVK 68/4)'},
+      'İnternet Reklam': {altKod:0, altAd:'İlan ve Reklam Gideri (GVK 68/9)'},
+      'Kargo': {altKod:0, altAd:'Kargo Posta ve Kurye Giderleri (GVK 68/1)'}
     };
     const TEDARIKCI_OZEL = {
       '3100018644': {sinif:'Mal Alışı', altKod:186, altAd:'Mal Alışı', turKod:'1'},
@@ -120,7 +136,7 @@
       // Doktor için: eczane/ilaç/tıp malzemesi/muhtelif ilaç → TEDAVİ VE İLAÇ GİDERİ
       const ILAC_TEDAVI_RE = /eczane|ilaç|ilac|tedavi|tıbbi|tibbi|medikal|serum|enjektör|enjektor|iğne|igne|kanül|kanul|gazlı bez|dikiş ipliği|dezenfektan|antiseptik|steril/i;
       if (isSaglikMeslek && (KISISEL_RE_SAGLIK.test(txt) || ILAC_TEDAVI_RE.test(txt))) {
-        return { sinif: '💊 Tedavi ve İlaç Gideri', altKod: 0, altAd: 'Tedavi ve İlaç Gideri (SMK 68) — elle kontrol', turKod: '3', otoGonder: false };
+        return { sinif: 'Tedavi ve İlaç', altKod: 0, altAd: 'Tedavi ve İlaç Giderleri (GVK 68/2) — elle kontrol', turKod: '3', otoGonder: false };
       }
       // Danışmanlık: dışarıdan sağlanan fayda/hizmet (muhasebe hariç — o özel kural var)
       const DANISMANLIK_RE = /danışman|danisman|danışmanlık|danismanlik|consulting|advisory|müşavir|musavir/i;
