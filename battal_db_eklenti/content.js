@@ -83,7 +83,7 @@
       {p:/avukat|hukuk büro|hukuk müşavir/i, sinif:'Avukatlık', altKod:0, altAd:'Avukatlık, Hukuk ve Müşavirlik Giderleri (GVK 40/1)', stopaj:20},
       {p:/teknik servis|bakım onarım|tamir|servis hizmet/i, sinif:'Bakım/Onarım', altKod:0, altAd:'Normal Bakım Onarım Giderleri (GVK 40/1)'},
       {p:/temizlik|hijyen/i, sinif:'Ofis (Temizlik)', altKod:0, altAd:'Ofis Giderleri (Çay, Kahve, Şeker, Temizlik vb.) (GVK 40/1)'},
-      {p:/yemek sepeti|getir\b|personel yemeği/i, sinif:'Yemek', altKod:90, altAd:'Gıda ve Yemek Harcamaları (GVK 40/1-40/2)'},
+      {p:/yemek sepeti|getir\b|personel yemeği|gıda|market\b|süpermarket|hipermarket|migros|carrefour|carrefoursa|bim\b|şok\b|a101|metro market|marmarabirlik|börek|pastane|fırın|kasap|manav|meyve|sebze|süt ürünleri|zincir market|makarna|un\b|şeker|tuz|çay|kahve|çikolata/i, sinif:'Yemek', altKod:90, altAd:'Yemek, Market vs. Gıda Harcamaları (GVK 40/1)'},
       {p:/iş yemeği|ağırlama|temsil/i, sinif:'Temsil ve Ağırlama Gideri', altKod:97, altAd:'Temsil ve Ağırlama Gideri (İş yemeği vb.) (GVK 40/1)'},
       {p:/iş güvenliği|iş sağlığı|isg|osgb|periyodik muayene çalışan/i, sinif:'İş Güvenliği', altKod:0, altAd:'İş Güvenliği ve İş Sağlığı Hizmet Alımları (GVK 40/1)'},
       {p:/yazılım|lisans|abonelik|software|saas|microsoft|adobe|windows/i, sinif:'Yazılım/Lisans', altKod:0, altAd:'Yazılım Lisans/Sözleşme Giderleri (GVK 40/1)'},
@@ -112,7 +112,9 @@
     };
     const TEDARIKCI_OZEL = {
       '3100018644': {sinif:'Mal Alışı', altKod:186, altAd:'Mal Alışı', turKod:'1'},
-      '5820492073': {sinif:'Yemek', altKod:90, altAd:'Gıda ve Yemek Harcamaları (GVK 40/1-40/2)', turKod:'4'}
+      '5820492073': {sinif:'Yemek', altKod:90, altAd:'Gıda ve Yemek Harcamaları (GVK 40/1-40/2)', turKod:'4'},
+      // EDENRED / Ticket Restaurant / Multinet — yemek çeki firmaları → Temsil ve Ağırlama
+      '9470043431': {sinif:'Temsil ve Ağırlama Gideri', altKod:97, altAd:'Temsil ve Ağırlama Gideri (İş yemeği vb.) (GVK 40/1)', turKod:'4'}
     };
     const ARAC_RE = /tüvturk|tuvturk|muayene istasyon|akaryakıt|akaryakit|petrol ofisi|opet|shell|aytemiz|benzin|motorin|oto ?lastik|oto ?yıkama|oto ?servis|kasko|trafik sigorta|otopark|otoyol|hgs|ogs|araç ?bakım/i;
     // Demirbaş adayları: elektronik/bilgisayar/donanım/mobilya/cihaz/ofis makinesi/ekipman.
@@ -140,7 +142,7 @@
       const aracYok = mukellefRec && mukellefRec.aracYok === true;
       const isSaglikMeslek = (nace || '').startsWith('86');
       const isEstetik = (mukellefRec && mukellefRec.estetik === true);
-      const ILAC_TEDAVI_RE = /eczane|ilaç|ilac|tedavi|tıbbi|tibbi|medikal|serum|enjektör|enjektor|iğne|igne|kanül|kanul|gazlı bez|dikiş ipliği|dezenfektan|antiseptik|steril|kozmetik|dermokozmetik|filler|botoks|dolgu|mezoterapi|cilt bakım|estetik/i;
+      const ILAC_TEDAVI_RE = /eczane|ilaç|ilac|tedavi|tıbbi|tibbi|medikal|serum|enjektör|enjektor|iğne|igne|kanül|kanul|gazlı bez|dikiş ipliği|dezenfektan|antiseptik|steril|kozmetik|dermokozmetik|filler|botoks|dolgu|mezoterapi|cilt bakım|estetik|aquashine|caregen|derma|hyaluronic|hyalüronik|hialüronik|jel\b|solüsyon|solusyon|krem|pomad|pomat|damla\b|şurup|surup|tablet ilaç|kapsül|kapsul|ampul|flakon/i;
       const KOZMETIK_ESTETIK_RE = /kozmetik|parfüm|makyaj|kişisel bakım|filler|botoks|dermokozmetik|cilt bakım/i;
       // 1️⃣ MESLEK ÖNCELİĞİ: doktor/dişçi için sağlık/ilaç/tedavi/kozmetik-estetik MESLEKI gider.
       //    Kişisel filtreden ÖNCE kontrol edilir ki alkol dışı sağlık ürünleri kişisel sayılmasın.
@@ -197,7 +199,13 @@
           return { sinif: rule.sinif, altKod: aK, altAd: aAd, turKod: tK, oiv: !!rule.oiv, stopaj: rule.stopaj || 0, otoGonder: aK > 0 };
         }
       }
-      return { sinif: 'Diğer Hizmet', altKod: 195, altAd: 'Diğer Hizmet Giderleri (GVK 40/1)', turKod: '4', otoGonder: true };
+      // 🔎 FALLBACK: Hiçbir kural eşleşmedi. "Diğer Hizmet" ASLA otomatik atma — elle kontrol.
+      // Doktor+estetik mükelleflerde tedarikçi tıbbi/estetik ürün satıcısı olma ihtimali yüksek
+      // (SRC İÇ VE DIŞ TİCARET → Caregen Aquashine mezoterapi gibi). Bu ipucunu ver.
+      if (isSaglikMeslek || isEstetik) {
+        return { sinif: '❓ Elle Sınıflandır', altKod: 0, altAd: 'Sınıflandırılamadı — Tedavi/Malzeme mi? Elle kontrol et (fatura açıklamasına bak)', turKod: '3', otoGonder: false };
+      }
+      return { sinif: '❓ Elle Sınıflandır', altKod: 0, altAd: 'Sınıflandırılamadı — elle kontrol et (fatura açıklamasına bak)', turKod: '4', otoGonder: false };
     }
 
     // Türkçe adres normalizasyonu: TR->ASCII, kısaltma açımı, noktalama temizliği.
@@ -576,11 +584,14 @@
 
       // 4) Eksik + gönderilebilir faturaları bul
       const eksik = [], zatenVar = [], redListe = [], elleKontrolListe = [];
+      let atlanan = 0;
       faturaListesi.forEach(f => {
         const fnoNorm = norm((f.fno || '').replace(/[^0-9A-Za-z]/g, ''));
         if (!fnoNorm) return;
         if (dbNos.has(fnoNorm)) { zatenVar.push(f); return; }
         const alk = alkMap[fnoNorm];
+        // Sessiz dışlama (araç, İGDAŞ vs) — hiçbir listeye girmez
+        if (alk && alk.atla) { atlanan++; return; }
         if (alk && alk.uygun === false) { redListe.push(f); return; }
         if (!f.otoGonder) { elleKontrolListe.push(f); return; }
         eksik.push(f);
@@ -1362,13 +1373,13 @@
       if (!kim) return { uygun: false, sebep: 'Faturada alıcı TCKN/VKN yok', detay: '' };
       if (!rec) return { uygun: false, sebep: 'Levhada kayıtlı değil: ' + kim, detay: '' };
       const saticiText = (a.satici||'') + ' ' + (a.saticiUnvan||'') + ' ' + (a.unvan||'');
-      // 🚫 Mükellefin kayıtlı olmadığı doğalgaz aboneliği — eski ev/işyeri, dışlanır.
+      // 🚫 Mükellefin kayıtlı olmadığı doğalgaz aboneliği — SESSİZ dışla (RED listesinde görünmez)
       if (rec.dogalgazDisla && /igdaş|igdas|istanbul gaz|doğalgaz dağıt|dogalgaz dagit/i.test(saticiText)) {
-        return { uygun: false, sebep: 'Doğalgaz faturası — mükellefte kayıtlı doğalgaz aboneliği yok (eski adres)', detay: 'İGDAŞ DIŞLA', rec };
+        return { uygun: false, atla: true, sebep: 'İGDAŞ dışla', detay: '', rec };
       }
-      // 🚫 Aracı olmayan mükellefte akaryakıt/petrol/kasko/HGS/otoyol → sessiz dışla
+      // 🚫 Aracı olmayan mükellefte akaryakıt/petrol/kasko/HGS → SESSİZ dışla
       if (rec.aracYok && ARAC_RE.test(saticiText)) {
-        return { uygun: false, sebep: 'Araç gideri — kayıtlı aracı yok', detay: 'ARAÇ DIŞLA', rec };
+        return { uygun: false, atla: true, sebep: 'Araç faturası — aracı yok', detay: '', rec };
       }
       const adL = trAscii(rec.ad).split(' ').filter(x => x.length > 1);
       const adF = trAscii(a.ad);
@@ -1385,16 +1396,17 @@
         });
       }
       const karar = adresKarar(adr.skor);
-      // VD normalize karşılaştırması (V.D., Vergi Dairesi, Müdürlüğü ekleri kaldır)
+      // VD normalize (V.D./Vergi Dairesi/Müd. ekleri kaldır)
+      // VD alanı belirsizse (boş, "-", TCKN sayısı, "TCKIMLIKNO" gibi) yok say → TCKN eşleşmesi yeterli.
+      const vdBelirsiz = !a.vd || /^[\d\-\s]*$/.test(a.vd) || /tckimlikno|tcimlikno|tcimlikno/i.test(a.vd);
       const vdGerek = !a.tckn && !!a.vkn;
-      const vdOk = vdGerek ? (!!a.vd && vdEsit(a.vd, rec.vd)) : (!a.vd || vdEsit(a.vd, rec.vd));
-      // 🔓 ESNEK MOD: TCKN/VKN + VD (normalize) eşleşiyorsa YETERLİ. Ad ve adres detayına bakılmaz.
-      // Fatura kısaltmalı adres/ünvan/ad gönderdiğinde ret verilmez.
+      const vdOk = vdBelirsiz ? true : (vdGerek ? vdEsit(a.vd, rec.vd) : (!a.vd || vdEsit(a.vd, rec.vd)));
+      // 🔓 ESNEK MOD: TCKN/VKN + VD (normalize/belirsiz→OK) eşleşiyorsa UYGUN. Ad/adres detayına bakılmaz.
       if (rec.esnekAdres) {
         const uygunEsnek = vdOk;
-        const detayE = (a.tckn ? 'TCKN ✓' : 'VKN ✓') + ' · VD ' + (vdOk ? '✓ (' + vdNorm(a.vd) + '≈' + vdNorm(rec.vd) + ')' : '✗') + ' · Ad "' + (a.ad||'—').slice(0,30) + '" (esnek — TCKN+VD yeterli)';
+        const detayE = (a.tckn ? 'TCKN ✓' : 'VKN ✓') + ' · VD ' + (vdOk ? (vdBelirsiz ? '~ (belirsiz)' : '✓') : '✗') + ' · esnek';
         let sebepE = '';
-        if (!vdOk) sebepE = 'VD tutmuyor (normalize sonrası): fatura "' + (a.vd || '—') + '" / levha "' + (rec.vd || '—') + '"';
+        if (!vdOk) sebepE = 'VD tutmuyor: fatura "' + (a.vd || '—') + '" / levha "' + (rec.vd || '—') + '"';
         return { uygun: uygunEsnek, sebep: sebepE, detay: detayE, rec, yzd: Math.round(adr.skor*100) };
       }
       const uygun = adOk && vdOk && karar.islenir;
@@ -1555,7 +1567,7 @@
           const a = await xmlCek(f.uuid);
           if (!a || (!a.tckn && !a.vkn)) return { f, uygun: false, sebep: 'XML\'de alıcı TCKN/VKN bulunamadı', detay: '' };
           const k = aliciKiyasla(a);
-          return { f, a, uygun: k.uygun, sebep: k.sebep, detay: k.detay };
+          return { f, a, uygun: k.uygun, sebep: k.sebep, detay: k.detay, atla: k.atla };
         } catch (e) { return { f, uygun: false, sebep: 'Hata: ' + e.message, detay: '' }; }
       }
       const PAR_AK = 15;
@@ -1566,14 +1578,16 @@
         const d = document.getElementById('__akDurum');
         if (d) d.textContent = '🔎 Kontrol ediliyor… ' + bitti + '/' + list.length;
       }
-      const uygun = sonuc.filter(r => r.uygun), red = sonuc.filter(r => !r.uygun);
+      // atla:true olanlar sessiz dışlanır (araç/İGDAŞ vs) — listelenmez
+      const aktifSonuc = sonuc.filter(r => !r.atla);
+      const uygun = aktifSonuc.filter(r => r.uygun), red = aktifSonuc.filter(r => !r.uygun);
       // Sonuçları hafızaya yaz → Defter Beyan "Panodan Gider Gönder" red'leri göndermesin
       try {
         const st = await chrome.storage.local.get('aliciKontrol');
         const mapEski = (st.aliciKontrol && st.aliciKontrol.map) || {};
         sonuc.forEach(r => {
           const no = ((r.a && r.a.fno) || r.f.no || '').replace(/[^0-9A-Za-z]/g, '');
-          if (no) mapEski[norm(no)] = { uygun: r.uygun, sebep: r.sebep || '', detay: r.detay || '', ts: Date.now() };
+          if (no) mapEski[norm(no)] = { uygun: r.uygun, atla: !!r.atla, sebep: r.sebep || '', detay: r.detay || '', ts: Date.now() };
         });
         await chrome.storage.local.set({ aliciKontrol: { ts: Date.now(), map: mapEski } });
       } catch (e) {}
