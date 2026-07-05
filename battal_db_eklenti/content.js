@@ -118,7 +118,7 @@
     // Demirbaş adayları: elektronik/bilgisayar/donanım/mobilya/cihaz/ofis makinesi/ekipman.
     // 2026 için amortisman sınırı ~10.000 TL. Bu değerin üstünde bu ürünlerden alım
     // gider değil demirbaş (amortismana tabi) sayılır — direkt gider yazılamaz.
-    const DEMIRBAS_RE = /elektronik|bilgisayar|laptop|notebook|monitör|monitor|yazıcı|printer|donanım|donanim|mobilya|masa\b|sandalye|koltuk|klima|kombi|buzdolabı|firın|fırın|iş ?makinesi|makina|makine|cihaz|ekipman|demirbaş|demirbas|tıbbi ?cihaz|dental ?ünit|röntgen|ultrason|tomografi|mri|otoklav/i;
+    const DEMIRBAS_RE = /elektronik|bilgisayar|laptop|notebook|monitör|monitor|yazıcı|printer|donanım|donanim|mobilya|masa\b|sandalye|koltuk|klima|kombi|buzdolabı|firın|fırın|iş ?makinesi|makina|makine|cihaz|ekipman|demirbaş|demirbas|tıbbi ?cihaz|dental ?ünit|röntgen|ultrason|tomografi|mri|otoklav|kettle|kettil|çelik kettle|çaydanlık|blender|mikser|tost makinesi|kahve makinesi|ütü|saç kurutma|elektrik süpürge|süpürge|mikrodalga|air ?fryer|kızartma|smeg|philips|samsung\b|apple\b|macbook|iphone|ipad|dyson|braun|arçelik|bosch|siemens|vestel|beko|profilo|led ?tv|smart ?tv|televizyon|projeksiyon|projektor|hoparlör|kulaklık|smartwatch|akıllı saat|tablet|smartphone|telefon\b(?!.*fatura)/i;
     const DEMIRBAS_ESIK = 12000;
     // Kişisel (indirilemez) harcamalar — herkes için.
     const KISISEL_RE_BASE = /alkol|içki|bira|şarap|votka|viski|rakı|sigara|tütün|kozmetik|parfüm|makyaj|kişisel bakım/i;
@@ -126,8 +126,13 @@
     const KISISEL_RE_SAGLIK = /hastane|sağlık|tıp merkezi|poliklinik|muayenehane|diş polikliniği|göz merkezi|tıp mrkz|medikal|laboratuvar|eczane|ilaç/i;
     const KISISEL_RE = new RegExp(KISISEL_RE_BASE.source + '|' + KISISEL_RE_SAGLIK.source, 'i');
 
-    function faturaSinifla(unvan, vkn, matrah, nace, mukellefRec) {
-      const txt = (unvan || '').toLocaleLowerCase('tr');
+    function faturaSinifla(unvanVeAciklama, vkn, matrah, nace, mukellefRec, aciklamaAyri) {
+      // İçerik (ürün açıklaması) satıcı ünvandan ÖNCE gelmeli — bir "Danışmanlık ve Elektronik"
+      // firması Smeg su ısıtıcısı satabilir; sınıflandırma ürüne bakar, ünvana değil.
+      const txt = (unvanVeAciklama || '').toLocaleLowerCase('tr');
+      const icerikTxt = (aciklamaAyri || '').toLocaleLowerCase('tr');
+      // Karar önceliği: eğer içerik metni verilmişse ve orada güçlü bir eşleşme varsa ONU kullan.
+      const oncelikliTxt = icerikTxt || txt;
       const ozel = TEDARIKCI_OZEL[vkn];
       // Aktif kayıtlı aracı olmayan mükelleflerde akaryakıt/otoyol/kasko = KİŞİSEL (indirilemez)
       const aracYok = mukellefRec && mukellefRec.aracYok === true;
@@ -158,17 +163,17 @@
         if (aracYok) return { sinif: '🔞 ÖZEL', altKod: 0, altAd: 'Kayıtlı aracı yok — kişisel harcama, işleme alınmaz', turKod: '4', otoGonder: false };
         return { sinif: '🚗 ARAÇ', altKod: 0, altAd: 'Araç gideri — elle kontrol', turKod: '4', otoGonder: false };
       }
-      // ÖNCELİK: Danışmanlık gideri — Demirbaş'tan önce kontrol edilir.
-      // Bir faturada hem "Danışmanlık" hem "Elektronik" geçebilir; kullanıcı danışmanlık
-      // önceliğinde olmasını istedi → önce danışmanlık kategorisine düşsün.
-      const DANISMANLIK_RE_ONCE = /danışman|danisman|danışmanlık|danismanlik|consulting|advisory/i;
-      const isMuhasebeOnce = /muhasebe|mali ?müşavir|smmm|ymm/i.test(txt);
-      if (DANISMANLIK_RE_ONCE.test(txt) && !isMuhasebeOnce) {
-        return { sinif: '🤝 Danışmanlık', altKod: 0, altAd: 'Dışarıdan Sağlanan Fayda/Hizmet — Danışmanlık Gideri', turKod: (nace||'').startsWith('86')||(nace||'').startsWith('69') ? '3' : '4', otoGonder: false };
-      }
-      // Demirbaş: yüksek tutar + elektronik/donanım/mobilya/cihaz → amortismana tabi, elle kontrol.
-      if (matrah >= DEMIRBAS_ESIK && DEMIRBAS_RE.test(txt)) {
+      // Demirbaş (ÖNCELİKLE İÇERİKTE ara): Smeg, kettle, blender, elektronik cihaz vb.
+      // Yüksek tutarlı + demirbaş nitelikli ürün → amortismana tabi, elle kontrol.
+      if (matrah >= DEMIRBAS_ESIK && DEMIRBAS_RE.test(oncelikliTxt)) {
         return { sinif: '🔧 DEMİRBAŞ', altKod: 0, altAd: 'Demirbaş — amortisman gerekir, elle kontrol (SMM 68/2 veya işletme mal alışı 191)', turKod: '4', otoGonder: false };
+      }
+      // Danışmanlık: sadece İÇERİKTE geçiyorsa (satıcı unvanı değil).
+      // 'Danışmanlık hizmeti', 'danışmanlık ücreti', 'consulting fee' gibi.
+      const DANISMANLIK_ICERIK_RE = /danışmanlık hizmet|danişmanlik hizmet|danışmanlık ücret|danismanlik ucret|advisory service|consulting fee|danışmanlık gideri|advisory hizmet/i;
+      const isMuhasebeOnce = /muhasebe|mali ?müşavir|smmm|ymm/i.test(txt);
+      if (icerikTxt && DANISMANLIK_ICERIK_RE.test(icerikTxt) && !isMuhasebeOnce) {
+        return { sinif: '🤝 Danışmanlık', altKod: 0, altAd: 'Dışarıdan Sağlanan Fayda/Hizmet — Danışmanlık Gideri', turKod: (nace||'').startsWith('86')||(nace||'').startsWith('69') ? '3' : '4', otoGonder: false };
       }
       if (ozel) {
         if (ozel.turKod === '1') return { sinif: ozel.sinif, altKod: ozel.altKod, altAd: ozel.altAd, turKod: '1', otoGonder: true };
@@ -1663,7 +1668,7 @@
           const aciklama = notlar.join(' | ').slice(0, 300);
 
           // Sınıfla
-          const sinifBilgi = faturaSinifla(saticiUnvan + ' ' + aciklama, saticiVkn || saticiTckn, matrah, nace, am && am.rec);
+          const sinifBilgi = faturaSinifla(saticiUnvan + ' ' + aciklama, saticiVkn || saticiTckn, matrah, nace, am && am.rec, aciklama);
 
           return {
             fno, ettn, tarih, saticiVkn: saticiVkn || saticiTckn, saticiUnvan,
