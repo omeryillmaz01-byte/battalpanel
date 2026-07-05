@@ -50,7 +50,7 @@
       '1500360006': { ad: 'Emir Battal', tckn: '27286976096', vd: 'BEŞİKTAŞ', nace: '691003', adres: 'ABBASAĞA MAH. KEŞŞAF SK. ŞATIROĞLU IS MERKEZI NO: 4 İÇ KAPI NO: 10 BEŞİKTAŞ/ İSTANBUL' },
       '6630177279': { ad: 'Müge Özarmağan', tckn: '47707497320', vd: 'MECİDİYEKÖY', nace: '691003', adres: 'MEŞRUTİYET MAH. VALİ KONAĞI CAD. POLAT APT NO: 99 İÇ KAPI NO: 10 YOK/ ŞİŞLİ/ İSTANBUL' },
       '1500459508': { ad: 'Mert Tufan Battal', tckn: '26929736554', vd: 'MECİDİYEKÖY', nace: '862303', adres: 'TEŞVİKİYE MAH. NİŞANTAŞI IHLAMUR YOLU SK. BELDE APT. NO: 1 İÇ KAPI NO: 5 ŞİŞLİ/ İSTANBUL' },
-      '3750072366': { ad: 'Cihan Güneş Ertürk', tckn: '40402335348', vd: 'GÖZTEPE', nace: '862202', adres: 'GÖZTEPE MAH. TEPEGÖZ SK. IKAR IŞ MERKEZI NO: 1 İÇ KAPI NO: 7 KADIKÖY/ İSTANBUL' },
+      '3750072366': { ad: 'Cihan Güneş Ertürk', tckn: '40402335348', vd: 'GÖZTEPE', nace: '862202', adres: 'GÖZTEPE MAH. TEPEGÖZ SK. IKAR IŞ MERKEZI NO: 1 İÇ KAPI NO: 7 KADIKÖY/ İSTANBUL', eskiAdres: ['ZÜHTÜPAŞA MAH. BAĞDAT CAD. MERAM SK. ITIR APT NO: 6 D: 4 KADIKÖY/ İSTANBUL'] },
       '1500127919': { ad: 'İskender Mehmet Nuri Battal', tckn: '26968735242', vd: 'MECİDİYEKÖY', nace: '862202', adres: 'MEŞRUTİYET MAH VALİKONAĞI CAD NO: 83 İÇ KAPI NO: 5 ŞİŞLİ/ İSTANBUL' },
       '8520482776': { ad: 'Aylin Topçu Erdinç', tckn: '11681662708', vd: 'BAKIRKÖY', nace: '869300', adres: 'KARTALTEPE MAH. ŞEHİT ER RIDVAN MERT SK. GURSESLI SITESI A1BLOK NO: 4/2 İÇ KAPI NO: 4 BAKIRKÖY/ İSTANBUL' },
       '32893788086': { ad: 'Serra Hekimoğlu', tckn: '32893788086', vd: 'MECİDİYEKÖY', nace: '862303', adres: 'TEŞVİKİYE MAH. NİŞANTAŞI IHLAMUR YOLU SK. BELDE APT. NO: 1 İÇ KAPI NO: 5 ŞİŞLİ/ İSTANBUL' },
