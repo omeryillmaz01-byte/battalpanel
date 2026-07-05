@@ -50,7 +50,7 @@
       '1500360006': { ad: 'Emir Battal', tckn: '27286976096', vd: 'BEŞİKTAŞ', nace: '691003', adres: 'ABBASAĞA MAH. KEŞŞAF SK. ŞATIROĞLU IS MERKEZI NO: 4 İÇ KAPI NO: 10 BEŞİKTAŞ/ İSTANBUL' },
       '6630177279': { ad: 'Müge Özarmağan', tckn: '47707497320', vd: 'MECİDİYEKÖY', nace: '691003', adres: 'MEŞRUTİYET MAH. VALİ KONAĞI CAD. POLAT APT NO: 99 İÇ KAPI NO: 10 YOK/ ŞİŞLİ/ İSTANBUL' },
       '1500459508': { ad: 'Mert Tufan Battal', tckn: '26929736554', vd: 'MECİDİYEKÖY', nace: '862303', adres: 'TEŞVİKİYE MAH. NİŞANTAŞI IHLAMUR YOLU SK. BELDE APT. NO: 1 İÇ KAPI NO: 5 ŞİŞLİ/ İSTANBUL' },
-      '3750072366': { ad: 'Cihan Güneş Ertürk', tckn: '40402335348', vd: 'GÖZTEPE', nace: '862202', adres: 'GÖZTEPE MAH. TEPEGÖZ SK. IKAR IŞ MERKEZI NO: 1 İÇ KAPI NO: 7 KADIKÖY/ İSTANBUL', eskiAdres: ['ZÜHTÜPAŞA MAH. BAĞDAT CAD. MERAM SK. ITIR APT NO: 6 D: 4 KADIKÖY/ İSTANBUL'], aracYok: true, estetik: true, esnekAdres: true, dogalgazDisla: true },
+      '3750072366': { ad: 'Cihan Güneş Ertürk', tckn: '40402335348', vd: 'GÖZTEPE', nace: '862202', adres: 'GÖZTEPE MAH. TEPEGÖZ SK. IKAR IŞ MERKEZI NO: 1 İÇ KAPI NO: 7 KADIKÖY/ İSTANBUL', aracYok: true, estetik: true, esnekAdres: true, dogalgazDisla: true, dislaAdres: /zühtüpaşa|zuhtupasa|zuhtupas|zühtüp/i },
       '1500127919': { ad: 'İskender Mehmet Nuri Battal', tckn: '26968735242', vd: 'MECİDİYEKÖY', nace: '862202', adres: 'MEŞRUTİYET MAH VALİKONAĞI CAD NO: 83 İÇ KAPI NO: 5 ŞİŞLİ/ İSTANBUL', estetik: true },
       '8520482776': { ad: 'Aylin Topçu Erdinç', tckn: '11681662708', vd: 'BAKIRKÖY', nace: '869300', adres: 'KARTALTEPE MAH. ŞEHİT ER RIDVAN MERT SK. GURSESLI SITESI A1BLOK NO: 4/2 İÇ KAPI NO: 4 BAKIRKÖY/ İSTANBUL' },
       '32893788086': { ad: 'Serra Hekimoğlu', tckn: '32893788086', vd: 'MECİDİYEKÖY', nace: '862303', adres: 'TEŞVİKİYE MAH. NİŞANTAŞI IHLAMUR YOLU SK. BELDE APT. NO: 1 İÇ KAPI NO: 5 ŞİŞLİ/ İSTANBUL' },
@@ -73,7 +73,7 @@
       {p:/i.?g.?d.?a.?ş|igdaş|gaz dağıt/i, sinif:'Doğalgaz', altKod:84, altAd:'Doğalgaz Giderleri (GVK 40/1)'},
       {p:/enerjisa|bedaş|ayedaş|boğaziçi elektrik|elektrik perakende|elektrik dağıt/i, sinif:'Elektrik', altKod:0, altAd:'Elektrik Giderleri (GVK 40/1)'},
       {p:/iski|aski|su dağıt|su şebek/i, sinif:'Su', altKod:83, altAd:'Su Giderleri (GVK 40/1)'},
-      {p:/turkcell|vodafone|türk ?telekom|ttnet|superonline|millennium|net|telefon|tt ?mob[iı]l|andromeda|dijital platform|d.?smart|digiturk|turksat|kablonet|haberleşme|iletişim hizmet/i, sinif:'Telefon+ÖİV', altKod:87, altAd:'Telefon Giderleri (GVK 40/1)', oiv:true},
+      {p:/turkcell|vodafone|türk ?telekom|ttnet|superonline|millennium|net|telefon|tt ?mob[iı]l|andromeda|dijital platform|d.?smart|digiturk|turksat|kablonet|haberleşme|iletişim hizmet|çizgi telekom|çizgi telekomünikasyon|telekomünikasyon|telekomunikasyon/i, sinif:'Telefon+ÖİV', altKod:87, altAd:'Telefon Giderleri (GVK 40/1)', oiv:true},
       {p:/kargo|aras|mng|yurtiçi kargo|ptt kargo|sürat|hepsijet|sendeo|trendyol express/i, sinif:'Kargo', altKod:193, altAd:'Kargo Posta ve Kurye Giderleri (GVK 40/1)'},
       {p:/google ireland|meta platforms|facebook|instagram reklam/i, sinif:'İnternet Reklam', altKod:0, altAd:'İnternet Reklam Hizmet Alım Giderleri (GVK 40/1)'},
       {p:/dsm grup|d-market|hepsiburada komisyon|trendyol komisyon|n11|amazon komisyon|gittigid|pttavm|çiçek ?sepeti|pos komis/i, sinif:'Komisyon/POS', altKod:0, altAd:'Komisyon ve Pos Giderleri (GVK 40/1)'},
@@ -1381,6 +1381,11 @@
       if (rec.aracYok && ARAC_RE.test(saticiText)) {
         return { uygun: false, atla: true, sebep: 'Araç faturası — aracı yok', detay: '', rec };
       }
+      // 🚫 Eski adres dışla: fatura adresinde bu kelime geçerse (ör. Zühtüpaşa) → SESSİZ dışla
+      // Mükellef o adreste artık oturmuyor; oradaki faturalar (Turkcell/TT/vb) dahil edilmemeli.
+      if (rec.dislaAdres && a.adres && rec.dislaAdres.test(a.adres)) {
+        return { uygun: false, atla: true, sebep: 'Eski adres — Zühtüpaşa/eski yerleşim', detay: '', rec };
+      }
       const adL = trAscii(rec.ad).split(' ').filter(x => x.length > 1);
       const adF = trAscii(a.ad);
       const adHit = adL.filter(t => adF.includes(t)).length;
@@ -1396,19 +1401,16 @@
         });
       }
       const karar = adresKarar(adr.skor);
-      // VD normalize (V.D./Vergi Dairesi/Müd. ekleri kaldır)
-      // VD alanı belirsizse (boş, "-", TCKN sayısı, "TCKIMLIKNO" gibi) yok say → TCKN eşleşmesi yeterli.
-      const vdBelirsiz = !a.vd || /^[\d\-\s]*$/.test(a.vd) || /tckimlikno|tcimlikno|tcimlikno/i.test(a.vd);
+      // 🔓 ESNEK MOD: TCKN/VKN eşleşiyorsa YETERLİ. VD/ad/adres bakılmaz.
+      // (Turkcell/TT gibi büyük tedarikçiler fatura kesim yerine bakıyor, VD tutarsız olabilir.
+      //  Zühtüpaşa/Kozyataği/vs adresli faturalar TCKN eşleştikçe geçer.)
+      if (rec.esnekAdres) {
+        return { uygun: true, sebep: '', detay: (a.tckn ? 'TCKN ✓' : 'VKN ✓') + ' · esnek mod', rec, yzd: Math.round(adr.skor*100) };
+      }
+      // VD normalize (V.D./Vergi Dairesi/Müd. ekleri kaldır) — normal mod için
+      const vdBelirsiz = !a.vd || /^[\d\-\s]*$/.test(a.vd) || /tckimlikno|tcimlikno/i.test(a.vd);
       const vdGerek = !a.tckn && !!a.vkn;
       const vdOk = vdBelirsiz ? true : (vdGerek ? vdEsit(a.vd, rec.vd) : (!a.vd || vdEsit(a.vd, rec.vd)));
-      // 🔓 ESNEK MOD: TCKN/VKN + VD (normalize/belirsiz→OK) eşleşiyorsa UYGUN. Ad/adres detayına bakılmaz.
-      if (rec.esnekAdres) {
-        const uygunEsnek = vdOk;
-        const detayE = (a.tckn ? 'TCKN ✓' : 'VKN ✓') + ' · VD ' + (vdOk ? (vdBelirsiz ? '~ (belirsiz)' : '✓') : '✗') + ' · esnek';
-        let sebepE = '';
-        if (!vdOk) sebepE = 'VD tutmuyor: fatura "' + (a.vd || '—') + '" / levha "' + (rec.vd || '—') + '"';
-        return { uygun: uygunEsnek, sebep: sebepE, detay: detayE, rec, yzd: Math.round(adr.skor*100) };
-      }
       const uygun = adOk && vdOk && karar.islenir;
       const yzd = Math.round(adr.skor * 100);
       const detay = (a.tckn ? 'TCKN ✓' : 'VKN ✓') + ' · Ad ' + (adOk ? '✓' : '✗') + ' · Adres %' + yzd + ' ' + (karar.islenir ? '✓' : '✗') +
