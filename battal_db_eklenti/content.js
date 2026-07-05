@@ -1293,10 +1293,23 @@
     // API tabanlı toplama: DataTables'ın kendi JSON endpoint'ine direkt istek atar,
     // sayfa DOM'una hiç dokunmaz. Sayfa gezmek yok, click yok, race condition yok.
     // Her satırdan uuid'yi çıkarır (JSON string'inde regex ile).
-    async function tumFaturalariToplaAPI(bar) {
+    // Dönem tercihi: {yil, ay} — chrome.storage.local'da 'donem' anahtarında.
+    // Yoksa varsayılan: bir önceki ay (KDV beyan edilmemiş, cari işlenmesi gereken).
+    async function donemCek() {
+      try {
+        const s = await chrome.storage.local.get('donem');
+        if (s && s.donem && s.donem.yil) return s.donem;
+      } catch(e){}
+      const d = new Date(); const o = new Date(d.getFullYear(), d.getMonth() - 1, 1);
+      return { yil: o.getFullYear(), ay: o.getMonth() + 1 };
+    }
+
+    async function tumFaturalariToplaAPI(bar, donem) {
       const all = new Map();
       const uuidRe = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
-      let start = 0, len = 250, total = Infinity;
+      const hedefYil = donem && donem.yil ? String(donem.yil) : '';
+      const hedefAy = donem && donem.ay ? ('0' + donem.ay).slice(-2) : '';
+      let start = 0, len = 250, total = Infinity, gecen = 0;
       while (start < total) {
         const body = 'sEcho=1&iColumns=11&iDisplayStart=' + start + '&iDisplayLength=' + len +
           '&mDataProp_1=InvoiceNumber&mDataProp_2=ExecutionDate&mDataProp_3=CreateDateUtc&mDataProp_4=Title&mDataProp_5=PayableAmount&mDataProp_6=TaxTotal&mDataProp_7=Type&mDataProp_8=Status&mDataProp_9=IsNew&mDataProp_10=InvoiceActions' +
@@ -1310,15 +1323,26 @@
         const j = await r.json();
         total = j.iTotalRecords || (j.aaData || []).length;
         (j.aaData || []).forEach(d => {
+          gecen++;
+          // Dönem filtresi — ExecutionDate "DD.MM.YYYY" veya "YYYY-MM-DD"
+          if (hedefYil) {
+            const ed = (d.ExecutionDate || '') + '';
+            const m1 = ed.match(/(\d{4})-(\d{2})-\d{2}/); // ISO
+            const m2 = ed.match(/(\d{2})\.(\d{2})\.(\d{4})/); // TR
+            const y = m1 ? m1[1] : m2 ? m2[3] : '';
+            const a = m1 ? m1[2] : m2 ? m2[2] : '';
+            if (y !== hedefYil) return;
+            if (hedefAy && a !== hedefAy) return;
+          }
           const asMe = JSON.stringify(d);
           const um = asMe.match(uuidRe);
           if (!um) return;
           const uuid = um[0];
           if (!all.has(uuid.toLowerCase())) {
-            all.set(uuid.toLowerCase(), { uuid, no: d.InvoiceNumber || '', satir: (d.Title || '').slice(0, 90) });
+            all.set(uuid.toLowerCase(), { uuid, no: d.InvoiceNumber || '', satir: (d.Title || '').slice(0, 90), tarih: d.ExecutionDate || '' });
           }
         });
-        if (bar) bar.textContent = '📄 API\'den fatura listesi çekiliyor… ' + all.size + '/' + total;
+        if (bar) bar.textContent = '📄 Dönem taranıyor (' + (hedefAy || 'tüm ay') + '/' + hedefYil + ')… eşleşen: ' + all.size + ' · toplam bakılan: ' + gecen + '/' + total;
         if (!(j.aaData || []).length) break;
         start += len;
         if (start > 20000) break;
@@ -1326,10 +1350,11 @@
       return [...all.values()];
     }
 
-    // TAM OTOMATİK toplama: önce API dener, olmazsa DOM'a düşer.
+    // TAM OTOMATİK toplama: önce API (dönem filtreli) dener, olmazsa DOM'a düşer.
     async function tumFaturalariTopla(bar) {
+      const donem = await donemCek();
       try {
-        const apiRes = await tumFaturalariToplaAPI(bar);
+        const apiRes = await tumFaturalariToplaAPI(bar, donem);
         if (apiRes.length) return apiRes;
       } catch (e) {
         if (bar) bar.textContent = '⚠️ API başarısız, DOM üzerinden gezilecek: ' + e.message;
@@ -1662,8 +1687,23 @@
 
     // 🧙 SİHİRBAZ · Uyumsoft Portal: alıcı kontrol → detay+sınıflandırma → Defter Beyan aç
     async function sihirbazAlisPortal() {
+      // Önce dönemi sor/onayla
+      const donemMevcut = await donemCek();
       const bar = overlayAc('🧙 Tam Otomatik Alış Kontrol Sihirbazı');
-      bar.innerHTML = '<div style="font-size:13.5px;line-height:1.9;color:#a78bfa"><b>Alıcı Kontrol</b> + <b>Fatura Detay + Sınıflandırma</b> paralel çalışıyor…</div>';
+      const aylar = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+      let ayOpt = ''; for (let i=1;i<=12;i++) ayOpt += '<option value="'+i+'"'+(i===donemMevcut.ay?' selected':'')+'>'+aylar[i-1]+'</option>';
+      let yilOpt = ''; for (let y=2024;y<=2028;y++) yilOpt += '<option value="'+y+'"'+(y===donemMevcut.yil?' selected':'')+'>'+y+'</option>';
+      bar.innerHTML =
+        '<div style="font-size:14px;color:#e8edf5;margin-bottom:14px">📅 Hangi dönemi tarayalım?</div>'+
+        '<div style="display:flex;gap:10px;align-items:center;margin-bottom:16px">'+
+        '<select id="__donAy" style="background:#0b1020;color:#e8edf5;border:1px solid #3a3550;padding:8px 14px;border-radius:8px;font-size:14px">'+ayOpt+'</select>'+
+        '<select id="__donYil" style="background:#0b1020;color:#e8edf5;border:1px solid #3a3550;padding:8px 14px;border-radius:8px;font-size:14px">'+yilOpt+'</select>'+
+        '</div>'+
+        '<button id="__donBasla" style="background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;border:0;padding:12px 24px;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer">▶️ Başlat</button>';
+      await new Promise(r => { document.getElementById('__donBasla').onclick = () => r(); });
+      const donem = { yil: +document.getElementById('__donYil').value, ay: +document.getElementById('__donAy').value };
+      try { await chrome.storage.local.set({ donem }); } catch(e){}
+      bar.innerHTML = '<div style="font-size:13.5px;line-height:1.9;color:#a78bfa">📅 Dönem: <b>'+aylar[donem.ay-1]+' '+donem.yil+'</b><br><b>Alıcı Kontrol</b> + <b>Fatura Detay + Sınıflandırma</b> paralel çalışıyor…</div>';
       // İki bağımsız iş: farklı endpointler, farklı veri. Ardışık çalıştırmak yerine
       // aynı anda başlatıp bitmelerini bekliyoruz — süre yaklaşık yarıya iner.
       try {
@@ -1845,8 +1885,22 @@
     //  2) Fatura detay + sınıflandırma (SINIF_KURALLAR + SMM modu)
     //  3) Defter Beyan'a otomatik geç → orada eksik özeti açılır (gönderim onayı elle)
     async function sihirbazAlis() {
+      const donemMevcut = await donemCek();
       const bar = overlayAc('🧙 Tam Otomatik Alış Kontrol Sihirbazı');
-      bar.innerHTML = '<div style="font-size:13.5px;line-height:1.9;color:#6ee7b7"><b>Alıcı Kontrol</b> + <b>Fatura Detay + Sınıflandırma</b> paralel çalışıyor…</div>';
+      const aylar = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+      let ayOpt = ''; for (let i=1;i<=12;i++) ayOpt += '<option value="'+i+'"'+(i===donemMevcut.ay?' selected':'')+'>'+aylar[i-1]+'</option>';
+      let yilOpt = ''; for (let y=2024;y<=2028;y++) yilOpt += '<option value="'+y+'"'+(y===donemMevcut.yil?' selected':'')+'>'+y+'</option>';
+      bar.innerHTML =
+        '<div style="font-size:14px;color:#e8edf5;margin-bottom:14px">📅 Hangi dönemi tarayalım?</div>'+
+        '<div style="display:flex;gap:10px;align-items:center;margin-bottom:16px">'+
+        '<select id="__donAy" style="background:#0b1020;color:#e8edf5;border:1px solid #3a3550;padding:8px 14px;border-radius:8px;font-size:14px">'+ayOpt+'</select>'+
+        '<select id="__donYil" style="background:#0b1020;color:#e8edf5;border:1px solid #3a3550;padding:8px 14px;border-radius:8px;font-size:14px">'+yilOpt+'</select>'+
+        '</div>'+
+        '<button id="__donBasla" style="background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;border:0;padding:12px 24px;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer">▶️ Başlat</button>';
+      await new Promise(r => { document.getElementById('__donBasla').onclick = () => r(); });
+      const donem = { yil: +document.getElementById('__donYil').value, ay: +document.getElementById('__donAy').value };
+      try { await chrome.storage.local.set({ donem }); } catch(e){}
+      bar.innerHTML = '<div style="font-size:13.5px;line-height:1.9;color:#6ee7b7">📅 Dönem: <b>'+aylar[donem.ay-1]+' '+donem.yil+'</b><br><b>Alıcı Kontrol</b> + <b>Fatura Detay + Sınıflandırma</b> paralel çalışıyor…</div>';
       try {
         await Promise.all([
           aliciKontrol().catch(e => console.warn('aliciKontrol hata:', e)),
