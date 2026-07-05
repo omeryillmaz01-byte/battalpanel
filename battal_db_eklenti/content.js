@@ -50,8 +50,8 @@
       '1500360006': { ad: 'Emir Battal', tckn: '27286976096', vd: 'BEŞİKTAŞ', nace: '691003', adres: 'ABBASAĞA MAH. KEŞŞAF SK. ŞATIROĞLU IS MERKEZI NO: 4 İÇ KAPI NO: 10 BEŞİKTAŞ/ İSTANBUL' },
       '6630177279': { ad: 'Müge Özarmağan', tckn: '47707497320', vd: 'MECİDİYEKÖY', nace: '691003', adres: 'MEŞRUTİYET MAH. VALİ KONAĞI CAD. POLAT APT NO: 99 İÇ KAPI NO: 10 YOK/ ŞİŞLİ/ İSTANBUL' },
       '1500459508': { ad: 'Mert Tufan Battal', tckn: '26929736554', vd: 'MECİDİYEKÖY', nace: '862303', adres: 'TEŞVİKİYE MAH. NİŞANTAŞI IHLAMUR YOLU SK. BELDE APT. NO: 1 İÇ KAPI NO: 5 ŞİŞLİ/ İSTANBUL' },
-      '3750072366': { ad: 'Cihan Güneş Ertürk', tckn: '40402335348', vd: 'GÖZTEPE', nace: '862202', adres: 'GÖZTEPE MAH. TEPEGÖZ SK. IKAR IŞ MERKEZI NO: 1 İÇ KAPI NO: 7 KADIKÖY/ İSTANBUL', eskiAdres: ['ZÜHTÜPAŞA MAH. BAĞDAT CAD. MERAM SK. ITIR APT NO: 6 D: 4 KADIKÖY/ İSTANBUL'], aracYok: true },
-      '1500127919': { ad: 'İskender Mehmet Nuri Battal', tckn: '26968735242', vd: 'MECİDİYEKÖY', nace: '862202', adres: 'MEŞRUTİYET MAH VALİKONAĞI CAD NO: 83 İÇ KAPI NO: 5 ŞİŞLİ/ İSTANBUL' },
+      '3750072366': { ad: 'Cihan Güneş Ertürk', tckn: '40402335348', vd: 'GÖZTEPE', nace: '862202', adres: 'GÖZTEPE MAH. TEPEGÖZ SK. IKAR IŞ MERKEZI NO: 1 İÇ KAPI NO: 7 KADIKÖY/ İSTANBUL', eskiAdres: ['ZÜHTÜPAŞA MAH. BAĞDAT CAD. MERAM SK. ITIR APT NO: 6 D: 4 KADIKÖY/ İSTANBUL'], aracYok: true, estetik: true },
+      '1500127919': { ad: 'İskender Mehmet Nuri Battal', tckn: '26968735242', vd: 'MECİDİYEKÖY', nace: '862202', adres: 'MEŞRUTİYET MAH VALİKONAĞI CAD NO: 83 İÇ KAPI NO: 5 ŞİŞLİ/ İSTANBUL', estetik: true },
       '8520482776': { ad: 'Aylin Topçu Erdinç', tckn: '11681662708', vd: 'BAKIRKÖY', nace: '869300', adres: 'KARTALTEPE MAH. ŞEHİT ER RIDVAN MERT SK. GURSESLI SITESI A1BLOK NO: 4/2 İÇ KAPI NO: 4 BAKIRKÖY/ İSTANBUL' },
       '32893788086': { ad: 'Serra Hekimoğlu', tckn: '32893788086', vd: 'MECİDİYEKÖY', nace: '862303', adres: 'TEŞVİKİYE MAH. NİŞANTAŞI IHLAMUR YOLU SK. BELDE APT. NO: 1 İÇ KAPI NO: 5 ŞİŞLİ/ İSTANBUL' },
       '32635597426': { ad: 'Suyum Bige Tilkici', tckn: '32635597426', vd: 'GÖZTEPE', nace: '691003', adres: 'GÖZTEPE MAH. TAŞMEKTEP SK. NUR NO: 21 İÇ KAPI NO: 17 KADIKÖY/ İSTANBUL' },
@@ -136,9 +136,17 @@
       const kisiselKontrol = isSaglikMeslek ? KISISEL_RE_BASE : KISISEL_RE;
       if (kisiselKontrol.test(txt)) return { sinif: '🔞 ÖZEL', altKod: 0, altAd: 'Elle kontrol', turKod: '4', otoGonder: false };
       // Doktor için: eczane/ilaç/tıp malzemesi/muhtelif ilaç → TEDAVİ VE İLAÇ GİDERİ
-      const ILAC_TEDAVI_RE = /eczane|ilaç|ilac|tedavi|tıbbi|tibbi|medikal|serum|enjektör|enjektor|iğne|igne|kanül|kanul|gazlı bez|dikiş ipliği|dezenfektan|antiseptik|steril/i;
+      // Güzellik/estetik hekimleri için KOZMETİK de mesleki (dolgu, filler, botoks, cilt bakım ürünleri).
+      const ILAC_TEDAVI_RE = /eczane|ilaç|ilac|tedavi|tıbbi|tibbi|medikal|serum|enjektör|enjektor|iğne|igne|kanül|kanul|gazlı bez|dikiş ipliği|dezenfektan|antiseptik|steril|kozmetik|dermokozmetik|filler|botoks|dolgu|mezoterapi|cilt bakım|estetik/i;
+      // Güzellik/estetik doktoru mükelleflerde kozmetik kişisel değil mesleki. Bunun için
+      // aynı LEVHA'daki 'estetik: true' flag kullanılabilir; yoksa NACE'ye bakılır.
+      const isEstetik = (mukellefRec && mukellefRec.estetik === true);
       if (isSaglikMeslek && (KISISEL_RE_SAGLIK.test(txt) || ILAC_TEDAVI_RE.test(txt))) {
         return { sinif: 'Tedavi ve İlaç', altKod: 0, altAd: 'Tedavi ve İlaç Giderleri (GVK 68/2) — elle kontrol', turKod: '3', otoGonder: false };
+      }
+      // Estetik doktoru: kozmetik/parfüm mesleki → 68/2 tedavi malzemesi
+      if (isEstetik && /kozmetik|parfüm|makyaj|kişisel bakım|filler|botoks/i.test(txt)) {
+        return { sinif: 'Tedavi ve İlaç', altKod: 0, altAd: 'Estetik/Güzellik Doktoru — Tedavi Malzemesi (GVK 68/2)', turKod: '3', otoGonder: false };
       }
       // Danışmanlık: dışarıdan sağlanan fayda/hizmet (muhasebe hariç — o özel kural var)
       const DANISMANLIK_RE = /danışman|danisman|danışmanlık|danismanlik|consulting|advisory|müşavir|musavir/i;
@@ -149,6 +157,14 @@
       if (ARAC_RE.test(txt)) {
         if (aracYok) return { sinif: '🔞 ÖZEL', altKod: 0, altAd: 'Kayıtlı aracı yok — kişisel harcama, işleme alınmaz', turKod: '4', otoGonder: false };
         return { sinif: '🚗 ARAÇ', altKod: 0, altAd: 'Araç gideri — elle kontrol', turKod: '4', otoGonder: false };
+      }
+      // ÖNCELİK: Danışmanlık gideri — Demirbaş'tan önce kontrol edilir.
+      // Bir faturada hem "Danışmanlık" hem "Elektronik" geçebilir; kullanıcı danışmanlık
+      // önceliğinde olmasını istedi → önce danışmanlık kategorisine düşsün.
+      const DANISMANLIK_RE_ONCE = /danışman|danisman|danışmanlık|danismanlik|consulting|advisory/i;
+      const isMuhasebeOnce = /muhasebe|mali ?müşavir|smmm|ymm/i.test(txt);
+      if (DANISMANLIK_RE_ONCE.test(txt) && !isMuhasebeOnce) {
+        return { sinif: '🤝 Danışmanlık', altKod: 0, altAd: 'Dışarıdan Sağlanan Fayda/Hizmet — Danışmanlık Gideri', turKod: (nace||'').startsWith('86')||(nace||'').startsWith('69') ? '3' : '4', otoGonder: false };
       }
       // Demirbaş: yüksek tutar + elektronik/donanım/mobilya/cihaz → amortismana tabi, elle kontrol.
       if (matrah >= DEMIRBAS_ESIK && DEMIRBAS_RE.test(txt)) {
@@ -654,11 +670,24 @@
         let ok = 0, fail = 0, skip = 0;
         elog('🚀 ' + eksik.length + ' eksik fatura Defter Beyan\'a gönderiliyor…', '#10b981');
 
-        // Tarih ezme ayarını oku
+        // Tarih ezme ayarını oku — SADECE ezme tarihinden ÖNCE olan faturalara uygulanır.
+        // Amaç: geçmiş KDV beyanı verilmiş dönemin faturalarını cari döneme çekmek.
+        // Cari dönem içindeki (veya sonraki) faturalar KENDİ tarihinde kalır.
         const ezCb = document.getElementById('__tarihEz');
         const ezVal = document.getElementById('__tarihEzVal');
         const tarihEzme = ezCb && ezCb.checked ? (ezVal ? ezVal.value : '') : '';
-        if (tarihEzme) elog('📅 Tüm fatura tarihleri ' + tarihEzme + ' olarak gönderilecek', '#93c5fd');
+        if (tarihEzme) elog('📅 Sadece ' + tarihEzme + ' TARİHİNDEN ÖNCE olan faturalar ' + tarihEzme + ' olarak gönderilecek; o tarihten sonrakiler kendi tarihinde kalır', '#93c5fd');
+        // Fatura tarihini "YYYY-MM-DD" biçimine çevir (karşılaştırma için)
+        const toISODate = t => {
+          const s = ('' + (t || '')).trim();
+          if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10);
+          const a = s.split(/[.\-\/]/);
+          if (a.length===3) {
+            if (a[0].length===4) return a[0]+'-'+a[1]+'-'+a[2];
+            return a[2]+'-'+a[1]+'-'+a[0];
+          }
+          return '';
+        };
 
         for (const f of eksik) {
           const belgeNo = (f.fno || '').replace(/[^0-9A-Za-z]/g, '').slice(0, 16);
@@ -669,7 +698,10 @@
             if (!rc) { elog('❌ ' + f.fno + ' — tedarikçi (' + f.saticiVkn + ') adres defterinde yok', '#ef4444'); fail++; continue; }
 
             const ad = ((rc.soyad || '') + ' ' + (rc.ad || '')).trim().toLocaleUpperCase('tr');
-            const t = tarihEzme ? (tarihEzme + ' 00:00:00') : iso(f.tarih);
+            // Ezme kararı: sadece faturanın kendi tarihi, ezme tarihinden ÖNCE ise ezilir.
+            const faturaISO = toISODate(f.tarih);
+            const uygulaEzme = tarihEzme && faturaISO && faturaISO < tarihEzme;
+            const t = uygulaEzme ? (tarihEzme + ' 00:00:00') : iso(f.tarih);
             const turKod = f.turKod || '4';
             const ana = {
               deleted: false, alisTuruKodu: '1',
