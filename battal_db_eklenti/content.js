@@ -99,6 +99,11 @@
       '5820492073': {sinif:'Yemek', altKod:90, altAd:'Gıda ve Yemek Harcamaları (GVK 40/1-40/2)', turKod:'4'}
     };
     const ARAC_RE = /tüvturk|tuvturk|muayene istasyon|akaryakıt|akaryakit|petrol ofisi|opet|shell|aytemiz|benzin|motorin|oto ?lastik|oto ?yıkama|oto ?servis|kasko|trafik sigorta|otopark|otoyol|hgs|ogs|araç ?bakım/i;
+    // Demirbaş adayları: elektronik/bilgisayar/donanım/mobilya/cihaz/ofis makinesi/ekipman.
+    // 2026 için amortisman sınırı ~10.000 TL. Bu değerin üstünde bu ürünlerden alım
+    // gider değil demirbaş (amortismana tabi) sayılır — direkt gider yazılamaz.
+    const DEMIRBAS_RE = /elektronik|bilgisayar|laptop|notebook|monitör|monitor|yazıcı|printer|donanım|donanim|mobilya|masa\b|sandalye|koltuk|klima|kombi|buzdolabı|firın|fırın|iş ?makinesi|makina|makine|cihaz|ekipman|demirbaş|demirbas|tıbbi ?cihaz|dental ?ünit|röntgen|ultrason|tomografi|mri|otoklav/i;
+    const DEMIRBAS_ESIK = 10000;
     // Kişisel (indirilemez) harcamalar — herkes için.
     const KISISEL_RE_BASE = /alkol|içki|bira|şarap|votka|viski|rakı|sigara|tütün|kozmetik|parfüm|makyaj|kişisel bakım/i;
     // Sağlık/ilaç sadece SAĞLIK dışı mesleklerde kişisel; doktor/dişçi (NACE 86*) için MESLEKI gider.
@@ -117,6 +122,10 @@
         return { sinif: '💊 Sağlık/İlaç', altKod: 0, altAd: 'Doktor mesleki gideri — SMM alt türü elle seç (tedavi malzemesi / ilaç)', turKod: '3', otoGonder: false };
       }
       if (ARAC_RE.test(txt)) return { sinif: '🚗 ARAÇ', altKod: 0, altAd: 'Araç gideri — elle kontrol', turKod: '4', otoGonder: false };
+      // Demirbaş: yüksek tutar + elektronik/donanım/mobilya/cihaz → amortismana tabi, elle kontrol.
+      if (matrah >= DEMIRBAS_ESIK && DEMIRBAS_RE.test(txt)) {
+        return { sinif: '🔧 DEMİRBAŞ', altKod: 0, altAd: 'Demirbaş — amortisman gerekir, elle kontrol (SMM 68/2 veya işletme mal alışı 191)', turKod: '4', otoGonder: false };
+      }
       if (ozel) {
         if (ozel.turKod === '1') return { sinif: ozel.sinif, altKod: ozel.altKod, altAd: ozel.altAd, turKod: '1', otoGonder: true };
         return { sinif: ozel.sinif, altKod: ozel.altKod, altAd: ozel.altAd, turKod: ozel.turKod || '4', otoGonder: true };
