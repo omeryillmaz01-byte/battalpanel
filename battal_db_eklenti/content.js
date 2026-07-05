@@ -50,7 +50,7 @@
       '1500360006': { ad: 'Emir Battal', tckn: '27286976096', vd: 'BEŞİKTAŞ', nace: '691003', adres: 'ABBASAĞA MAH. KEŞŞAF SK. ŞATIROĞLU IS MERKEZI NO: 4 İÇ KAPI NO: 10 BEŞİKTAŞ/ İSTANBUL' },
       '6630177279': { ad: 'Müge Özarmağan', tckn: '47707497320', vd: 'MECİDİYEKÖY', nace: '691003', adres: 'MEŞRUTİYET MAH. VALİ KONAĞI CAD. POLAT APT NO: 99 İÇ KAPI NO: 10 YOK/ ŞİŞLİ/ İSTANBUL' },
       '1500459508': { ad: 'Mert Tufan Battal', tckn: '26929736554', vd: 'MECİDİYEKÖY', nace: '862303', adres: 'TEŞVİKİYE MAH. NİŞANTAŞI IHLAMUR YOLU SK. BELDE APT. NO: 1 İÇ KAPI NO: 5 ŞİŞLİ/ İSTANBUL' },
-      '3750072366': { ad: 'Cihan Güneş Ertürk', tckn: '40402335348', vd: 'GÖZTEPE', nace: '862202', adres: 'GÖZTEPE MAH. TEPEGÖZ SK. IKAR IŞ MERKEZI NO: 1 İÇ KAPI NO: 7 KADIKÖY/ İSTANBUL', eskiAdres: ['ZÜHTÜPAŞA MAH. BAĞDAT CAD. MERAM SK. ITIR APT NO: 6 D: 4 KADIKÖY/ İSTANBUL'], aracYok: true, estetik: true },
+      '3750072366': { ad: 'Cihan Güneş Ertürk', tckn: '40402335348', vd: 'GÖZTEPE', nace: '862202', adres: 'GÖZTEPE MAH. TEPEGÖZ SK. IKAR IŞ MERKEZI NO: 1 İÇ KAPI NO: 7 KADIKÖY/ İSTANBUL', eskiAdres: ['ZÜHTÜPAŞA MAH. BAĞDAT CAD. MERAM SK. ITIR APT NO: 6 D: 4 KADIKÖY/ İSTANBUL'], aracYok: true, estetik: true, esnekAdres: true, dogalgazDisla: true },
       '1500127919': { ad: 'İskender Mehmet Nuri Battal', tckn: '26968735242', vd: 'MECİDİYEKÖY', nace: '862202', adres: 'MEŞRUTİYET MAH VALİKONAĞI CAD NO: 83 İÇ KAPI NO: 5 ŞİŞLİ/ İSTANBUL', estetik: true },
       '8520482776': { ad: 'Aylin Topçu Erdinç', tckn: '11681662708', vd: 'BAKIRKÖY', nace: '869300', adres: 'KARTALTEPE MAH. ŞEHİT ER RIDVAN MERT SK. GURSESLI SITESI A1BLOK NO: 4/2 İÇ KAPI NO: 4 BAKIRKÖY/ İSTANBUL' },
       '32893788086': { ad: 'Serra Hekimoğlu', tckn: '32893788086', vd: 'MECİDİYEKÖY', nace: '862303', adres: 'TEŞVİKİYE MAH. NİŞANTAŞI IHLAMUR YOLU SK. BELDE APT. NO: 1 İÇ KAPI NO: 5 ŞİŞLİ/ İSTANBUL' },
@@ -1314,7 +1314,10 @@
         .map(k => tagTxt(pa, k)).filter(Boolean).join(' ');
       const ettn = tagTxt(t, 'UUID');
       const fno = (t.match(/<(?:\w+:)?ID(?:\s[^>]*)?>\s*([A-Z0-9]{3}20\d{11})\s*</) || ['', ''])[1];
-      return { tckn, vkn, ad, vd, adres, ettn, fno };
+      // Satıcı (fatura kesen) firma adı — İGDAŞ gibi tedarikçi bazlı dışlama için
+      const saticiBlok = tagIc(t, 'AccountingSupplierParty');
+      const saticiUnvan = (tagTxt(tagIc(saticiBlok, 'PartyName'), 'Name') || ((tagTxt(saticiBlok, 'FirstName') + ' ' + tagTxt(saticiBlok, 'FamilyName')).trim())) || '';
+      return { tckn, vkn, ad, vd, adres, ettn, fno, saticiUnvan };
     }
 
     // Ekrandaki Gelen Fatura tablosundan UUID'leri topla (satırlarda gizli invoiceId inputları var)
@@ -1339,10 +1342,16 @@
       const rec = kim ? LEVHA_BY_ID[kim] : null;
       if (!kim) return { uygun: false, sebep: 'Faturada alıcı TCKN/VKN yok', detay: '' };
       if (!rec) return { uygun: false, sebep: 'Levhada kayıtlı değil: ' + kim, detay: '' };
+      // 🚫 Mükellefin kayıtlı olmadığı doğalgaz aboneliği — eski ev/işyeri, dışlanır.
+      if (rec.dogalgazDisla && /igdaş|igdas|istanbul gaz|doğalgaz dağıt|dogalgaz dagit/i.test((a.satici||'') + ' ' + (a.saticiUnvan||'') + ' ' + (a.unvan||''))) {
+        return { uygun: false, sebep: 'Doğalgaz faturası — mükellefte kayıtlı doğalgaz aboneliği yok (eski adres)', detay: 'İGDAŞ DIŞLA', rec };
+      }
       const adL = trAscii(rec.ad).split(' ').filter(x => x.length > 1);
       const adF = trAscii(a.ad);
       const adHit = adL.filter(t => adF.includes(t)).length;
       const adOk = adL.length > 0 && adHit === adL.length;
+      // Kısmi ad eşleşmesi (en az soyad tuttu): esnek modda kabul.
+      const adKismiOk = adL.length > 0 && adHit >= 1;
       let adr = adresBenzer(rec.adres, a.adres);
       // Eski adresler varsa onlarla da kıyasla, en yüksek skoru al
       if (rec.eskiAdres && Array.isArray(rec.eskiAdres)) {
@@ -1355,6 +1364,16 @@
       // VD kuralı: TCKN'li şahısta faturada VD boş olabilir (normal). VKN tüzelde VD karşılaştırılır.
       const vdGerek = !a.tckn && !!a.vkn;
       const vdOk = vdGerek ? (!!a.vd && trAscii(a.vd) === trAscii(rec.vd || '')) : (!a.vd || trAscii(a.vd) === trAscii(rec.vd || ''));
+      // 🔓 ESNEK MOD: bu mükellef için VKN+VD+ad kısmi eşleşiyorsa uygun (adres detayına bakma).
+      // Fatura kısaltmalı adres/ünvan gönderdiğinde geçir.
+      if (rec.esnekAdres) {
+        const uygunEsnek = adKismiOk && vdOk;
+        const detayE = (a.tckn ? 'TCKN ✓' : 'VKN ✓') + ' · Ad kısmi ' + (adKismiOk ? '✓' : '✗') + ' · VD ' + (vdOk ? '✓' : '✗') + ' · Adres %'+Math.round(adr.skor*100)+' (esnek)';
+        let sebepE = '';
+        if (!adKismiOk) sebepE = 'Ad hiçbir kısmı tutmuyor: fatura "' + (a.ad || '—') + '"';
+        else if (!vdOk) sebepE = 'VD tutmuyor: fatura "' + (a.vd || '—') + '" / levha "' + (rec.vd || '—') + '"';
+        return { uygun: uygunEsnek, sebep: sebepE, detay: detayE, rec, yzd: Math.round(adr.skor*100) };
+      }
       const uygun = adOk && vdOk && karar.islenir;
       const yzd = Math.round(adr.skor * 100);
       const detay = (a.tckn ? 'TCKN ✓' : 'VKN ✓') + ' · Ad ' + (adOk ? '✓' : '✗') + ' · Adres %' + yzd + ' ' + (karar.islenir ? '✓' : '✗') +
