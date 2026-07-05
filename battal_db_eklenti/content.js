@@ -118,8 +118,11 @@
     // Demirbaş adayları: elektronik/bilgisayar/donanım/mobilya/cihaz/ofis makinesi/ekipman.
     // 2026 için amortisman sınırı ~10.000 TL. Bu değerin üstünde bu ürünlerden alım
     // gider değil demirbaş (amortismana tabi) sayılır — direkt gider yazılamaz.
-    const DEMIRBAS_RE = /elektronik|bilgisayar|laptop|notebook|monitör|monitor|yazıcı|printer|donanım|donanim|mobilya|masa\b|sandalye|koltuk|klima|kombi|buzdolabı|firın|fırın|iş ?makinesi|makina|makine|cihaz|ekipman|demirbaş|demirbas|tıbbi ?cihaz|dental ?ünit|röntgen|ultrason|tomografi|mri|otoklav|kettle|kettil|çelik kettle|çaydanlık|blender|mikser|tost makinesi|kahve makinesi|ütü|saç kurutma|elektrik süpürge|süpürge|mikrodalga|air ?fryer|kızartma|smeg|philips|samsung\b|apple\b|macbook|iphone|ipad|dyson|braun|arçelik|bosch|siemens|vestel|beko|profilo|led ?tv|smart ?tv|televizyon|projeksiyon|projektor|hoparlör|kulaklık|smartwatch|akıllı saat|tablet|smartphone|telefon\b(?!.*fatura)/i;
+    const DEMIRBAS_RE = /elektronik|bilgisayar|laptop|notebook|monitör|monitor|yazıcı|printer|donanım|donanim|mobilya|masa\b|sandalye|koltuk|klima|kombi|buzdolabı|firın|fırın|iş ?makinesi|makina|makine|cihaz|ekipman|demirbaş|demirbas|tıbbi ?cihaz|dental ?ünit|röntgen|ultrason|tomografi|mri|otoklav|kettle|kettil|çelik kettle|çaydanlık|blender|mikser|tost makinesi|tost ?makinası|ekmek ?kızartma|kahve makinesi|espresso|barista|ütü\b|saç kurutma|elektrik süpürge|süpürge|mikrodalga|air ?fryer|kızartma makinası|kızartma makinesi|smeg|philips|samsung\b|apple\b|macbook|iphone|ipad|dyson|braun|arçelik|bosch|siemens|vestel|beko|profilo|led ?tv|smart ?tv|televizyon|projeksiyon|projektor|hoparlör|kulaklık|smartwatch|akıllı saat|tablet|smartphone|ev aletleri|elektrikli ev|beyaz eşya/i;
     const DEMIRBAS_ESIK = 12000;
+    // 2026: 5.000-12.000 TL fiziki ürün → doğrudan gider yazılan küçük demirbaş.
+    // <5.000 TL fiziki ürün → normal gider (yine de "Diğer Hizmet"e atmıyoruz — fiziki ürün, hizmet değil).
+    const DEMIRBAS_ESIK_KUCUK = 5000;
     // Kişisel (indirilemez) harcamalar — herkes için.
     const KISISEL_RE_BASE = /alkol|içki|bira|şarap|votka|viski|rakı|sigara|tütün|kozmetik|parfüm|makyaj|kişisel bakım/i;
     // Sağlık/ilaç sadece SAĞLIK dışı mesleklerde kişisel; doktor/dişçi (NACE 86*) için MESLEKI gider.
@@ -157,10 +160,20 @@
         if (aracYok) return { sinif: '🔞 ÖZEL', altKod: 0, altAd: 'Kayıtlı aracı yok — kişisel harcama, işleme alınmaz', turKod: '4', otoGonder: false };
         return { sinif: '🚗 ARAÇ', altKod: 0, altAd: 'Araç gideri — elle kontrol', turKod: '4', otoGonder: false };
       }
-      // Demirbaş (ÖNCELİKLE İÇERİKTE ara): Smeg, kettle, blender, elektronik cihaz vb.
-      // Yüksek tutarlı + demirbaş nitelikli ürün → amortismana tabi, elle kontrol.
-      if (matrah >= DEMIRBAS_ESIK && DEMIRBAS_RE.test(oncelikliTxt)) {
-        return { sinif: '🔧 DEMİRBAŞ', altKod: 0, altAd: 'Demirbaş — amortisman gerekir, elle kontrol (SMM 68/2 veya işletme mal alışı 191)', turKod: '4', otoGonder: false };
+      // Fiziki ürün / Demirbaş (İÇERİKTE ürün terimi geçiyor mu):
+      // Ekmek kızartma, kettle, blender, buzdolabı, mobilya, elektronik cihaz — hepsi FİZİKİ ürün, hizmet değil.
+      // Tutara göre 3 kategori:
+      //   >= 12.000 TL: 🔧 DEMİRBAŞ (amortismana tabi)
+      //   5.000 - 12.000 TL: 🔧 Doğrudan Gider Yazılan Demirbaş (küçük demirbaş)
+      //   <  5.000 TL: 🛒 Küçük Alım / Mal Alışı (fiziki ürün, direkt gider — "Diğer Hizmet"e atma!)
+      if (DEMIRBAS_RE.test(oncelikliTxt)) {
+        if (matrah >= DEMIRBAS_ESIK) {
+          return { sinif: '🔧 DEMİRBAŞ', altKod: 0, altAd: 'Demirbaş — amortismana tabi, elle kontrol (SMM 68/2 veya işletme mal alışı 191)', turKod: '4', otoGonder: false };
+        }
+        if (matrah >= DEMIRBAS_ESIK_KUCUK) {
+          return { sinif: '🔧 Küçük Demirbaş', altKod: 0, altAd: 'Doğrudan Gider Yazılan Demirbaş (5.000-12.000 TL) — elle kontrol', turKod: '4', otoGonder: false };
+        }
+        return { sinif: '🛒 Fiziki Ürün', altKod: 0, altAd: 'Küçük tutarlı fiziki ürün alımı — Mal Alışı / Ofis Malzemesi (elle kontrol)', turKod: '4', otoGonder: false };
       }
       // Danışmanlık: sadece İÇERİKTE geçiyorsa (satıcı unvanı değil).
       // 'Danışmanlık hizmeti', 'danışmanlık ücreti', 'consulting fee' gibi.
