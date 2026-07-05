@@ -137,25 +137,23 @@
       // Karar önceliği: eğer içerik metni verilmişse ve orada güçlü bir eşleşme varsa ONU kullan.
       const oncelikliTxt = icerikTxt || txt;
       const ozel = TEDARIKCI_OZEL[vkn];
-      // Aktif kayıtlı aracı olmayan mükelleflerde akaryakıt/otoyol/kasko = KİŞİSEL (indirilemez)
       const aracYok = mukellefRec && mukellefRec.aracYok === true;
-      // Doktor/dişçi (NACE 86*) için sağlık/ilaç mesleki gider — sadece BASE kişiseller (alkol/kozmetik vs) devre dışı.
       const isSaglikMeslek = (nace || '').startsWith('86');
-      const kisiselKontrol = isSaglikMeslek ? KISISEL_RE_BASE : KISISEL_RE;
-      if (kisiselKontrol.test(txt)) return { sinif: '🔞 ÖZEL', altKod: 0, altAd: 'Elle kontrol', turKod: '4', otoGonder: false };
-      // Doktor için: eczane/ilaç/tıp malzemesi/muhtelif ilaç → TEDAVİ VE İLAÇ GİDERİ
-      // Güzellik/estetik hekimleri için KOZMETİK de mesleki (dolgu, filler, botoks, cilt bakım ürünleri).
-      const ILAC_TEDAVI_RE = /eczane|ilaç|ilac|tedavi|tıbbi|tibbi|medikal|serum|enjektör|enjektor|iğne|igne|kanül|kanul|gazlı bez|dikiş ipliği|dezenfektan|antiseptik|steril|kozmetik|dermokozmetik|filler|botoks|dolgu|mezoterapi|cilt bakım|estetik/i;
-      // Güzellik/estetik doktoru mükelleflerde kozmetik kişisel değil mesleki. Bunun için
-      // aynı LEVHA'daki 'estetik: true' flag kullanılabilir; yoksa NACE'ye bakılır.
       const isEstetik = (mukellefRec && mukellefRec.estetik === true);
+      const ILAC_TEDAVI_RE = /eczane|ilaç|ilac|tedavi|tıbbi|tibbi|medikal|serum|enjektör|enjektor|iğne|igne|kanül|kanul|gazlı bez|dikiş ipliği|dezenfektan|antiseptik|steril|kozmetik|dermokozmetik|filler|botoks|dolgu|mezoterapi|cilt bakım|estetik/i;
+      const KOZMETIK_ESTETIK_RE = /kozmetik|parfüm|makyaj|kişisel bakım|filler|botoks|dermokozmetik|cilt bakım/i;
+      // 1️⃣ MESLEK ÖNCELİĞİ: doktor/dişçi için sağlık/ilaç/tedavi/kozmetik-estetik MESLEKI gider.
+      //    Kişisel filtreden ÖNCE kontrol edilir ki alkol dışı sağlık ürünleri kişisel sayılmasın.
       if (isSaglikMeslek && (KISISEL_RE_SAGLIK.test(txt) || ILAC_TEDAVI_RE.test(txt))) {
         return { sinif: 'Tedavi ve İlaç', altKod: 0, altAd: 'Tedavi ve İlaç Giderleri (GVK 68/2) — elle kontrol', turKod: '3', otoGonder: false };
       }
-      // Estetik doktoru: kozmetik/parfüm mesleki → 68/2 tedavi malzemesi
-      if (isEstetik && /kozmetik|parfüm|makyaj|kişisel bakım|filler|botoks/i.test(txt)) {
+      if (isEstetik && KOZMETIK_ESTETIK_RE.test(txt)) {
         return { sinif: 'Tedavi ve İlaç', altKod: 0, altAd: 'Estetik/Güzellik Doktoru — Tedavi Malzemesi (GVK 68/2)', turKod: '3', otoGonder: false };
       }
+      // 2️⃣ Kişisel filtre — meslek özel kontrolleri geçtiyse artık gerçekten kişisel demektir.
+      //    Sağlık mesleğinde BASE (alkol, sigara vs), diğerlerinde tam KISISEL_RE (sağlık dahil).
+      const kisiselKontrol = isSaglikMeslek ? KISISEL_RE_BASE : KISISEL_RE;
+      if (kisiselKontrol.test(txt)) return { sinif: '🔞 ÖZEL', altKod: 0, altAd: 'Elle kontrol', turKod: '4', otoGonder: false };
       if (ARAC_RE.test(txt)) {
         if (aracYok) return { sinif: '🔞 ÖZEL', altKod: 0, altAd: 'Kayıtlı aracı yok — kişisel harcama, işleme alınmaz', turKod: '4', otoGonder: false };
         return { sinif: '🚗 ARAÇ', altKod: 0, altAd: 'Araç gideri — elle kontrol', turKod: '4', otoGonder: false };
