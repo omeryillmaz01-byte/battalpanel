@@ -153,12 +153,6 @@
       if (isEstetik && /kozmetik|parfüm|makyaj|kişisel bakım|filler|botoks/i.test(txt)) {
         return { sinif: 'Tedavi ve İlaç', altKod: 0, altAd: 'Estetik/Güzellik Doktoru — Tedavi Malzemesi (GVK 68/2)', turKod: '3', otoGonder: false };
       }
-      // Danışmanlık: dışarıdan sağlanan fayda/hizmet (muhasebe hariç — o özel kural var)
-      const DANISMANLIK_RE = /danışman|danisman|danışmanlık|danismanlik|consulting|advisory|müşavir|musavir/i;
-      const isMuhasebe = /muhasebe|mali ?müşavir|smmm|ymm/i.test(txt);
-      if (DANISMANLIK_RE.test(txt) && !isMuhasebe) {
-        return { sinif: '🤝 Danışmanlık', altKod: 0, altAd: 'Dışarıdan Sağlanan Fayda/Hizmet — Danışmanlık Gideri', turKod: isSaglikMeslek ? '3' : '4', otoGonder: false };
-      }
       if (ARAC_RE.test(txt)) {
         if (aracYok) return { sinif: '🔞 ÖZEL', altKod: 0, altAd: 'Kayıtlı aracı yok — kişisel harcama, işleme alınmaz', turKod: '4', otoGonder: false };
         return { sinif: '🚗 ARAÇ', altKod: 0, altAd: 'Araç gideri — elle kontrol', turKod: '4', otoGonder: false };
