@@ -103,7 +103,7 @@
     // 2026 için amortisman sınırı ~10.000 TL. Bu değerin üstünde bu ürünlerden alım
     // gider değil demirbaş (amortismana tabi) sayılır — direkt gider yazılamaz.
     const DEMIRBAS_RE = /elektronik|bilgisayar|laptop|notebook|monitör|monitor|yazıcı|printer|donanım|donanim|mobilya|masa\b|sandalye|koltuk|klima|kombi|buzdolabı|firın|fırın|iş ?makinesi|makina|makine|cihaz|ekipman|demirbaş|demirbas|tıbbi ?cihaz|dental ?ünit|röntgen|ultrason|tomografi|mri|otoklav/i;
-    const DEMIRBAS_ESIK = 10000;
+    const DEMIRBAS_ESIK = 12000;
     // Kişisel (indirilemez) harcamalar — herkes için.
     const KISISEL_RE_BASE = /alkol|içki|bira|şarap|votka|viski|rakı|sigara|tütün|kozmetik|parfüm|makyaj|kişisel bakım/i;
     // Sağlık/ilaç sadece SAĞLIK dışı mesleklerde kişisel; doktor/dişçi (NACE 86*) için MESLEKI gider.
