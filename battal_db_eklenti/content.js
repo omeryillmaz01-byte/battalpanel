@@ -99,12 +99,23 @@
       '5820492073': {sinif:'Yemek', altKod:90, altAd:'Gıda ve Yemek Harcamaları (GVK 40/1-40/2)', turKod:'4'}
     };
     const ARAC_RE = /tüvturk|tuvturk|muayene istasyon|akaryakıt|akaryakit|petrol ofisi|opet|shell|aytemiz|benzin|motorin|oto ?lastik|oto ?yıkama|oto ?servis|kasko|trafik sigorta|otopark|otoyol|hgs|ogs|araç ?bakım/i;
-    const KISISEL_RE = /alkol|içki|bira|şarap|votka|viski|rakı|sigara|tütün|kozmetik|parfüm|makyaj|kişisel bakım|hastane|sağlık|tıp merkezi|poliklinik|muayenehane|diş polikliniği|göz merkezi|tıp mrkz|medikal|laboratuvar|eczane|ilaç/i;
+    // Kişisel (indirilemez) harcamalar — herkes için.
+    const KISISEL_RE_BASE = /alkol|içki|bira|şarap|votka|viski|rakı|sigara|tütün|kozmetik|parfüm|makyaj|kişisel bakım/i;
+    // Sağlık/ilaç sadece SAĞLIK dışı mesleklerde kişisel; doktor/dişçi (NACE 86*) için MESLEKI gider.
+    const KISISEL_RE_SAGLIK = /hastane|sağlık|tıp merkezi|poliklinik|muayenehane|diş polikliniği|göz merkezi|tıp mrkz|medikal|laboratuvar|eczane|ilaç/i;
+    const KISISEL_RE = new RegExp(KISISEL_RE_BASE.source + '|' + KISISEL_RE_SAGLIK.source, 'i');
 
     function faturaSinifla(unvan, vkn, matrah, nace) {
       const txt = (unvan || '').toLocaleLowerCase('tr');
       const ozel = TEDARIKCI_OZEL[vkn];
-      if (KISISEL_RE.test(txt)) return { sinif: '🔞 ÖZEL', altKod: 0, altAd: 'Elle kontrol', turKod: '4', otoGonder: false };
+      // Doktor/dişçi (NACE 86*) için sağlık/ilaç mesleki gider — sadece BASE kişiseller (alkol/kozmetik vs) devre dışı.
+      const isSaglikMeslek = (nace || '').startsWith('86');
+      const kisiselKontrol = isSaglikMeslek ? KISISEL_RE_BASE : KISISEL_RE;
+      if (kisiselKontrol.test(txt)) return { sinif: '🔞 ÖZEL', altKod: 0, altAd: 'Elle kontrol', turKod: '4', otoGonder: false };
+      // Doktor için: eczane/ilaç/tıp malzemesi geldiyse SMM alt kodu (Mal Alışı gibi işlenir, ama SMM'de kod 34 ilaç/malzeme yok — elle kontrol)
+      if (isSaglikMeslek && KISISEL_RE_SAGLIK.test(txt)) {
+        return { sinif: '💊 Sağlık/İlaç', altKod: 0, altAd: 'Doktor mesleki gideri — SMM alt türü elle seç (tedavi malzemesi / ilaç)', turKod: '3', otoGonder: false };
+      }
       if (ARAC_RE.test(txt)) return { sinif: '🚗 ARAÇ', altKod: 0, altAd: 'Araç gideri — elle kontrol', turKod: '4', otoGonder: false };
       if (ozel) {
         if (ozel.turKod === '1') return { sinif: ozel.sinif, altKod: ozel.altKod, altAd: ozel.altAd, turKod: '1', otoGonder: true };
