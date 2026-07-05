@@ -117,9 +117,16 @@
       const isSaglikMeslek = (nace || '').startsWith('86');
       const kisiselKontrol = isSaglikMeslek ? KISISEL_RE_BASE : KISISEL_RE;
       if (kisiselKontrol.test(txt)) return { sinif: '🔞 ÖZEL', altKod: 0, altAd: 'Elle kontrol', turKod: '4', otoGonder: false };
-      // Doktor için: eczane/ilaç/tıp malzemesi geldiyse SMM alt kodu (Mal Alışı gibi işlenir, ama SMM'de kod 34 ilaç/malzeme yok — elle kontrol)
-      if (isSaglikMeslek && KISISEL_RE_SAGLIK.test(txt)) {
-        return { sinif: '💊 Sağlık/İlaç', altKod: 0, altAd: 'Doktor mesleki gideri — SMM alt türü elle seç (tedavi malzemesi / ilaç)', turKod: '3', otoGonder: false };
+      // Doktor için: eczane/ilaç/tıp malzemesi/muhtelif ilaç → TEDAVİ VE İLAÇ GİDERİ
+      const ILAC_TEDAVI_RE = /eczane|ilaç|ilac|tedavi|tıbbi|tibbi|medikal|serum|enjektör|enjektor|iğne|igne|kanül|kanul|gazlı bez|dikiş ipliği|dezenfektan|antiseptik|steril/i;
+      if (isSaglikMeslek && (KISISEL_RE_SAGLIK.test(txt) || ILAC_TEDAVI_RE.test(txt))) {
+        return { sinif: '💊 Tedavi ve İlaç Gideri', altKod: 0, altAd: 'Tedavi ve İlaç Gideri (SMK 68) — elle kontrol', turKod: '3', otoGonder: false };
+      }
+      // Danışmanlık: dışarıdan sağlanan fayda/hizmet (muhasebe hariç — o özel kural var)
+      const DANISMANLIK_RE = /danışman|danisman|danışmanlık|danismanlik|consulting|advisory|müşavir|musavir/i;
+      const isMuhasebe = /muhasebe|mali ?müşavir|smmm|ymm/i.test(txt);
+      if (DANISMANLIK_RE.test(txt) && !isMuhasebe) {
+        return { sinif: '🤝 Danışmanlık', altKod: 0, altAd: 'Dışarıdan Sağlanan Fayda/Hizmet — Danışmanlık Gideri', turKod: isSaglikMeslek ? '3' : '4', otoGonder: false };
       }
       if (ARAC_RE.test(txt)) return { sinif: '🚗 ARAÇ', altKod: 0, altAd: 'Araç gideri — elle kontrol', turKod: '4', otoGonder: false };
       // Demirbaş: yüksek tutar + elektronik/donanım/mobilya/cihaz → amortismana tabi, elle kontrol.
