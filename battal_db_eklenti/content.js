@@ -50,7 +50,7 @@
       '1500360006': { ad: 'Emir Battal', tckn: '27286976096', vd: 'BEŞİKTAŞ', nace: '691003', adres: 'ABBASAĞA MAH. KEŞŞAF SK. ŞATIROĞLU IS MERKEZI NO: 4 İÇ KAPI NO: 10 BEŞİKTAŞ/ İSTANBUL' },
       '6630177279': { ad: 'Müge Özarmağan', tckn: '47707497320', vd: 'MECİDİYEKÖY', nace: '691003', adres: 'MEŞRUTİYET MAH. VALİ KONAĞI CAD. POLAT APT NO: 99 İÇ KAPI NO: 10 YOK/ ŞİŞLİ/ İSTANBUL' },
       '1500459508': { ad: 'Mert Tufan Battal', tckn: '26929736554', vd: 'MECİDİYEKÖY', nace: '862303', adres: 'TEŞVİKİYE MAH. NİŞANTAŞI IHLAMUR YOLU SK. BELDE APT. NO: 1 İÇ KAPI NO: 5 ŞİŞLİ/ İSTANBUL' },
-      '3750072366': { ad: 'Cihan Güneş Ertürk', tckn: '40402335348', vd: 'GÖZTEPE', nace: '862202', adres: 'GÖZTEPE MAH. TEPEGÖZ SK. IKAR IŞ MERKEZI NO: 1 İÇ KAPI NO: 7 KADIKÖY/ İSTANBUL', eskiAdres: ['ZÜHTÜPAŞA MAH. BAĞDAT CAD. MERAM SK. ITIR APT NO: 6 D: 4 KADIKÖY/ İSTANBUL'] },
+      '3750072366': { ad: 'Cihan Güneş Ertürk', tckn: '40402335348', vd: 'GÖZTEPE', nace: '862202', adres: 'GÖZTEPE MAH. TEPEGÖZ SK. IKAR IŞ MERKEZI NO: 1 İÇ KAPI NO: 7 KADIKÖY/ İSTANBUL', eskiAdres: ['ZÜHTÜPAŞA MAH. BAĞDAT CAD. MERAM SK. ITIR APT NO: 6 D: 4 KADIKÖY/ İSTANBUL'], aracYok: true },
       '1500127919': { ad: 'İskender Mehmet Nuri Battal', tckn: '26968735242', vd: 'MECİDİYEKÖY', nace: '862202', adres: 'MEŞRUTİYET MAH VALİKONAĞI CAD NO: 83 İÇ KAPI NO: 5 ŞİŞLİ/ İSTANBUL' },
       '8520482776': { ad: 'Aylin Topçu Erdinç', tckn: '11681662708', vd: 'BAKIRKÖY', nace: '869300', adres: 'KARTALTEPE MAH. ŞEHİT ER RIDVAN MERT SK. GURSESLI SITESI A1BLOK NO: 4/2 İÇ KAPI NO: 4 BAKIRKÖY/ İSTANBUL' },
       '32893788086': { ad: 'Serra Hekimoğlu', tckn: '32893788086', vd: 'MECİDİYEKÖY', nace: '862303', adres: 'TEŞVİKİYE MAH. NİŞANTAŞI IHLAMUR YOLU SK. BELDE APT. NO: 1 İÇ KAPI NO: 5 ŞİŞLİ/ İSTANBUL' },
@@ -126,9 +126,11 @@
     const KISISEL_RE_SAGLIK = /hastane|sağlık|tıp merkezi|poliklinik|muayenehane|diş polikliniği|göz merkezi|tıp mrkz|medikal|laboratuvar|eczane|ilaç/i;
     const KISISEL_RE = new RegExp(KISISEL_RE_BASE.source + '|' + KISISEL_RE_SAGLIK.source, 'i');
 
-    function faturaSinifla(unvan, vkn, matrah, nace) {
+    function faturaSinifla(unvan, vkn, matrah, nace, mukellefRec) {
       const txt = (unvan || '').toLocaleLowerCase('tr');
       const ozel = TEDARIKCI_OZEL[vkn];
+      // Aktif kayıtlı aracı olmayan mükelleflerde akaryakıt/otoyol/kasko = KİŞİSEL (indirilemez)
+      const aracYok = mukellefRec && mukellefRec.aracYok === true;
       // Doktor/dişçi (NACE 86*) için sağlık/ilaç mesleki gider — sadece BASE kişiseller (alkol/kozmetik vs) devre dışı.
       const isSaglikMeslek = (nace || '').startsWith('86');
       const kisiselKontrol = isSaglikMeslek ? KISISEL_RE_BASE : KISISEL_RE;
@@ -144,7 +146,10 @@
       if (DANISMANLIK_RE.test(txt) && !isMuhasebe) {
         return { sinif: '🤝 Danışmanlık', altKod: 0, altAd: 'Dışarıdan Sağlanan Fayda/Hizmet — Danışmanlık Gideri', turKod: isSaglikMeslek ? '3' : '4', otoGonder: false };
       }
-      if (ARAC_RE.test(txt)) return { sinif: '🚗 ARAÇ', altKod: 0, altAd: 'Araç gideri — elle kontrol', turKod: '4', otoGonder: false };
+      if (ARAC_RE.test(txt)) {
+        if (aracYok) return { sinif: '🔞 ÖZEL', altKod: 0, altAd: 'Kayıtlı aracı yok — kişisel harcama, işleme alınmaz', turKod: '4', otoGonder: false };
+        return { sinif: '🚗 ARAÇ', altKod: 0, altAd: 'Araç gideri — elle kontrol', turKod: '4', otoGonder: false };
+      }
       // Demirbaş: yüksek tutar + elektronik/donanım/mobilya/cihaz → amortismana tabi, elle kontrol.
       if (matrah >= DEMIRBAS_ESIK && DEMIRBAS_RE.test(txt)) {
         return { sinif: '🔧 DEMİRBAŞ', altKod: 0, altAd: 'Demirbaş — amortisman gerekir, elle kontrol (SMM 68/2 veya işletme mal alışı 191)', turKod: '4', otoGonder: false };
@@ -1626,7 +1631,7 @@
           const aciklama = notlar.join(' | ').slice(0, 300);
 
           // Sınıfla
-          const sinifBilgi = faturaSinifla(saticiUnvan + ' ' + aciklama, saticiVkn || saticiTckn, matrah, nace);
+          const sinifBilgi = faturaSinifla(saticiUnvan + ' ' + aciklama, saticiVkn || saticiTckn, matrah, nace, am && am.rec);
 
           return {
             fno, ettn, tarih, saticiVkn: saticiVkn || saticiTckn, saticiUnvan,
