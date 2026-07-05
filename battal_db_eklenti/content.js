@@ -1507,29 +1507,40 @@
           const toplam = say(tagTxt(lmt, 'PayableAmount') || tagTxt(lmt, 'TaxInclusiveAmount'));
           const matrahXml = say(tagTxt(lmt, 'TaxExclusiveAmount') || tagTxt(lmt, 'LineExtensionAmount'));
 
-          // Vergi ayrıştırma: KDV (0015) ve ÖİV (4171 / OIV / ÖİV) ayrı çekilir.
-          // Telecom faturasında ikisi tek TaxTotal içinde farklı TaxCategory ile gelir.
+          // Vergi ayrıştırma STRICT: Sadece TaxTypeCode/scheme = 0015 (KDV) olanlar KDV.
+          // Diğer tüm vergiler (ÖİV 4171, Konaklama 9015, Hazine Payı, Katkı Payı vb.)
+          // "digerVergi" havuzunda toplanır → tek KDVsiz kayıt (alt kod 218) olarak gider.
+          // Bu, telecom faturalarında KDV'yi doğru (matrah × %20) yapmak için kritik.
           const subTotals = (t.match(/<(?:\w+:)?TaxSubtotal[\s>][\s\S]*?<\/(?:\w+:)?TaxSubtotal>/g) || []);
-          let kdvToplam = 0, kdvOran = 0, oivToplam = 0, oivOran = 0, kdvMatrahi = 0;
-          const isOIVSub = st => {
-            const catId = tagTxt(st, 'TaxTypeCode') || tagTxt(tagIc(st, 'TaxCategory'), 'ID') || '';
-            const catName = tagTxt(tagIc(st, 'TaxCategory'), 'Name') + ' ' + tagTxt(tagIc(tagIc(st, 'TaxCategory'), 'TaxScheme'), 'Name') + ' ' + tagTxt(tagIc(tagIc(st, 'TaxCategory'), 'TaxScheme'), 'TaxTypeCode');
-            return /4171|ÖİV|OIV|OZEL ILET|ÖZEL İLET/i.test(catId + ' ' + catName);
+          let kdvToplam = 0, kdvOran = 0, digerVergi = 0, oivOran = 0, kdvMatrahi = 0;
+          const vergiKodu = st => {
+            const cat = tagIc(st, 'TaxCategory');
+            const scheme = tagIc(cat, 'TaxScheme');
+            return (tagTxt(scheme, 'TaxTypeCode') || tagTxt(cat, 'TaxTypeCode') || tagTxt(cat, 'ID') || '').trim();
           };
           if (subTotals.length) {
             subTotals.forEach(st => {
               const ta = say(tagTxt(st, 'TaxableAmount'));
               const tx = say(tagTxt(st, 'TaxAmount'));
               const pc = say(tagTxt(st, 'Percent'));
-              if (isOIVSub(st)) { oivToplam += tx; if (!oivOran) oivOran = Math.round(pc); }
-              else { kdvToplam += tx; kdvMatrahi += ta; if (!kdvOran) kdvOran = Math.round(pc); }
+              const kod = vergiKodu(st);
+              if (kod === '0015') {
+                // Gerçek KDV
+                kdvToplam += tx; kdvMatrahi += ta;
+                if (!kdvOran || pc > kdvOran) kdvOran = Math.round(pc);
+              } else {
+                // ÖİV + tüm diğer ek vergiler (Konaklama, Hazine Payı, Katkı Payı…)
+                digerVergi += tx;
+                if (kod === '4171' && !oivOran) oivOran = Math.round(pc);
+              }
             });
             if (!kdvOran && kdvMatrahi > 0) kdvOran = Math.round(kdvToplam / kdvMatrahi * 100);
           } else {
-            // Yedek: TaxTotal → TaxAmount (ayrım yok)
+            // Yedek: TaxTotal → TaxAmount (ayrım yok, muhtemelen basit fatura)
             const taxTotal = tagIc(t, 'TaxTotal');
             kdvToplam = say(tagTxt(taxTotal, 'TaxAmount'));
           }
+          const oivToplam = digerVergi; // eski değişken adını koru
           const matrah = matrahXml > 0 ? matrahXml : (toplam - kdvToplam - oivToplam);
 
           // Açıklama (Note alanı + kalem açıklamaları)
