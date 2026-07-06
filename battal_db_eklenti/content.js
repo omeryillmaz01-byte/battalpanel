@@ -922,12 +922,16 @@
               k.kdvOrani = oran;
               if ('kdv' in k) k.kdv = kdv;
               k.aciklama = s.aciklama || (b.zno + ' NL. Z RAPORU Mal Satışı');
+              // CREATE için: eski kaydın kimlik alanlarını temizle (yoksa API UPDATE zanneder)
+              delete k.id; delete k.gelirBelgeId; delete k.key; delete k.gelirId;
               belgeToplam += dahil;
               return k;
             });
             P.belgeTutari = r2(belgeToplam);
             P[krediKey] = r2(b.kredi);
             if (nakitKey) P[nakitKey] = r2(b.nakit);
+            // Aynı şekilde belge kimlik alanlarını temizle
+            delete P.id; delete P.gelirBelgeId; delete P.key; delete P.gelirId;
             const cr = await fetch(B + '/gelir/create', { method: 'POST', headers: H, body: JSON.stringify(P), credentials: 'include' });
             const cj = await cr.json();
             if (cr.status === 200 && cj.resultContainer && !cj.errorMessage) { zlog('  ✅ Z ' + b.zno + ' (' + belgeToplam.toFixed(2) + ' TL' + (b.satirlar.length > 1 ? ', ' + b.satirlar.length + ' satır' : '') + ')', '#10b981'); ok++; }
