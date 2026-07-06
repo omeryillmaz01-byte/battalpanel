@@ -1270,8 +1270,9 @@
       butonEkle('🚀 Eksik Giderleri Oto Gönder', eksikGiderGonder, 'linear-gradient(135deg,#f59e0b,#d97706)', '__eksikBtn', 132);
       butonEkle('📊 Gelir Kontrol', gelirKontrol, 'linear-gradient(135deg,#d4af37,#b8941f)', '__glBtn', 188);
       butonEkle('📤 Giden (Satış) Gönder', gidenGonder, 'linear-gradient(135deg,#60a5fa,#2563eb)', '__gdGonderBtn', 244);
-      butonEkle('📋 e-SMM Eksik Bul', esmmEksik, 'linear-gradient(135deg,#34d399,#059669)', '__esmmBtn', 300);
-      butonEkle('🔒 Kimlik/Adres Kontrol', kimlikKontrol, 'linear-gradient(135deg,#a78bfa,#7c3aed)', '__kimlikBtn', 356);
+      butonEkle('📊 Z Raporu Gönder', zRaporGonder, 'linear-gradient(135deg,#22c55e,#15803d)', '__zGonderBtn', 300);
+      butonEkle('📋 e-SMM Eksik Bul', esmmEksik, 'linear-gradient(135deg,#34d399,#059669)', '__esmmBtn', 356);
+      butonEkle('🔒 Kimlik/Adres Kontrol', kimlikKontrol, 'linear-gradient(135deg,#a78bfa,#7c3aed)', '__kimlikBtn', 412);
     };
     kur();
     setInterval(kur, 2000);
