@@ -1599,19 +1599,35 @@ if(fails.length)console.log('Hatalı: '+fails.slice(0,10).join(' | '));
         raporlar.push({tarih:tar, zno, tutar, oran, nakit, kredi, hesKdv, aciklama:acik, uyari:[]});
       }
       if(!raporlar.length) return;
-      // Kontroller
-      const seen={};
+      // Kontroller — karışık KDV oranlı (%1+%20) Z raporlarını destekle:
+      // Aynı Z No birden fazla KDV oranı ile gelebilir (ör. çay %20 + gıda %1).
+      // Bunlar mükerrer sayılmaz; nakit+kredi de Z No bazında toplu kontrol edilir.
+      const seenKombin={}; // "zno|oran" — gerçek mükerrer (aynı Z no + aynı oran)
+      const znoTop={}; // Z No bazında toplam tutar/nakit/kredi
+      raporlar.forEach(x=>{
+        if(!znoTop[x.zno]) znoTop[x.zno]={tutar:0, nakit:0, kredi:0, tarihler:new Set()};
+        znoTop[x.zno].tutar += x.tutar;
+        znoTop[x.zno].nakit += x.nakit;
+        znoTop[x.zno].kredi += x.kredi;
+        if(x.tarih) znoTop[x.zno].tarihler.add(x.tarih);
+      });
       raporlar.forEach(x=>{
         if(!/^\d{2}\.\d{2}\.\d{4}$/.test(x.tarih)) x.uyari.push('TARİH?');
         if([0,1,8,10,18,20].indexOf(x.oran)<0) x.uyari.push('KDV ORANI?');
-        // Nakit+Kredi = Tutar
-        if(Math.abs((x.nakit+x.kredi)-x.tutar)>0.05) x.uyari.push('NAKİT+KREDİ≠TUTAR');
         // Hesaplanan KDV doğrulama (KDV dahil → matrah=tutar/(1+oran))
         const beklenenKdv=this.r2(x.tutar-x.tutar/(1+x.oran/100));
         if(x.hesKdv>0 && Math.abs(beklenenKdv-x.hesKdv)>0.05) x.uyari.push('KDV HESAP?');
         x.hesKdvBeklenen=beklenenKdv;
-        // Mükerrer Z No
-        if(seen[x.zno]) x.uyari.push('MÜKERRER Z NO'); else seen[x.zno]=1;
+        // Mükerrer: aynı Z No + aynı KDV oranı (karışık oranlı Z raporunda farklı oranlı satırlar OK)
+        const kombin = x.zno+'|'+x.oran;
+        if(seenKombin[kombin]) x.uyari.push('MÜKERRER Z NO'); else seenKombin[kombin]=1;
+        // NAKİT+KREDİ = TUTAR kontrolü: Z No bazında topluca yapılır. Karışık oranlı Z'lerde
+        // nakit/kredi genelde sadece bir satırda yazılır, diğerinde 0 olur.
+        const top = znoTop[x.zno];
+        if(top && Math.abs((top.nakit+top.kredi)-top.tutar)>0.05) {
+          // Sadece Z No'nun ilk satırında uyarı ver (aksi halde her satırda tekrar eder)
+          if(x.oran === raporlar.find(r=>r.zno===x.zno).oran) x.uyari.push('NAKİT+KREDİ≠TUTAR (Z No toplam)');
+        }
       });
       firmalar.push({ sheet:sn, vkn:mvkn||vkn, ad:mad, nace:naceFinal, eslesti:!!mvkn, raporlar });
     });
