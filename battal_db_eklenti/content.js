@@ -899,7 +899,10 @@
         if (TK) H.Token = TK;
         // Şablon kayıt kaleminin KDV dahil mi olduğunu tespit et
         const kTmpl = (tmpl.kayitlar && tmpl.kayitlar[0]) || {};
-        const kdvDahil = kTmpl.isKdvDahil !== false; // Z raporu: genelde true
+        // Panelden gelen tutar KDV DAHİL kabul edilir (Excel'de "Tutar (KDV Dahil)" kolonu).
+        // Şablonun isKdvDahil değerine göre DB'ye ya KDV DAHİL ya KDV HARİÇ gönderilir.
+        // Ama DB'nin çift KDV hesaplamasını önlemek için: DB tutar alanı her zaman MATRAH (KDV HARİÇ) olur.
+        const isKdvDahilField = kTmpl.isKdvDahil === true; // şablon KDV dahil kaydediyor mu?
         const nakitKey = Object.keys(tmpl).find(k => /nakit/i.test(k));
         const krediKey = Object.keys(tmpl).find(k => /krediKarti/i.test(k)) || 'krediKartiTutari';
         zlog('🚀 ' + firma.ad + ' — ' + belgeler.length + ' Z raporu API ile gönderiliyor…', '#7c3aed');
@@ -916,13 +919,17 @@
             P.kayitlar = b.satirlar.map(s => {
               const k = JSON.parse(JSON.stringify(kTmpl));
               const oran = s.oran || 0;
-              let matrah, kdv, dahil;
-              if (kdvDahil) { dahil = s.tutar; matrah = r2(dahil / (1 + oran / 100)); kdv = r2(dahil - matrah); k.tutar = dahil; }
-              else { matrah = s.tutar; kdv = r2(matrah * oran / 100); k.tutar = matrah; dahil = r2(matrah + kdv); }
+              // Panelden gelen tutar KDV DAHİL. Matrahı ve KDV'yi ayır.
+              const dahil = s.tutar;
+              const matrah = r2(dahil / (1 + oran / 100));
+              const kdv = r2(dahil - matrah);
+              // DB tutar alanı: şablon isKdvDahil=true ise DAHİL değer, değilse HARİÇ (matrah).
+              k.tutar = isKdvDahilField ? dahil : matrah;
+              k.isKdvDahil = isKdvDahilField;
               k.kdvOrani = oran;
               if ('kdv' in k) k.kdv = kdv;
               k.aciklama = s.aciklama || (b.zno + ' NL. Z RAPORU Mal Satışı');
-              // CREATE için: eski kaydın kimlik alanlarını temizle (yoksa API UPDATE zanneder)
+              // CREATE için: eski kaydın kimlik alanlarını temizle
               delete k.id; delete k.gelirBelgeId; delete k.key; delete k.gelirId;
               belgeToplam += dahil;
               return k;
