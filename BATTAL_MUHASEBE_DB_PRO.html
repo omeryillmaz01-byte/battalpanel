@@ -1579,6 +1579,17 @@ if(fails.length)console.log('Hatalı: '+fails.slice(0,10).join(' | '));
         const tutar=this.num(r[3]);
         if(!zno||!(tutar>0)) continue;
         let tar=String(r[0]||'').split(' ')[0];
+        // Excel serial number → tarih. 46174 gibi salt sayılar 1900-01-01 tabanlı Excel gün sayısıdır.
+        const _srNo = parseFloat(tar);
+        if(!isNaN(_srNo) && _srNo>20000 && _srNo<100000 && /^\d+(\.\d+)?$/.test(tar)){
+          // Windows Excel: 1900-02-29 leap bug için 25569 = 1970-01-01. Yaklaşık dönüşüm yeterli.
+          const _d = new Date(Math.round((_srNo - 25569) * 86400 * 1000));
+          if(!isNaN(_d.getTime())){
+            const _dd = ('0'+_d.getDate()).slice(-2);
+            const _mm = ('0'+(_d.getMonth()+1)).slice(-2);
+            tar = _dd + '.' + _mm + '.' + _d.getFullYear();
+          }
+        }
         if(/^\d{4}-\d{2}-\d{2}/.test(tar)){const p=tar.split('-');tar=p[2].slice(0,2)+'.'+p[1]+'.'+p[0];}
         const oran=this.num(r[4])||0;
         const nakit=this.num(r[5]);
