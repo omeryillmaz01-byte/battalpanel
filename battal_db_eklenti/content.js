@@ -919,15 +919,16 @@
             P.kayitlar = b.satirlar.map(s => {
               const k = JSON.parse(JSON.stringify(kTmpl));
               const oran = s.oran || 0;
-              // Panelden gelen tutar KDV DAHİL. Matrahı ve KDV'yi ayır.
+              // Excel'de yazan tutar KDV DAHİL (Excel kolon başlığı "Tutar (KDV Dahil)")
               const dahil = s.tutar;
               const matrah = r2(dahil / (1 + oran / 100));
               const kdv = r2(dahil - matrah);
-              // DB tutar alanı: şablon isKdvDahil=true ise DAHİL değer, değilse HARİÇ (matrah).
-              k.tutar = isKdvDahilField ? dahil : matrah;
-              k.isKdvDahil = isKdvDahilField;
+              // DB API "tutar" alanı KDV HARİÇ matrah + isKdvDahil:false + kdv ayrı bekliyor.
+              // (gider/create'te de aynı yapı — çift KDV hesaplamasını önlemek için ZORUNLU.)
+              k.tutar = matrah;
+              k.isKdvDahil = false;
               k.kdvOrani = oran;
-              if ('kdv' in k) k.kdv = kdv;
+              k.kdv = kdv;
               k.aciklama = s.aciklama || (b.zno + ' NL. Z RAPORU Mal Satışı');
               // CREATE için: eski kaydın kimlik alanlarını temizle
               delete k.id; delete k.gelirBelgeId; delete k.key; delete k.gelirId;
