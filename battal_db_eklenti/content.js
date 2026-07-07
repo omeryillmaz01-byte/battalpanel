@@ -1724,16 +1724,30 @@
             const ic = m.replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').trim();
             if (ic && ic.length > 2 && !/UYUM|e-?Fatura|e-?Arsiv|UBL|uuid|Hash/i.test(ic)) notlar.push(ic);
           });
-          // InvoiceLine açıklamaları
+          // InvoiceLine açıklamaları + gecikme zammı tespiti (elektrik fat.)
           const lines = t.match(/<(?:\w+:)?InvoiceLine[\s>][\s\S]*?<\/(?:\w+:)?InvoiceLine>/g) || [];
+          let gecikmeTutar = 0;
           lines.forEach(ln => {
             const desc = tagTxt(ln, 'Description') || tagTxt(tagIc(ln, 'Item'), 'Name') || '';
             if (desc && desc.length > 2) notlar.push(desc);
+            // Elektrik faturalarında gecikme zammı/faizi ayrı satır olarak gelir.
+            // Matrahtan düşürülmesi gerekir (user talimatı: gecikme zammı işleme alınmaz).
+            if (/gecikme ?zamm|gecikme ?faiz/i.test(desc)) {
+              const lineExt = say(tagTxt(ln, 'LineExtensionAmount'));
+              gecikmeTutar += lineExt;
+            }
           });
           const aciklama = notlar.join(' | ').slice(0, 300);
+          const elektrikMi = /enerjisa|bedaş|ayedaş|boğaziçi elektrik|elektrik perakende|elektrik dağıt|elektrik/i.test(saticiUnvan + ' ' + aciklama);
 
           // Sınıfla
           const sinifBilgi = faturaSinifla(saticiUnvan + ' ' + aciklama, saticiVkn || saticiTckn, matrah, nace, am && am.rec, aciklama);
+          // Elektrik faturasında gecikme zammı varsa: kullanıcı elle işlesin (matrah/KDV manuel)
+          if (elektrikMi && gecikmeTutar > 0.01) {
+            sinifBilgi.otoGonder = false;
+            sinifBilgi.altAd = '⚠️ Gecikme zammı ' + gecikmeTutar.toFixed(2) + ' TL — elle düzelt (matrah gecikme zammı hariç, KDV Vergi/Fonlar altındaki değer)';
+            sinifBilgi.sinif = '⚡ Elektrik (Gecikme Zammı)';
+          }
 
           return {
             fno, ettn, tarih, saticiVkn: saticiVkn || saticiTckn, saticiUnvan,
