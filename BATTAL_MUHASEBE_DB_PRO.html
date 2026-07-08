@@ -1085,6 +1085,14 @@ const App = {
       const seri = g('belgeSeri').trim();
       if(seri && !/^[A-Z]{2,3}\d/.test(bn)){ bn = (seri + bn).replace(/\s+/g,''); }
       let tar = g('tarih').split(' ')[0];
+      // Excel serial number (ör. 45815) → tarih dönüşümü (openpyxl/xlsx bunu tam sayı verir)
+      const _srNo = parseFloat(tar);
+      if(!isNaN(_srNo) && _srNo>20000 && _srNo<100000 && /^\d+(\.\d+)?$/.test(tar)){
+        const _d = new Date(Math.round((_srNo - 25569) * 86400 * 1000));
+        if(!isNaN(_d.getTime())){
+          tar = ('0'+_d.getDate()).slice(-2) + '.' + ('0'+(_d.getMonth()+1)).slice(-2) + '.' + _d.getFullYear();
+        }
+      }
       if(/^\d{4}-\d{2}-\d{2}/.test(tar)){const a=tar.split('-');tar=a[2].slice(0,2)+'.'+a[1]+'.'+a[0]}
       tar = tar.replace(/^(\d)\./,'0$1.').replace(/\.(\d)\./,'.0$1.');
       const vkn = (g('vkn').match(/\b(\d{10,11})\b/)||[,''])[1];
