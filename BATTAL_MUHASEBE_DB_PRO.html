@@ -1113,7 +1113,13 @@ const App = {
       // POS ise brut kredi kartına, aksi halde nakit hanesine yazılır (kkAyrim aktif mükelleflerde)
       const krediKart = posMu ? brut : 0;
       const nakit    = posMu ? 0 : brut;
-      out.push({belgeNo:bn,tarih:tar,vkn,unvan,matrah,kdv,stopaj,odenecek:brut,iptal,iade:/iade/.test(durum),tahsilatHesap:tHesap,krediKart,nakit,posMu});
+      // Uyarı kontrolleri: belge no, tarih, vkn, matrah zorunlu
+      const uyari = [];
+      if(!bn) uyari.push('BELGE NO?');
+      if(!/^\d{2}\.\d{2}\.\d{4}$/.test(tar)) uyari.push('TARİH?');
+      if(!vkn) uyari.push('VKN?');
+      if(!(matrah>0)) uyari.push('MATRAH?');
+      out.push({belgeNo:bn,tarih:tar,vkn,unvan,matrah,kdv,stopaj,odenecek:brut,iptal,iade:/iade/.test(durum),tahsilatHesap:tHesap,krediKart,nakit,posMu,uyari});
     }
     this.gelirData = out;
     this.gelirFilter();
