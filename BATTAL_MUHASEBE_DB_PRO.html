@@ -1491,7 +1491,9 @@ if(vkn && rc){ P.tcknVkn=vkn; P.ad=rc.ad; P.soyad=rc.soyad; P.vergiDairesiKodu=r
 const P={gelirBelgeTuruKodu:"10",versiyon:11,kayitTarihi:t,belgeTarihi:t,nihaiTuketici:${m.nihaiTuketici},belgeSiraNo:bno,tcknVkn:vkn,ad:rc.ad,soyad:rc.soyad,vergiDairesiKodu:rc.vergiDairesiKodu,subeNo:rc.subeNo,adresiGuncelleme:false,krediKartiTutari:kk||0,belgeTutari:mat,kayitlar:[{deleted:false,satisTuruKodu:"1",gelirKayitTuruKodu:"2",gelirKayitAltTuruKodu:"${m.altKod}",aciklama:((rc.soyad||'')+' '+(rc.ad||'')).trim().toLocaleUpperCase('tr')+' - ${m.altAd}',tutar:mat,naceKodu:"${m.nace}",isKdvDahil:false,kdv:kdv,kdvOrani:${m.kdvOrani},tevkifatUygulanmayanKodu:"1100"}]};`}
 const cr=await fetch(B+'/gelir/create',{method:'POST',headers:H,body:JSON.stringify(P),credentials:'include'});const cj=await cr.json();
 if(cr.status===200&&cj.resultContainer&&!cj.errorMessage)return{bno,s:'✅'};
-return{bno,s:'❌',m:(cj.errorMessage||cj.statusMessage||cr.status).toString().slice(0,60)};
+const msg=(cj.errorMessage||cj.statusMessage||JSON.stringify(cj).slice(0,200)||cr.status).toString();
+if(/aynı|mükerrer|zaten|kay[ıi]tl[ıi]/i.test(msg)) return {bno,s:'⏭',m:'zaten kayıtlı'};
+return{bno,s:'❌',m:msg.slice(0,150)};
 }catch(e){return{bno,s:'❌',m:e.message};}}
 let ok=0,er=0;const fails=[];
 for(let i=0;i<DATA.length;i+=5){
