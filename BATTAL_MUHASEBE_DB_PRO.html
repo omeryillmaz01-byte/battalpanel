@@ -1080,7 +1080,10 @@ const App = {
       const r=rows[i];if(!r||r.every(c=>c==='')) continue;
       const g = k=>cm.cols[k]>=0?String(r[cm.cols[k]]||''):'';
       const bc = g('belge');
-      const bn = (bc.match(/[A-Z]{2,3}\d{8,16}/)||[''])[0]||bc.trim();
+      let bn = (bc.match(/[A-Z]{2,3}\d{8,16}/)||[''])[0]||bc.trim();
+      // Fatura seri + Fatura sıra ayrı kolonlarda ise birleştir: "CAN"+"2026000000933" = "CAN2026000000933"
+      const seri = g('belgeSeri').trim();
+      if(seri && !/^[A-Z]{2,3}\d/.test(bn)){ bn = (seri + bn).replace(/\s+/g,''); }
       let tar = g('tarih').split(' ')[0];
       if(/^\d{4}-\d{2}-\d{2}/.test(tar)){const a=tar.split('-');tar=a[2].slice(0,2)+'.'+a[1]+'.'+a[0]}
       tar = tar.replace(/^(\d)\./,'0$1.').replace(/\.(\d)\./,'.0$1.');
@@ -1093,6 +1096,10 @@ const App = {
       const vergi0 = this.num(g('vergi'));
       const durum = g('durum').toLocaleLowerCase('tr');
       const iptal = /iptal/.test(durum);
+      // Tahsilat hesabı: POS geçiyorsa Kredi Kartı, aksi halde Nakit
+      // (Kullanıcı kuralı: "Garanti Bankası"=Nakit, "Garanti POS"/"İş Bankası POS"=Kredi Kartı)
+      const tHesap = g('tahsilatHesap').trim();
+      const posMu = /pos/i.test(tHesap);
       const m = MUKELLEFLER[this.aktifVkn];
       let matrah, kdv, stopaj;
       if(m.stopaj){ // 20/20 — ödenecek = matrah
@@ -1102,7 +1109,11 @@ const App = {
       } else { // stopajsız, KDV hariç
         matrah = matrah0||this.r2(odenecek-kdv0); kdv = kdv0||this.r2(matrah*m.kdvOrani/100); stopaj=0;
       }
-      out.push({belgeNo:bn,tarih:tar,vkn,unvan,matrah,kdv,stopaj,odenecek:odenecek||matrah+kdv,iptal,iade:/iade/.test(durum)});
+      const brut = odenecek || (matrah + kdv);
+      // POS ise brut kredi kartına, aksi halde nakit hanesine yazılır (kkAyrim aktif mükelleflerde)
+      const krediKart = posMu ? brut : 0;
+      const nakit    = posMu ? 0 : brut;
+      out.push({belgeNo:bn,tarih:tar,vkn,unvan,matrah,kdv,stopaj,odenecek:brut,iptal,iade:/iade/.test(durum),tahsilatHesap:tHesap,krediKart,nakit,posMu});
     }
     this.gelirData = out;
     this.gelirFilter();
@@ -1415,7 +1426,8 @@ const App = {
     });
     if(!arr.length){alert('Gönderilecek temiz kayıt yok');return}
 
-    const veri = arr.map(r=>`["${r.belgeNo}","${r.vkn}",${r.matrah},"${r.tarih}"]`).join(',\n  ');
+    // Cihan tarzı (kkAyrim=true) → her satır için kredi kartı/nakit ayrımını da paketle
+    const veri = arr.map(r=>`["${r.belgeNo}","${r.vkn}",${r.matrah},"${r.tarih}",${r.krediKart||0},${r.nakit||0}]`).join(',\n  ');
     const script = `(async()=>{
 const TOKEN="${localStorage.getItem('dbToken')}";
 const H={'Content-Type':'application/json; charset=utf-8','Token':TOKEN};
@@ -1425,18 +1437,18 @@ const DATA=[
 ];
 const r2=v=>Math.round(v*100)/100;
 const iso=t=>{const a=t.split('.');return a[2]+'-'+a[1]+'-'+a[0]+' 00:00:00';};
-async function islem(d){const[bno,vkn,mat,tar]=d;try{
+async function islem(d){const[bno,vkn,mat,tar,kk,nkt]=d;try{
 const lj=await(await fetch(B+'/adresdefteri/findbytckn/'+vkn,{method:'POST',headers:H,body:'{}',credentials:'include'})).json();
 const rc=lj.resultContainer;if(!rc||!rc.vergiDairesiKodu)return{bno,s:'❌',m:'VD yok'};
 ${m.stopaj?
 `const kdv=r2(mat*${m.kdvOrani}/100),stp=r2(mat*${m.stopajOran}/100),t=iso(tar);
-const P={gelirBelgeTuruKodu:"10",versiyon:11,kayitTarihi:t,belgeTarihi:t,nihaiTuketici:${m.nihaiTuketici},belgeSiraNo:bno,tcknVkn:vkn,ad:rc.ad,soyad:rc.soyad,vergiDairesiKodu:rc.vergiDairesiKodu,subeNo:rc.subeNo,adresiGuncelleme:false,krediKartiTutari:0,belgeTutari:mat,kayitlar:[{deleted:false,satisTuruKodu:"1",gelirKayitTuruKodu:"2",gelirKayitAltTuruKodu:"${m.altKod}",aciklama:((rc.soyad||'')+' '+(rc.ad||'')).trim().toLocaleUpperCase('tr')+' - ${m.altAd}',tutar:mat,naceKodu:"${m.nace}",isKdvDahil:false,kdv:kdv,kdvOrani:${m.kdvOrani},stopajKodu:"022",stopajTutari:stp,tevkifatUygulanmayanKodu:"1100"}]};`
+const P={gelirBelgeTuruKodu:"10",versiyon:11,kayitTarihi:t,belgeTarihi:t,nihaiTuketici:${m.nihaiTuketici},belgeSiraNo:bno,tcknVkn:vkn,ad:rc.ad,soyad:rc.soyad,vergiDairesiKodu:rc.vergiDairesiKodu,subeNo:rc.subeNo,adresiGuncelleme:false,krediKartiTutari:kk||0,belgeTutari:mat,kayitlar:[{deleted:false,satisTuruKodu:"1",gelirKayitTuruKodu:"2",gelirKayitAltTuruKodu:"${m.altKod}",aciklama:((rc.soyad||'')+' '+(rc.ad||'')).trim().toLocaleUpperCase('tr')+' - ${m.altAd}',tutar:mat,naceKodu:"${m.nace}",isKdvDahil:false,kdv:kdv,kdvOrani:${m.kdvOrani},stopajKodu:"022",stopajTutari:stp,tevkifatUygulanmayanKodu:"1100"}]};`
 :m.kdvDahil?
 `const gross=mat,matrah=r2(gross/(1+${m.kdvOrani}/100)),kdv=r2(gross-matrah),t=iso(tar);
-const P={gelirBelgeTuruKodu:"10",versiyon:11,kayitTarihi:t,belgeTarihi:t,nihaiTuketici:${m.nihaiTuketici},belgeSiraNo:bno,tcknVkn:vkn,ad:rc.ad,soyad:rc.soyad,vergiDairesiKodu:rc.vergiDairesiKodu,subeNo:rc.subeNo,adresiGuncelleme:false,krediKartiTutari:0,belgeTutari:gross,kayitlar:[{deleted:false,satisTuruKodu:"1",gelirKayitTuruKodu:"2",gelirKayitAltTuruKodu:"${m.altKod}",aciklama:((rc.soyad||'')+' '+(rc.ad||'')).trim().toLocaleUpperCase('tr')+' - ${m.altAd}',tutar:matrah,naceKodu:"${m.nace}",isKdvDahil:false,kdv:kdv,kdvOrani:${m.kdvOrani},tevkifatUygulanmayanKodu:"1100"}]};`
+const P={gelirBelgeTuruKodu:"10",versiyon:11,kayitTarihi:t,belgeTarihi:t,nihaiTuketici:${m.nihaiTuketici},belgeSiraNo:bno,tcknVkn:vkn,ad:rc.ad,soyad:rc.soyad,vergiDairesiKodu:rc.vergiDairesiKodu,subeNo:rc.subeNo,adresiGuncelleme:false,krediKartiTutari:kk||0,belgeTutari:gross,kayitlar:[{deleted:false,satisTuruKodu:"1",gelirKayitTuruKodu:"2",gelirKayitAltTuruKodu:"${m.altKod}",aciklama:((rc.soyad||'')+' '+(rc.ad||'')).trim().toLocaleUpperCase('tr')+' - ${m.altAd}',tutar:matrah,naceKodu:"${m.nace}",isKdvDahil:false,kdv:kdv,kdvOrani:${m.kdvOrani},tevkifatUygulanmayanKodu:"1100"}]};`
 :
 `const kdv=r2(mat*${m.kdvOrani}/100),t=iso(tar);
-const P={gelirBelgeTuruKodu:"10",versiyon:11,kayitTarihi:t,belgeTarihi:t,nihaiTuketici:${m.nihaiTuketici},belgeSiraNo:bno,tcknVkn:vkn,ad:rc.ad,soyad:rc.soyad,vergiDairesiKodu:rc.vergiDairesiKodu,subeNo:rc.subeNo,adresiGuncelleme:false,krediKartiTutari:0,belgeTutari:mat,kayitlar:[{deleted:false,satisTuruKodu:"1",gelirKayitTuruKodu:"2",gelirKayitAltTuruKodu:"${m.altKod}",aciklama:((rc.soyad||'')+' '+(rc.ad||'')).trim().toLocaleUpperCase('tr')+' - ${m.altAd}',tutar:mat,naceKodu:"${m.nace}",isKdvDahil:false,kdv:kdv,kdvOrani:${m.kdvOrani},tevkifatUygulanmayanKodu:"1100"}]};`}
+const P={gelirBelgeTuruKodu:"10",versiyon:11,kayitTarihi:t,belgeTarihi:t,nihaiTuketici:${m.nihaiTuketici},belgeSiraNo:bno,tcknVkn:vkn,ad:rc.ad,soyad:rc.soyad,vergiDairesiKodu:rc.vergiDairesiKodu,subeNo:rc.subeNo,adresiGuncelleme:false,krediKartiTutari:kk||0,belgeTutari:mat,kayitlar:[{deleted:false,satisTuruKodu:"1",gelirKayitTuruKodu:"2",gelirKayitAltTuruKodu:"${m.altKod}",aciklama:((rc.soyad||'')+' '+(rc.ad||'')).trim().toLocaleUpperCase('tr')+' - ${m.altAd}',tutar:mat,naceKodu:"${m.nace}",isKdvDahil:false,kdv:kdv,kdvOrani:${m.kdvOrani},tevkifatUygulanmayanKodu:"1100"}]};`}
 const cr=await fetch(B+'/gelir/create',{method:'POST',headers:H,body:JSON.stringify(P),credentials:'include'});const cj=await cr.json();
 if(cr.status===200&&cj.resultContainer&&!cj.errorMessage)return{bno,s:'✅'};
 return{bno,s:'❌',m:(cj.errorMessage||cj.statusMessage||cr.status).toString().slice(0,60)};
@@ -1743,17 +1755,20 @@ if(fails.length)console.log('Hatalı: '+fails.slice(0,10).join(' | '));
     const f = (...keys)=>h.findIndex(c=>keys.some(k=>c.includes(k)));
     const fN = (yes,no)=>h.findIndex(c=>yes.some(k=>c.includes(k))&&!no.some(k=>c.includes(k)));
     const cols = {
-      belge: f('makbuz no','belge no','fatura no','belge numara','gib belge'),
+      belge: f('makbuz no','belge no','fatura no','belge numara','gib belge','fatura sıra','fatura sira'),
+      belgeSeri: f('fatura seri','belge seri'),
       tarih: fN(['belge tarih','fatura tarih','düzenleme tarih','tarih'],['oluştur']),
-      unvan: fN(['alıcı','alici','ünvan','unvan','gönderici','gönderen','cari','satıcı','ad soyad'],['vkn','tckn','kimlik','vergi no']),
-      vkn:   f('vkn/tckn','vkn','tckn','vergi no','kimlik'),
-      matrah:tip==='gider'?f('vergiler hariç','kdv hariç','matrah'):f('kdv matrah','mal hizmet','matrah','vergiler hariç','brüt toplam'),
+      unvan: fN(['alıcı','alici','ünvan','unvan','gönderici','gönderen','cari','satıcı','ad soyad','müşteri','musteri'],['vkn','tckn','kimlik','vergi no','vergi numara']),
+      vkn:   f('vkn/tckn','vkn','tckn','vergi no','kimlik','vergi numara','müşteri vergi'),
+      matrah:tip==='gider'?f('vergiler hariç','kdv hariç','matrah'):f('kdv matrah','mal hizmet','matrah','vergiler hariç','brüt toplam','ara toplam'),
       kdv:   f('toplam kdv','hesaplanan kdv','kdv tutar'),
-      odenecek:f('ödenecek','net tahsil'),
+      odenecek:f('ödenecek','net tahsil','genel toplam','toplam tahsil'),
       stopaj:f('toplam stopaj'),
       vergi: f('toplam vergi'),
       durum: f('durum','makbuz durumu','fatura durumu'),
       faturaTipi: f('fatura tipi','fatura tı','senaryo tipi','tip'),
+      // Cihan tarzı SMM'de tahsilat hesabı (POS/Nakit/Banka) ayrımı için
+      tahsilatHesap: f('tahsilatın yapıldığı hesap','tahsilat hesab','tahsilat hesap','ödeme türü','odeme turu'),
       // Gider: KDV oranlı kolonlar
       kdv0m: f('%0 kdv matrah'),
       kdv1m: f('%1 kdv matrah'),
