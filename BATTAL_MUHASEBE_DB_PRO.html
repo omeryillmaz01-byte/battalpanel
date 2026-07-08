@@ -1446,7 +1446,19 @@ const App = {
     if(!arr.length){alert('Gönderilecek temiz kayıt yok');return}
 
     // Cihan tarzı (kkAyrim=true) → her satır için kredi kartı/nakit ayrımını da paketle
-    const veri = arr.map(r=>`["${r.belgeNo}","${r.vkn}",${r.matrah},"${r.tarih}",${r.krediKart||0},${r.nakit||0}]`).join(',\n  ');
+    // Ad ve soyad ayrımı: son kelime soyad, öncekiler ad. "Sinem Sonuvar" → ad:"SİNEM", soyad:"SONUVAR"
+    const parseAdSoyad = u => {
+      const p = (u||'').trim().split(/\s+/).filter(Boolean);
+      if(!p.length) return {ad:'MÜŞTERİ',soyad:''};
+      if(p.length===1) return {ad:p[0].toLocaleUpperCase('tr'),soyad:''};
+      const soyad = p[p.length-1].toLocaleUpperCase('tr');
+      const ad = p.slice(0,-1).join(' ').toLocaleUpperCase('tr');
+      return {ad,soyad};
+    };
+    const veri = arr.map(r=>{
+      const {ad,soyad} = parseAdSoyad(r.unvan);
+      return `["${r.belgeNo}","${r.vkn}",${r.matrah},"${r.tarih}",${r.krediKart||0},${r.nakit||0},"${ad.replace(/"/g,'')}","${soyad.replace(/"/g,'')}"]`;
+    }).join(',\n  ');
     const script = `(async()=>{
 const TOKEN="${localStorage.getItem('dbToken')}";
 const H={'Content-Type':'application/json; charset=utf-8','Token':TOKEN};
@@ -1456,7 +1468,7 @@ const DATA=[
 ];
 const r2=v=>Math.round(v*100)/100;
 const iso=t=>{const a=t.split('.');return a[2]+'-'+a[1]+'-'+a[0]+' 00:00:00';};
-async function islem(d){const[bno,vkn,mat,tar,kk,nkt]=d;try{
+async function islem(d){const[bno,vkn,mat,tar,kk,nkt,nAd,nSoyad]=d;try{
 let rc = null;
 if(vkn){
   const lj=await(await fetch(B+'/adresdefteri/findbytckn/'+vkn,{method:'POST',headers:H,body:'{}',credentials:'include'})).json();
@@ -1468,8 +1480,8 @@ ${m.stopaj?
 const P={gelirBelgeTuruKodu:"10",versiyon:11,kayitTarihi:t,belgeTarihi:t,nihaiTuketici:${m.nihaiTuketici},belgeSiraNo:bno,tcknVkn:vkn,ad:rc.ad,soyad:rc.soyad,vergiDairesiKodu:rc.vergiDairesiKodu,subeNo:rc.subeNo,adresiGuncelleme:false,krediKartiTutari:kk||0,belgeTutari:mat,kayitlar:[{deleted:false,satisTuruKodu:"1",gelirKayitTuruKodu:"2",gelirKayitAltTuruKodu:"${m.altKod}",aciklama:((rc.soyad||'')+' '+(rc.ad||'')).trim().toLocaleUpperCase('tr')+' - ${m.altAd}',tutar:mat,naceKodu:"${m.nace}",isKdvDahil:false,kdv:kdv,kdvOrani:${m.kdvOrani},stopajKodu:"022",stopajTutari:stp,tevkifatUygulanmayanKodu:"1100"}]};`
 :m.kdvDahil?
 `const gross=mat,matrah=r2(gross/(1+${m.kdvOrani}/100)),kdv=r2(gross-matrah),t=iso(tar);
-const acikAd = rc ? ((rc.soyad||'')+' '+(rc.ad||'')).trim().toLocaleUpperCase('tr') : 'MÜŞTERİ';
-const P={gelirBelgeTuruKodu:"10",versiyon:11,kayitTarihi:t,belgeTarihi:t,nihaiTuketici:true,belgeSiraNo:bno,adresiGuncelleme:false,krediKartiTutari:kk||0,belgeTutari:gross,kayitlar:[{deleted:false,satisTuruKodu:"1",gelirKayitTuruKodu:"2",gelirKayitAltTuruKodu:"${m.altKod}",aciklama:acikAd+' - ${m.altAd}',tutar:matrah,naceKodu:"${m.nace}",isKdvDahil:false,kdv:kdv,kdvOrani:${m.kdvOrani},tevkifatUygulanmayanKodu:"1100"}]};
+const acikAd = rc ? ((rc.soyad||'')+' '+(rc.ad||'')).trim().toLocaleUpperCase('tr') : ((nSoyad||'')+' '+(nAd||'')).trim();
+const P={gelirBelgeTuruKodu:"10",versiyon:11,kayitTarihi:t,belgeTarihi:t,nihaiTuketici:true,belgeSiraNo:bno,ad:nAd||'MÜŞTERİ',soyad:nSoyad||'',adresiGuncelleme:false,krediKartiTutari:kk||0,belgeTutari:gross,kayitlar:[{deleted:false,satisTuruKodu:"1",gelirKayitTuruKodu:"2",gelirKayitAltTuruKodu:"${m.altKod}",aciklama:acikAd+' - ${m.altAd}',tutar:matrah,naceKodu:"${m.nace}",isKdvDahil:false,kdv:kdv,kdvOrani:${m.kdvOrani},tevkifatUygulanmayanKodu:"1100"}]};
 if(vkn && rc){ P.tcknVkn=vkn; P.ad=rc.ad; P.soyad=rc.soyad; P.vergiDairesiKodu=rc.vergiDairesiKodu; if(rc.subeNo)P.subeNo=rc.subeNo; P.nihaiTuketici=false; }`
 :
 `const kdv=r2(mat*${m.kdvOrani}/100),t=iso(tar);
