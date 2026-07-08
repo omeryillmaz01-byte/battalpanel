@@ -1153,15 +1153,17 @@ const App = {
 
   gelirKontrol(arr){
     const say={};arr.forEach(r=>{if(r.belgeNo)say[r.belgeNo]=(say[r.belgeNo]||0)+1});
+    const mAktif = MUKELLEFLER[this.aktifVkn];
+    const nihaiZorunlu = mAktif && mAktif.nihaiTuketici;
     arr.forEach(r=>{
       const u=[];
       if(!/^\d{2}\.\d{2}\.\d{4}$/.test(r.tarih))u.push('Tarih?');
       if(!r.belgeNo)u.push('BelgeNo boş');
       else if(say[r.belgeNo]>1)u.push('MÜKERRER');
-      if(!r.vkn||(r.vkn.length!==10&&r.vkn.length!==11))u.push('VKN hane');
+      // Nihai tüketici mükelleflerde VKN aranmaz (Cihan gibi doktorlar)
+      if(!nihaiZorunlu && (!r.vkn||(r.vkn.length!==10&&r.vkn.length!==11))) u.push('VKN hane');
       if(!(r.matrah>0))u.push('Matrah ≤0');
-      const m=MUKELLEFLER[this.aktifVkn];
-      const bek=this.r2(r.matrah*m.kdvOrani/100);
+      const bek=this.r2(r.matrah*mAktif.kdvOrani/100);
       if(Math.abs(bek-r.kdv)>Math.max(0.5,r.matrah*0.005))u.push('KDV≠'+bek.toFixed(0));
       r.uyari=u;
     });
