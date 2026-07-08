@@ -1457,19 +1457,20 @@ const DATA=[
 const r2=v=>Math.round(v*100)/100;
 const iso=t=>{const a=t.split('.');return a[2]+'-'+a[1]+'-'+a[0]+' 00:00:00';};
 async function islem(d){const[bno,vkn,mat,tar,kk,nkt]=d;try{
-// Nihai tüketici (VKN yok) → adres defteri sorgusuz, boş kimlik ile gönder
-let rc = {ad:'', soyad:'', vergiDairesiKodu:'', subeNo:''};
+let rc = null;
 if(vkn){
   const lj=await(await fetch(B+'/adresdefteri/findbytckn/'+vkn,{method:'POST',headers:H,body:'{}',credentials:'include'})).json();
-  rc = lj.resultContainer || rc;
-  if(!rc.vergiDairesiKodu) return {bno,s:'❌',m:'VD yok'};
+  rc = lj.resultContainer;
+  if(!rc||!rc.vergiDairesiKodu) return {bno,s:'❌',m:'VD yok'};
 }
 ${m.stopaj?
 `const kdv=r2(mat*${m.kdvOrani}/100),stp=r2(mat*${m.stopajOran}/100),t=iso(tar);
 const P={gelirBelgeTuruKodu:"10",versiyon:11,kayitTarihi:t,belgeTarihi:t,nihaiTuketici:${m.nihaiTuketici},belgeSiraNo:bno,tcknVkn:vkn,ad:rc.ad,soyad:rc.soyad,vergiDairesiKodu:rc.vergiDairesiKodu,subeNo:rc.subeNo,adresiGuncelleme:false,krediKartiTutari:kk||0,belgeTutari:mat,kayitlar:[{deleted:false,satisTuruKodu:"1",gelirKayitTuruKodu:"2",gelirKayitAltTuruKodu:"${m.altKod}",aciklama:((rc.soyad||'')+' '+(rc.ad||'')).trim().toLocaleUpperCase('tr')+' - ${m.altAd}',tutar:mat,naceKodu:"${m.nace}",isKdvDahil:false,kdv:kdv,kdvOrani:${m.kdvOrani},stopajKodu:"022",stopajTutari:stp,tevkifatUygulanmayanKodu:"1100"}]};`
 :m.kdvDahil?
 `const gross=mat,matrah=r2(gross/(1+${m.kdvOrani}/100)),kdv=r2(gross-matrah),t=iso(tar);
-const P={gelirBelgeTuruKodu:"10",versiyon:11,kayitTarihi:t,belgeTarihi:t,nihaiTuketici:${m.nihaiTuketici},belgeSiraNo:bno,tcknVkn:vkn,ad:rc.ad,soyad:rc.soyad,vergiDairesiKodu:rc.vergiDairesiKodu,subeNo:rc.subeNo,adresiGuncelleme:false,krediKartiTutari:kk||0,belgeTutari:gross,kayitlar:[{deleted:false,satisTuruKodu:"1",gelirKayitTuruKodu:"2",gelirKayitAltTuruKodu:"${m.altKod}",aciklama:((rc.soyad||'')+' '+(rc.ad||'')).trim().toLocaleUpperCase('tr')+' - ${m.altAd}',tutar:matrah,naceKodu:"${m.nace}",isKdvDahil:false,kdv:kdv,kdvOrani:${m.kdvOrani},tevkifatUygulanmayanKodu:"1100"}]};`
+const acikAd = rc ? ((rc.soyad||'')+' '+(rc.ad||'')).trim().toLocaleUpperCase('tr') : 'MÜŞTERİ';
+const P={gelirBelgeTuruKodu:"10",versiyon:11,kayitTarihi:t,belgeTarihi:t,nihaiTuketici:true,belgeSiraNo:bno,adresiGuncelleme:false,krediKartiTutari:kk||0,belgeTutari:gross,kayitlar:[{deleted:false,satisTuruKodu:"1",gelirKayitTuruKodu:"2",gelirKayitAltTuruKodu:"${m.altKod}",aciklama:acikAd+' - ${m.altAd}',tutar:matrah,naceKodu:"${m.nace}",isKdvDahil:false,kdv:kdv,kdvOrani:${m.kdvOrani},tevkifatUygulanmayanKodu:"1100"}]};
+if(vkn && rc){ P.tcknVkn=vkn; P.ad=rc.ad; P.soyad=rc.soyad; P.vergiDairesiKodu=rc.vergiDairesiKodu; if(rc.subeNo)P.subeNo=rc.subeNo; P.nihaiTuketici=false; }`
 :
 `const kdv=r2(mat*${m.kdvOrani}/100),t=iso(tar);
 const P={gelirBelgeTuruKodu:"10",versiyon:11,kayitTarihi:t,belgeTarihi:t,nihaiTuketici:${m.nihaiTuketici},belgeSiraNo:bno,tcknVkn:vkn,ad:rc.ad,soyad:rc.soyad,vergiDairesiKodu:rc.vergiDairesiKodu,subeNo:rc.subeNo,adresiGuncelleme:false,krediKartiTutari:kk||0,belgeTutari:mat,kayitlar:[{deleted:false,satisTuruKodu:"1",gelirKayitTuruKodu:"2",gelirKayitAltTuruKodu:"${m.altKod}",aciklama:((rc.soyad||'')+' '+(rc.ad||'')).trim().toLocaleUpperCase('tr')+' - ${m.altAd}',tutar:mat,naceKodu:"${m.nace}",isKdvDahil:false,kdv:kdv,kdvOrani:${m.kdvOrani},tevkifatUygulanmayanKodu:"1100"}]};`}
