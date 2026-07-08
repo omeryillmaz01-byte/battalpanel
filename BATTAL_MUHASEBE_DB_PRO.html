@@ -1754,7 +1754,7 @@ if(fails.length)console.log('Hatalı: '+fails.slice(0,10).join(' | '));
     let hi=-1;
     for(let i=0;i<Math.min(15,rows.length);i++){
       const j=rows[i].map(x=>String(x||'').toLocaleLowerCase('tr')).join(' ');
-      if(/belge|fatura|makbuz|tarih/.test(j)&&/vkn|tckn|ünvan|unvan|alıcı|gönderici|tutar|matrah|ödenecek/.test(j)){hi=i;break}
+      if(/belge|fatura|makbuz|tarih|düzenleme/.test(j)&&/vkn|tckn|ünvan|unvan|alıcı|gönderici|tutar|matrah|ödenecek|müşteri|musteri|vergi numara|toplam|kdv|tahsil/.test(j)){hi=i;break}
     }
     if(hi<0) return {headerIdx:-1, cols:{}};
     const h = rows[hi].map(x=>String(x||'').toLocaleLowerCase('tr').replace(/\s+/g,' ').trim());
