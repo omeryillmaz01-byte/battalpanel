@@ -396,7 +396,7 @@ footer.btmbar b{color:var(--acc-2)}
         <div class="tablewrap-h">📋 Önizleme · İlmek ilmek kontrolden geçti</div>
         <div style="max-height:420px;overflow:auto">
           <table id="g-tab">
-            <thead><tr><th>#</th><th>Belge No</th><th>Tarih</th><th>Alıcı</th><th>VKN/TC</th><th class="r">Matrah</th><th class="r">KDV</th><th class="r">Stopaj</th><th class="r">Toplam</th><th>Uyarı</th></tr></thead>
+            <thead><tr><th>#</th><th>Belge No</th><th>Tarih</th><th>Alıcı</th><th>VKN/TC</th><th class="r">Matrah</th><th class="r">KDV</th><th class="r">Stopaj</th><th class="r">Toplam</th><th>Tahsilat</th><th>Uyarı</th></tr></thead>
             <tbody></tbody>
           </table>
         </div>
@@ -1172,12 +1172,17 @@ const App = {
   gelirRender(arr){
     const tb = document.getElementById('g-tab').querySelector('tbody');
     if(!arr.length){
-      tb.innerHTML = '<tr><td colspan="10" class="empty">Bu dönemde gelir kaydı yok</td></tr>';
+      tb.innerHTML = '<tr><td colspan="11" class="empty">Bu dönemde gelir kaydı yok</td></tr>';
       document.getElementById('g-kpi').innerHTML='';
       return;
     }
     tb.innerHTML = arr.map((r,i)=>{
       const cls = r.uyari.length ? (r.uyari.some(u=>u.includes('MÜKERRER')||u==='Matrah ≤0')?'err':'warn') : 'ok';
+      // Tahsilat gösterimi: POS ise kredi kartı (mor), aksi halde nakit (yeşil)
+      const tahsBadge = r.posMu
+        ? `<span style="background:#a855f7;color:#fff;padding:2px 8px;border-radius:8px;font-size:10.5px;font-weight:700">💳 KK</span>`
+        : `<span style="background:#22c55e;color:#0b1224;padding:2px 8px;border-radius:8px;font-size:10.5px;font-weight:700">💵 Nakit</span>`;
+      const tahsMetin = (r.tahsilatHesap||'').slice(0,18);
       return `<tr class="${cls}">
         <td>${i+1}</td>
         <td><b>${r.belgeNo}</b></td>
@@ -1188,6 +1193,7 @@ const App = {
         <td class="r">${this.f(r.kdv)}</td>
         <td class="r">${r.stopaj?this.f(r.stopaj):'-'}</td>
         <td class="r">${this.f(r.matrah+r.kdv-(r.stopaj||0))}</td>
+        <td>${tahsBadge}<div style="font-size:10px;color:#9aa6c0;margin-top:2px">${tahsMetin}</div></td>
         <td>${r.uyari.length?`<span class="cell-warn">⚠️ ${r.uyari.join(' · ')}</span>`:'<span style="color:var(--acc-2)">✓ Temiz</span>'}</td>
       </tr>`;
     }).join('');
