@@ -1461,6 +1461,39 @@ const App = {
       const ad = p.slice(0,-1).join(' ').toLocaleUpperCase('tr');
       return {ad,soyad};
     };
+    // kkAyrim=true mükellefler (ör. Cihan Güneş) için: F12 script yerine EXTENSION paketi üret.
+    // Extension "📥 Panodan e-SMM Gönder" butonu bu paketi okuyup DB'ye casus şablonuyla POSTlar.
+    if(m.kkAyrim){
+      const items = arr.map(r=>{
+        const {ad,soyad} = parseAdSoyad(r.unvan);
+        return {
+          belgeNo:r.belgeNo, tarih:r.tarih, vkn:r.vkn||'',
+          ad, soyad, unvan:(r.unvan||'').toLocaleUpperCase('tr'),
+          matrah:r.matrah, kdv:r.kdv, kdvOran:m.kdvOrani,
+          krediKart:r.krediKart||0, nakit:r.nakit||0
+        };
+      });
+      const paket = {tip:'battal-esmm-gonder', mukellef:m.ad, vkn:this.aktifVkn,
+                     nace:m.nace, altKod:m.altKod, altAd:m.altAd, kdvOran:m.kdvOrani,
+                     items};
+      const j = JSON.stringify(paket);
+      const topKk = items.reduce((a,r)=>a+(+r.krediKart||0),0);
+      const topNk = items.reduce((a,r)=>a+(+r.nakit||0),0);
+      navigator.clipboard.writeText(j).then(()=>{
+        this.uretilenScript = j;
+        this.uretilenAd = m.ad;
+        document.getElementById('modal-mukname').textContent = m.ad+' ('+this.aktifVkn+') · e-SMM Extension Paketi';
+        this.modalAc('modal-script');
+        this.log('g-log',
+`✅ e-SMM Extension paketi üretildi: ${items.length} makbuz
+   💳 Kredi kartı: ${this.f(topKk)}  ·  💵 Nakit: ${this.f(topNk)}
+📋 Klibborda kopyalandı (JSON paket).
+🎯 Defter Beyan → Cihan sayfasında BATTAL panel → "📥 Panodan e-SMM Gönder" butonuna bas.
+   İlk sefer: kayıtlı bir e-SMM'ye tıkla → "Belgeyi Güncelle" (casus şablonu yakalar) → tekrar butona bas.`);
+      }).catch(e=>alert('Kopyalama hatası: '+e.message));
+      return;
+    }
+
     const veri = arr.map(r=>{
       const {ad,soyad} = parseAdSoyad(r.unvan);
       return `["${r.belgeNo}","${r.vkn}",${r.matrah},"${r.tarih}",${r.krediKart||0},${r.nakit||0},"${ad.replace(/"/g,'')}","${soyad.replace(/"/g,'')}"]`;

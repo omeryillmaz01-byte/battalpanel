@@ -1275,6 +1275,92 @@
       }
     }
 
+    /* ── PANODAN e-SMM GÖNDER: Panelde üretilen 'battal-esmm-gonder' paketini okur,
+       satisTemplate casus şablonuyla her makbuzu /gelir/create'e POST atar.
+       Nihai tüketici: ad/soyad paketten, tcknVkn/VD YOK. VKN'li: adres defterinden VD çekilir.
+       POS ise krediKartiTutari brüt, nakit ise nakit alanı brüt. */
+    async function panodanEsmmGonder() {
+      const bar = overlayAc('📥 Panodan e-SMM Gönder');
+      const kilit = await adresKilidi();
+      if (!kilit.gecer) { kilitRed(bar, kilit.mesaj); return; }
+      const D = document, r2 = v => Math.round(v * 100) / 100;
+      const isoT = t => { const a = String(t).split('.'); return a.length === 3 ? a[2] + '-' + a[1] + '-' + a[0] + ' 00:00:00' : t; };
+      let paket;
+      try {
+        const txt = await navigator.clipboard.readText();
+        paket = JSON.parse(txt);
+        if (paket.tip !== 'battal-esmm-gonder' || !Array.isArray(paket.items)) throw new Error('Panoda geçerli e-SMM paketi yok.');
+      } catch (e) { bar.innerHTML = '<span style="color:#fca5a5">Hata: ' + e.message + '</span>'; return; }
+      // Casus şablon
+      let tmpl = null;
+      try { const s = await chrome.storage.local.get('satisTemplate'); tmpl = s.satisTemplate && s.satisTemplate.req; } catch (e) {}
+      if (!tmpl || !tmpl.gelirBelgeTuruKodu) {
+        bar.innerHTML = '<div style="color:#fcd34d;font-size:14px;line-height:1.8"><b>🎯 Önce e-SMM şablonu öğrenilmeli (tek seferlik)</b><br>' +
+          'Gelir Listele → kayıtlı bir <b>e-Serbest Meslek Makbuzu</b> satırına tıkla → <b>"Belgeyi Güncelle"</b> bas (değiştirme yok). Casus şablonu yakalar → tekrar bu butona bas.</div>' +
+          '<div id="__esBek" style="margin-top:10px;color:#6ee7b7;font-size:12px">Durum: e-SMM belgesinin "Belgeyi Güncelle" ile kaydı bekleniyor…</div>';
+        const iv = setInterval(async () => { try { const s = await chrome.storage.local.get('satisTemplate'); if (s && s.satisTemplate) { clearInterval(iv); const e = D.getElementById('__esBek'); if (e) e.innerHTML = '✅ Şablon yakalandı! Tekrar "📥 Panodan e-SMM Gönder" bas.'; } } catch (e) {} }, 1500);
+        return;
+      }
+      const TK = tokenBul(); const H = { 'Content-Type': 'application/json; charset=utf-8' }; if (TK) H.Token = TK;
+      const kTmpl = (tmpl.kayitlar && tmpl.kayitlar[0]) || {};
+      // Mevcut belge nolar (mükerrer'i atla)
+      const mevcut = new Set();
+      try { const R = await pullGelirDB(null); R.all.forEach(r => { if (r.belgeSiraNo) mevcut.add(norm(r.belgeSiraNo)); }); } catch (e) {}
+
+      bar.innerHTML = '<div style="margin-bottom:8px">📤 ' + paket.items.length + ' e-SMM makbuzu · Şablon türü <b>' + tmpl.gelirBelgeTuruKodu + '</b> · alt kod <b>' + (paket.altKod || '?') + '</b></div>' +
+        '<label style="display:block;margin-bottom:10px"><input type="checkbox" id="__esTest" checked> 🧪 Test modu (sadece 1 makbuz, kaydetmeden sonuç göster)</label>' +
+        '<button id="__esStart" style="background:#22c55e;color:#0b1224;border:0;padding:12px 22px;border-radius:8px;font-weight:800;cursor:pointer;font-size:14px">🚀 Gönder</button>' +
+        '<div id="__esLog" style="margin-top:12px;font-family:Consolas,monospace;font-size:12px;max-height:340px;overflow:auto;background:#0b1020;padding:10px;border-radius:8px"></div>';
+      const logEl = D.getElementById('__esLog');
+      const eslog = (t, c) => { const d = document.createElement('div'); d.style.color = c || '#9aa6c0'; d.textContent = t; logEl.appendChild(d); logEl.scrollTop = logEl.scrollHeight; };
+
+      D.getElementById('__esStart').onclick = async () => {
+        const test = D.getElementById('__esTest').checked;
+        D.getElementById('__esStart').disabled = true;
+        let ok = 0, fail = 0, atla = 0;
+        eslog('🚀 ' + paket.items.length + ' makbuz · Test: ' + (test ? 'AÇIK' : 'KAPALI'), '#22c55e');
+        for (const it of paket.items) {
+          const bno = String(it.belgeNo || '').replace(/[^0-9A-Za-z]/g, '').slice(0, 16);
+          if (mevcut.has(norm(bno))) { atla++; eslog('⏭ ' + bno + ' zaten kayıtlı', '#9aa6c0'); continue; }
+          try {
+            const t = isoT(it.tarih);
+            const P = JSON.parse(JSON.stringify(tmpl));
+            P.kayitTarihi = t; P.belgeTarihi = t; P.belgeSiraNo = bno;
+            P.adresiGuncelleme = false;
+            // Kimlik ayarı
+            if (it.vkn) {
+              try { const lj = await (await fetch(B + '/adresdefteri/findbytckn/' + it.vkn, { method: 'POST', headers: H, body: '{}', credentials: 'include' })).json(); const rc = lj.resultContainer; if (rc) { P.tcknVkn = it.vkn; P.ad = rc.ad; P.soyad = rc.soyad; P.vergiDairesiKodu = rc.vergiDairesiKodu; if (rc.subeNo) P.subeNo = rc.subeNo; P.nihaiTuketici = false; } else { P.nihaiTuketici = true; P.ad = it.ad || 'MÜŞTERİ'; P.soyad = it.soyad || ''; delete P.tcknVkn; delete P.vergiDairesiKodu; delete P.subeNo; } } catch (e) { P.nihaiTuketici = true; P.ad = it.ad || 'MÜŞTERİ'; P.soyad = it.soyad || ''; delete P.tcknVkn; delete P.vergiDairesiKodu; delete P.subeNo; }
+            } else {
+              P.nihaiTuketici = true; P.ad = it.ad || 'MÜŞTERİ'; P.soyad = it.soyad || '';
+              delete P.tcknVkn; delete P.vergiDairesiKodu; delete P.subeNo;
+            }
+            const matrah = r2(+it.matrah || 0), kdv = r2(+it.kdv || 0), oran = +it.kdvOran || 0;
+            const gross = r2(matrah + kdv);
+            P.belgeTutari = matrah;
+            P.krediKartiTutari = r2(+it.krediKart || 0);
+            // Kayit
+            const k = JSON.parse(JSON.stringify(kTmpl));
+            k.tutar = matrah; k.isKdvDahil = false; if ('kdv' in k) k.kdv = kdv; else k.kdv = kdv; k.kdvOrani = oran;
+            k.gelirKayitAltTuruKodu = String(paket.altKod || k.gelirKayitAltTuruKodu || '');
+            k.naceKodu = String(paket.nace || k.naceKodu || '');
+            const adUst = (it.ad || '') + ' ' + (it.soyad || '');
+            k.aciklama = ((it.unvan || adUst).toLocaleUpperCase('tr')).trim() + ' - ' + (paket.altAd || 'HİZMET');
+            delete k.id; delete k.gelirBelgeId; delete k.key;
+            P.kayitlar = [k];
+            delete P.id; delete P.gelirBelgeId; delete P.key;
+            if (test) { eslog('🧪 ' + bno + ' hazırlandı: matrah ' + matrah.toFixed(2) + ' + KDV ' + kdv.toFixed(2) + ' · ' + (P.nihaiTuketici ? 'nihai' : 'VKN ' + P.tcknVkn) + ' · ' + (it.krediKart > 0 ? 'KK ' + it.krediKart : 'Nakit ' + it.nakit) + ' — KAYDEDİLMEDİ', '#fbbf24'); ok++; break; }
+            const cr = await fetch(B + '/gelir/create', { method: 'POST', headers: H, body: JSON.stringify(P), credentials: 'include' });
+            const cj = await cr.json();
+            if (cr.status === 200 && cj.resultContainer && !cj.errorMessage) { ok++; mevcut.add(norm(bno)); eslog('✅ ' + bno + ' (₺' + gross.toFixed(2) + ')', '#10b981'); }
+            else { const m = (cj.errorMessage || cj.statusMessage || cr.status).toString(); if (/aynı|mükerrer|zaten/i.test(m)) { atla++; eslog('⏭ ' + bno + ' zaten var', '#9aa6c0'); } else { fail++; eslog('❌ ' + bno + ' — ' + m.slice(0, 100), '#ef4444'); } }
+          } catch (e) { fail++; eslog('❌ ' + bno + ' — ' + e.message, '#ef4444'); }
+        }
+        eslog('🎉 Bitti — ✅ Yeni: ' + ok + ' · ⏭ Atlanan: ' + atla + (fail ? ' · ❌ Hata: ' + fail : ''), fail ? '#fbbf24' : '#10b981');
+        if (test) eslog('🧪 Test bitti. Doğruysa test modunu kapatıp tekrar bas.', '#fbbf24');
+        D.getElementById('__esStart').disabled = false;
+      };
+    }
+
     const kur = () => {
       sicilAdresYakala(); // Sicil sayfasındaysak hesap adresini yakala
       butonEkle('📊 Gider Kontrol', calistir, null, '__gkBtn', 20);
@@ -1283,8 +1369,9 @@
       butonEkle('📊 Gelir Kontrol', gelirKontrol, 'linear-gradient(135deg,#d4af37,#b8941f)', '__glBtn', 188);
       butonEkle('📤 Giden (Satış) Gönder', gidenGonder, 'linear-gradient(135deg,#60a5fa,#2563eb)', '__gdGonderBtn', 244);
       butonEkle('📊 Z Raporu Gönder', zRaporGonder, 'linear-gradient(135deg,#22c55e,#15803d)', '__zGonderBtn', 300);
-      butonEkle('📋 e-SMM Eksik Bul', esmmEksik, 'linear-gradient(135deg,#34d399,#059669)', '__esmmBtn', 356);
-      butonEkle('🔒 Kimlik/Adres Kontrol', kimlikKontrol, 'linear-gradient(135deg,#a78bfa,#7c3aed)', '__kimlikBtn', 412);
+      butonEkle('📥 Panodan e-SMM Gönder', panodanEsmmGonder, 'linear-gradient(135deg,#f97316,#c2410c)', '__panoEsmmBtn', 356);
+      butonEkle('📋 e-SMM Eksik Bul', esmmEksik, 'linear-gradient(135deg,#34d399,#059669)', '__esmmBtn', 412);
+      butonEkle('🔒 Kimlik/Adres Kontrol', kimlikKontrol, 'linear-gradient(135deg,#a78bfa,#7c3aed)', '__kimlikBtn', 468);
     };
     kur();
     setInterval(kur, 2000);
