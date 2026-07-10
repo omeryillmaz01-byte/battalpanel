@@ -717,8 +717,11 @@ const MUKELLEFLER = {
     sektor:'İnternet/E-ticaret (Kuyum/Gümüş)', nace:'479114',
     tckn:'10097926060', vd2:'BEYLİKDÜZÜ',
     adres:'YAKUPLU MAH. KANUNİ CAD. MENEKŞE EVLERİ B BLOK NO: 16 A İÇ KAPI NO: 19 BEYLİKDÜZÜ/ İSTANBUL',
-    girisVar:true, // Trendyol/Hepsi gelir
-    giderEvet:true, malAlis:true // alım-satım, mal alışı GEÇERLİ
+    girisVar:true, // Trendyol e-Arşiv gelir
+    giderEvet:true, malAlis:true,
+    // GELİR: Trendyol e-Arşiv Fatura, nihai tüketici, %20 KDV veya karışık (özel matrah + %20)
+    altKod:'', altAd:'MAL SATIŞI', kdvOrani:20, nihaiTuketici:true, kdvDahil:false,
+    kkAyrim:true, earsivFatura:true // Excel'de per-oran matrah kolonları kullanılır
   },
   '3460330305':{
     ad:'Altuğ Erden', emoji:'☕', tip:'ISL', vd:'ÜSKÜDAR',
@@ -1121,17 +1124,36 @@ const App = {
         matrah = matrah0||this.r2(odenecek-kdv0); kdv = kdv0||this.r2(matrah*m.kdvOrani/100); stopaj=0;
       }
       const brut = odenecek || (matrah + kdv);
-      // POS ise brut kredi kartına, aksi halde nakit hanesine yazılır (kkAyrim aktif mükelleflerde)
       const krediKart = posMu ? brut : 0;
       const nakit    = posMu ? 0 : brut;
-      // Uyarı kontrolleri: belge no, tarih, matrah zorunlu.
-      // VKN yoksa nihai tüketici kabul edilir (Cihan gibi doktor SMM'lerde çok yaygın).
+      // KARIŞIK FATURA (kuyumcu): earsivFatura mükelleflerde per-oran matrah kolonlarını oku,
+      // birden fazla oran doluysa satirlar[] üret. Yoksa tek satır standart.
+      let satirlar = null;
+      if(m.earsivFatura){
+        const perOran = [
+          {oran:0,  m: cm.cols.kdv0m>=0  ? this.num(String(r[cm.cols.kdv0m]||''))  : 0, v:0},
+          {oran:1,  m: cm.cols.kdv1m>=0  ? this.num(String(r[cm.cols.kdv1m]||''))  : 0, v: cm.cols.kdv1v>=0  ? this.num(String(r[cm.cols.kdv1v]||''))  : 0},
+          {oran:8,  m: cm.cols.kdv8m>=0  ? this.num(String(r[cm.cols.kdv8m]||''))  : 0, v: cm.cols.kdv8v>=0  ? this.num(String(r[cm.cols.kdv8v]||''))  : 0},
+          {oran:10, m: cm.cols.kdv10m>=0 ? this.num(String(r[cm.cols.kdv10m]||'')) : 0, v: cm.cols.kdv10v>=0 ? this.num(String(r[cm.cols.kdv10v]||'')) : 0},
+          {oran:18, m: cm.cols.kdv18m>=0 ? this.num(String(r[cm.cols.kdv18m]||'')) : 0, v: cm.cols.kdv18v>=0 ? this.num(String(r[cm.cols.kdv18v]||'')) : 0},
+          {oran:20, m: cm.cols.kdv20m>=0 ? this.num(String(r[cm.cols.kdv20m]||'')) : 0, v: cm.cols.kdv20v>=0 ? this.num(String(r[cm.cols.kdv20v]||'')) : 0}
+        ].filter(x=>x.m>0);
+        if(perOran.length>1){
+          satirlar = perOran.map(x=>({matrah:this.r2(x.m),kdv:this.r2(x.v||x.m*x.oran/100),kdvOran:x.oran}));
+          matrah = satirlar.reduce((a,s)=>a+s.matrah,0);
+          kdv = satirlar.reduce((a,s)=>a+s.kdv,0);
+        } else if(perOran.length===1 && perOran[0].oran===0){
+          // Salt istisna: satisTuruKodu=3 (istisna satış)
+          satirlar = [{matrah:this.r2(perOran[0].m),kdv:0,kdvOran:0,satisTuruKodu:'3'}];
+          matrah = perOran[0].m; kdv = 0;
+        }
+      }
       const uyari = [];
       if(!bn) uyari.push('BELGE NO?');
       if(!/^\d{2}\.\d{2}\.\d{4}$/.test(tar)) uyari.push('TARİH?');
       if(!(matrah>0)) uyari.push('MATRAH?');
-      const nihai = !vkn; // VKN yoksa nihai tüketici
-      out.push({belgeNo:bn,tarih:tar,vkn,unvan,matrah,kdv,stopaj,odenecek:brut,iptal,iade:/iade/.test(durum),tahsilatHesap:tHesap,krediKart,nakit,posMu,uyari,nihai});
+      const nihai = !vkn;
+      out.push({belgeNo:bn,tarih:tar,vkn,unvan,matrah,kdv,stopaj,odenecek:brut,iptal,iade:/iade/.test(durum),tahsilatHesap:tHesap,krediKart,nakit,posMu,uyari,nihai,satirlar});
     }
     this.gelirData = out;
     this.gelirFilter();
@@ -1467,12 +1489,15 @@ const App = {
     if(m.kkAyrim){
       const items = arr.map(r=>{
         const {ad,soyad} = parseAdSoyad(r.unvan);
-        return {
+        const it = {
           belgeNo:r.belgeNo, tarih:r.tarih, vkn:r.vkn||'',
           ad, soyad, unvan:(r.unvan||'').toLocaleUpperCase('tr'),
           matrah:r.matrah, kdv:r.kdv, kdvOran:m.kdvOrani,
           krediKart:r.krediKart||0, nakit:r.nakit||0
         };
+        // Karışık fatura veya salt istisna (earsivFatura mükelleflerde): satirlar[] taşı
+        if(Array.isArray(r.satirlar) && r.satirlar.length) it.satirlar = r.satirlar;
+        return it;
       });
       const paket = {tip:'battal-esmm-gonder', mukellef:m.ad, vkn:this.aktifVkn,
                      nace:m.nace, altKod:m.altKod, altAd:m.altAd, kdvOran:m.kdvOrani,
@@ -1865,17 +1890,17 @@ if(fails.length)console.log('Hatalı: '+fails.slice(0,10).join(' | '));
       // Cihan tarzı SMM'de tahsilat hesabı (POS/Nakit/Banka) ayrımı için
       tahsilatHesap: f('tahsilatın yapıldığı hesap','tahsilat hesab','tahsilat hesap','ödeme türü','odeme turu'),
       // Gider: KDV oranlı kolonlar
-      kdv0m: f('%0 kdv matrah'),
-      kdv1m: f('%1 kdv matrah'),
-      kdv1v: f('kdv %1 tutar'),
-      kdv8m: f('%8 kdv matrah'),
-      kdv8v: f('kdv %8 tutar'),
-      kdv10m:f('%10 kdv matrah'),
-      kdv10v:f('kdv %10 tutar'),
-      kdv18m:f('%18 kdv matrah'),
-      kdv18v:f('kdv %18 tutar'),
-      kdv20m:f('%20 kdv matrah'),
-      kdv20v:f('kdv %20 tutar'),
+      kdv0m: f('%0 kdv matrah','kdv %0 matrah'),
+      kdv1m: f('%1 kdv matrah','kdv %1 matrah'),
+      kdv1v: f('kdv %1 tutar','kdv %1'),
+      kdv8m: f('%8 kdv matrah','kdv %8 matrah'),
+      kdv8v: f('kdv %8 tutar','kdv %8'),
+      kdv10m:f('%10 kdv matrah','kdv %10 matrah'),
+      kdv10v:f('kdv %10 tutar','kdv %10'),
+      kdv18m:f('%18 kdv matrah','kdv %18 matrah'),
+      kdv18v:f('kdv %18 tutar','kdv %18'),
+      kdv20m:f('%20 kdv matrah','kdv %20 matrah'),
+      kdv20v:f('kdv %20 tutar','kdv %20'),
       topkdv:f('toplam kdv'),
       haric: f('vergiler hariç toplam','kdv hariç toplam')
     };
