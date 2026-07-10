@@ -1071,9 +1071,27 @@
       if (!kilitG.gecer) { kilitRed(bar, kilitG.mesaj); return; }
       const D = document, r2 = v => Math.round(v * 100) / 100;
       const iso = t => { const a = String(t).split('.'); return a.length === 3 ? a[2] + '-' + a[1] + '-' + a[0] + ' 00:00:00' : t; };
-      let tmpl = null, giden = null;
+      let tmpl = null, giden = null, panoPaket = null;
       try { const s = await chrome.storage.local.get(['satisTemplate', 'uyumGiden']); tmpl = s.satisTemplate && s.satisTemplate.req; giden = s.uyumGiden && s.uyumGiden.list; } catch (e) {}
-      if (!giden || !giden.length) { bar.innerHTML = '<div style="color:#fcd34d">📤 Önce <b>Uyumsoft</b> Giden sayfasında <b>"📤 Giden Faturaları Al"</b>a bas (satış faturaları çekilsin), sonra buraya dön.</div>'; return; }
+      // FALLBACK: Uyumsoft cache yoksa panodaki 'battal-esmm-gonder' paketini oku (Sinan/Trendyol gibi Uyumsoft-suz mükellefler)
+      if (!giden || !giden.length) {
+        try {
+          const txt = await navigator.clipboard.readText();
+          const p = JSON.parse(txt);
+          if (p && p.tip === 'battal-esmm-gonder' && Array.isArray(p.items)) {
+            panoPaket = p;
+            // Package.items -> giden formatına dönüştür (no, tarih, vkn, unvan, matrah, kdv, tutar + satirlar)
+            giden = p.items.map(it => ({
+              no: it.belgeNo, tarih: it.tarih, vkn: it.vkn || '', unvan: it.unvan || ((it.ad || '') + ' ' + (it.soyad || '')).trim(),
+              matrah: +it.matrah || 0, kdv: +it.kdv || 0, tutar: (+it.matrah || 0) + (+it.kdv || 0),
+              ad: it.ad, soyad: it.soyad, krediKart: +it.krediKart || 0, nakit: +it.nakit || 0,
+              satirlar: Array.isArray(it.satirlar) ? it.satirlar : null,
+              status: 'aktif'
+            }));
+          }
+        } catch (e) {}
+      }
+      if (!giden || !giden.length) { bar.innerHTML = '<div style="color:#fcd34d">📤 <b>Panoda paket YOK</b> veya <b>Uyumsoft</b> Giden faturaları çekilmedi.<br>· Panelden <b>Defter Beyan Scripti Üret + Kopyala</b> bas → pano dolar → tekrar bu butona bas.<br>· Ya da Uyumsoft Giden sayfasında "📤 Giden Faturaları Al" bas.</div>'; return; }
       if (!tmpl || !tmpl.gelirBelgeTuruKodu) {
         bar.innerHTML = '<div style="color:#fcd34d;font-size:15px;margin-bottom:8px"><b>🎯 Önce satış şablonu öğrenilmeli (tek seferlik)</b></div>' +
           '<div style="color:#e8edf5;font-size:13px;line-height:1.8">Gelir Listele → kayıtlı bir <b>satış e-Fatura/e-Arşiv</b> (ör. RESUL ÇEVİK) satırına tıkla → <b>"Belgeyi Güncelle"</b> bas (değiştirme yok). Casus e-Arşiv şablonunu yakalar → tekrar bu butona bas.</div>' +
@@ -1107,20 +1125,44 @@
           if (mevcut.has(norm(no))) { atla++; slog('⏭ ' + no + ' zaten kayıtlı', '#9aa6c0'); continue; }
           const tutar = x.tutar, kdv = x.kdv, matrah = r2(tutar - kdv);
           const oran = matrah > 0 ? Math.round(kdv / matrah * 100) : 0;
-          if ([0, 1, 8, 10, 18, 20].indexOf(oran) < 0) { slog('⚠ ' + no + ' KDV oranı belirsiz (%' + oran + ') — karışık oranlı olabilir, ELLE gir', '#fbbf24'); atla++; continue; }
+          // Karışık faturalar (kuyumcu): satirlar[] varsa oran kontrolü BYPASS — her satır kendi kdvOran'ıyla gider
+          const hasSatirlar = Array.isArray(x.satirlar) && x.satirlar.length > 0;
+          if (!hasSatirlar && [0, 1, 8, 10, 18, 20].indexOf(oran) < 0) { slog('⚠ ' + no + ' KDV oranı belirsiz (%' + oran + ') — ELLE gir', '#fbbf24'); atla++; continue; }
           try {
             const t = iso((x.tarih || '').slice(0, 10));
             const P = JSON.parse(JSON.stringify(tmpl));
             P.kayitTarihi = t; P.belgeTarihi = t; P.belgeSiraNo = no;
-            // Alıcı bilgisi
+            P.adresiGuncelleme = false;
+            // Alıcı bilgisi — VKN varsa adres defterinden, yoksa nihai (Trendyol)
             if (x.vkn) {
               try { const lj = await (await fetch(B + '/adresdefteri/findbytckn/' + x.vkn, { method: 'POST', headers: H, body: '{}', credentials: 'include' })).json(); const rc = lj.resultContainer; if (rc) { P.tcknVkn = x.vkn; P.ad = rc.ad; P.soyad = rc.soyad; P.vergiDairesiKodu = rc.vergiDairesiKodu; if (rc.subeNo) P.subeNo = rc.subeNo; P.nihaiTuketici = false; } } catch (e) {}
+            } else if (panoPaket) {
+              P.nihaiTuketici = true; P.ad = x.ad || 'MÜŞTERİ'; P.soyad = x.soyad || '';
+              delete P.tcknVkn; delete P.vergiDairesiKodu; delete P.subeNo;
             }
-            const k = JSON.parse(JSON.stringify(kTmpl));
-            k.tutar = matrah; k.isKdvDahil = false; if ('kdv' in k) k.kdv = kdv; k.kdvOrani = oran;
-            k.aciklama = (x.unvan || '').toLocaleUpperCase('tr') + ' - MAL SATIŞI';
-            delete k.id; delete k.gelirBelgeId; delete k.key;
-            P.kayitlar = [k]; P.belgeTutari = r2(tutar);
+            if (panoPaket) P.krediKartiTutari = r2(x.krediKart || 0);
+            const acikBase = (x.unvan || ((x.ad || '') + ' ' + (x.soyad || ''))).toLocaleUpperCase('tr').trim();
+            // Kayıt satırları — karışık ise satirlar[], değilse tek satır (whitelist alanlar)
+            const satirlar = hasSatirlar ? x.satirlar : [{ matrah, kdv, kdvOran: oran }];
+            let toplamM = 0, toplamK = 0;
+            P.kayitlar = satirlar.map(s => {
+              const mm = r2(+s.matrah || 0), kk = r2(+s.kdv || 0), oo = +s.kdvOran || 0;
+              toplamM += mm; toplamK += kk;
+              return {
+                deleted: false,
+                satisTuruKodu: String(s.satisTuruKodu || kTmpl.satisTuruKodu || '1'),
+                gelirKayitTuruKodu: String(kTmpl.gelirKayitTuruKodu || '2'),
+                gelirKayitAltTuruKodu: String(s.altKod || (panoPaket && panoPaket.altKod) || kTmpl.gelirKayitAltTuruKodu || ''),
+                aciklama: acikBase + ' - ' + (s.altAd || (panoPaket && panoPaket.altAd) || 'MAL SATIŞI'),
+                tutar: mm,
+                naceKodu: String((panoPaket && panoPaket.nace) || kTmpl.naceKodu || ''),
+                isKdvDahil: false,
+                kdv: kk,
+                kdvOrani: oo,
+                tevkifatUygulanmayanKodu: String(kTmpl.tevkifatUygulanmayanKodu || '1100')
+              };
+            });
+            P.belgeTutari = r2(toplamM);
             delete P.id; delete P.gelirBelgeId; delete P.key;
             if (test) { slog('🧪 ' + no + ' hazırlandı: matrah ' + matrah.toFixed(2) + ' · KDV ' + kdv.toFixed(2) + ' (%' + oran + ') · alıcı ' + (x.vkn || 'nihai') + ' — KAYDEDİLMEDİ', '#fbbf24'); ok++; break; }
             const cr = await fetch(B + '/gelir/create', { method: 'POST', headers: H, body: JSON.stringify(P), credentials: 'include' });
