@@ -1463,7 +1463,8 @@ const App = {
     if(!localStorage.getItem('dbToken')){alert('Önce Token kaydet (üst sağ buton)');return}
     const m = MUKELLEFLER[this.aktifVkn];
     if(m.manuel){alert('Bu mükellef MANUEL işleniyor (kızlar elle giriyor). API ile gönderilmiyor.');return}
-    if(!m.altKod){
+    // altKod boş olabilir — kkAyrim/earsivFatura mükelleflerde extension'ın casus şablonu supplies eder
+    if(!m.altKod && !m.kkAyrim){
       if(!confirm('Bu mükellefin gelir alt türü kodu henüz öğrenilmedi. Devam edersen script üretilir ama sistem hata verir. İlk kayıt için manuel girip kodu yakalamayı öneririm. Yine de devam edilsin mi?')) return;
     }
     const ay = +document.getElementById('g-ay').value;
