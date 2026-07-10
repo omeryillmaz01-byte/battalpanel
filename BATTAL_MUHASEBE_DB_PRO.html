@@ -1188,8 +1188,12 @@ const App = {
       // Nihai tüketici mükelleflerde VKN aranmaz (Cihan gibi doktorlar)
       if(!nihaiZorunlu && (!r.vkn||(r.vkn.length!==10&&r.vkn.length!==11))) u.push('VKN hane');
       if(!(r.matrah>0))u.push('Matrah ≤0');
-      const bek=this.r2(r.matrah*mAktif.kdvOrani/100);
-      if(Math.abs(bek-r.kdv)>Math.max(0.5,r.matrah*0.005))u.push('KDV≠'+bek.toFixed(0));
+      // KDV kontrolü: karışık faturalarda (satirlar[] var) veya salt istisna faturalarda BYPASS
+      const karisikVeyaIstisna = Array.isArray(r.satirlar) && r.satirlar.length>0;
+      if(!karisikVeyaIstisna){
+        const bek=this.r2(r.matrah*mAktif.kdvOrani/100);
+        if(Math.abs(bek-r.kdv)>Math.max(0.5,r.matrah*0.005))u.push('KDV≠'+bek.toFixed(0));
+      }
       r.uyari=u;
     });
   },
