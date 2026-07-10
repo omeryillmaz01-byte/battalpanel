@@ -1349,6 +1349,9 @@
               k.gelirKayitAltTuruKodu = String(s.altKod || paket.altKod || k.gelirKayitAltTuruKodu || '');
               k.naceKodu = String(paket.nace || k.naceKodu || '');
               k.aciklama = acikBase + ' - ' + (s.altAd || paket.altAd || 'HİZMET');
+              // Salt istisna satırlar (kdv=0 hepsi): satisTuruKodu override edilebilir (özel matrah/istisna)
+              if (s.satisTuruKodu) k.satisTuruKodu = String(s.satisTuruKodu);
+              if (s.tevkifatUygulanmayanKodu) k.tevkifatUygulanmayanKodu = String(s.tevkifatUygulanmayanKodu);
               delete k.id; delete k.gelirBelgeId; delete k.key;
               return k;
             });
