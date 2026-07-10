@@ -1334,19 +1334,27 @@
               P.nihaiTuketici = true; P.ad = it.ad || 'MÜŞTERİ'; P.soyad = it.soyad || '';
               delete P.tcknVkn; delete P.vergiDairesiKodu; delete P.subeNo;
             }
-            const matrah = r2(+it.matrah || 0), kdv = r2(+it.kdv || 0), oran = +it.kdvOran || 0;
-            const gross = r2(matrah + kdv);
+            // Karışık fatura (kuyumcu: aynı belgede %20 + özel matrah): it.satirlar array kullanılır.
+            // Yoksa tek satırlı standart: it.matrah/kdv/kdvOran.
+            const satirlar = Array.isArray(it.satirlar) && it.satirlar.length ? it.satirlar
+              : [{ matrah: +it.matrah || 0, kdv: +it.kdv || 0, kdvOran: +it.kdvOran || 0 }];
+            let toplamMatrah = 0, toplamKdv = 0;
+            const adUst = (it.ad || '') + ' ' + (it.soyad || '');
+            const acikBase = ((it.unvan || adUst).toLocaleUpperCase('tr')).trim();
+            P.kayitlar = satirlar.map(s => {
+              const mm = r2(+s.matrah || 0), kk = r2(+s.kdv || 0), oo = +s.kdvOran || 0;
+              toplamMatrah += mm; toplamKdv += kk;
+              const k = JSON.parse(JSON.stringify(kTmpl));
+              k.tutar = mm; k.isKdvDahil = false; k.kdv = kk; k.kdvOrani = oo;
+              k.gelirKayitAltTuruKodu = String(s.altKod || paket.altKod || k.gelirKayitAltTuruKodu || '');
+              k.naceKodu = String(paket.nace || k.naceKodu || '');
+              k.aciklama = acikBase + ' - ' + (s.altAd || paket.altAd || 'HİZMET');
+              delete k.id; delete k.gelirBelgeId; delete k.key;
+              return k;
+            });
+            const matrah = r2(toplamMatrah), kdv = r2(toplamKdv), gross = r2(matrah + kdv);
             P.belgeTutari = matrah;
             P.krediKartiTutari = r2(+it.krediKart || 0);
-            // Kayit
-            const k = JSON.parse(JSON.stringify(kTmpl));
-            k.tutar = matrah; k.isKdvDahil = false; if ('kdv' in k) k.kdv = kdv; else k.kdv = kdv; k.kdvOrani = oran;
-            k.gelirKayitAltTuruKodu = String(paket.altKod || k.gelirKayitAltTuruKodu || '');
-            k.naceKodu = String(paket.nace || k.naceKodu || '');
-            const adUst = (it.ad || '') + ' ' + (it.soyad || '');
-            k.aciklama = ((it.unvan || adUst).toLocaleUpperCase('tr')).trim() + ' - ' + (paket.altAd || 'HİZMET');
-            delete k.id; delete k.gelirBelgeId; delete k.key;
-            P.kayitlar = [k];
             delete P.id; delete P.gelirBelgeId; delete P.key;
             if (test) { eslog('🧪 ' + bno + ' hazırlandı: matrah ' + matrah.toFixed(2) + ' + KDV ' + kdv.toFixed(2) + ' · ' + (P.nihaiTuketici ? 'nihai' : 'VKN ' + P.tcknVkn) + ' · ' + (it.krediKart > 0 ? 'KK ' + it.krediKart : 'Nakit ' + it.nakit) + ' — KAYDEDİLMEDİ', '#fbbf24'); ok++; break; }
             const cr = await fetch(B + '/gelir/create', { method: 'POST', headers: H, body: JSON.stringify(P), credentials: 'include' });
