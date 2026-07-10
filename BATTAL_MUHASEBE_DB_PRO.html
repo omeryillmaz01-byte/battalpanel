@@ -552,6 +552,7 @@ footer.btmbar b{color:var(--acc-2)}
       <li>Hepsi otomatik gider, başarılı/hatalı sayısı konsola düşer ✅</li>
     </ol>
     <p style="font-size:11px;color:var(--txt-dim);margin-top:8px" id="modal-script-not">Script tarayıcında o anda token'ı ile çalışır, Defter Beyan API'sine direkt POST atar.</p>
+    <textarea id="modal-script-ta" style="display:none;width:100%;height:150px;background:#020617;color:#22d3ee;border:2px solid #f59e0b;border-radius:8px;padding:10px;font-family:monospace;font-size:11px;box-sizing:border-box;margin-top:10px" onclick="this.select()" readonly></textarea>
     <div class="modal-actions">
       <button class="btn secondary" onclick="App.modalKapat('modal-script')">Tamam</button>
       <button class="btn" onclick="App.scriptKopyala()" id="modal-script-tekrar">📋 Tekrar Kopyala</button>
@@ -1479,18 +1480,30 @@ const App = {
       const j = JSON.stringify(paket);
       const topKk = items.reduce((a,r)=>a+(+r.krediKart||0),0);
       const topNk = items.reduce((a,r)=>a+(+r.nakit||0),0);
-      navigator.clipboard.writeText(j).then(()=>{
-        this.uretilenScript = j;
-        this.uretilenAd = m.ad;
-        document.getElementById('modal-mukname').textContent = m.ad+' ('+this.aktifVkn+') · e-SMM Extension Paketi';
-        this.modalAc('modal-script');
-        this.log('g-log',
-`✅ e-SMM Extension paketi üretildi: ${items.length} makbuz
+      this.uretilenScript = j;
+      this.uretilenAd = m.ad;
+      // Modal başlık ve talimatları extension-flow için özelleştir
+      document.getElementById('modal-script-h2').textContent = '📦 '+items.length+' e-SMM/Fatura → Extension Paketi Hazır';
+      document.getElementById('modal-mukname').textContent = m.ad+' ('+this.aktifVkn+') · 💳 '+this.f(topKk)+' KK · 💵 '+this.f(topNk)+' Nakit';
+      document.getElementById('modal-script-banner').innerHTML = '📥 Extension ile otomatik gönderim hazır — F12 YOK. Aşağıdaki adımlar:';
+      document.getElementById('modal-script-steps').innerHTML = `
+        <li><b>KOPYALA</b> otomatik yapıldı (aşağıdaki kutuda da var — manuel için Ctrl+A + Ctrl+C)</li>
+        <li><b>Defter Beyan</b> → ${m.ad} sayfasına geç (giriş yapmışsın)</li>
+        <li>İlk sefer casus şablonu: kayıtlı bir e-SMM/fatura satırına tıkla → <b>Belgeyi Güncelle</b> (hiç değiştirme) → şablon yakalanır</li>
+        <li>Sağdaki turuncu <b>📥 Panodan e-SMM Gönder</b> butonu → 🧪 Test AÇIK → 🚀 → 1 belge kontrol</li>
+        <li>Doğruysa test kapat → 🚀 → ${items.length} belge gider ✅ (mükerreri atlar)</li>`;
+      document.getElementById('modal-script-not').textContent = 'Extension casus şablonuyla çalışır, mükelleflere göre altKod otomatik gelir. POS/Nakit ayrımı korunur.';
+      const ta = document.getElementById('modal-script-ta');
+      ta.style.display='block'; ta.value=j;
+      document.getElementById('modal-script-tekrar').textContent='📋 Tekrar Kopyala (JSON)';
+      this.modalAc('modal-script');
+      // Panoya yaz (async, hata olursa textarea manuel açık)
+      navigator.clipboard.writeText(j).catch(()=>{ ta.focus(); ta.select(); });
+      this.log('g-log',
+`✅ Extension paketi üretildi: ${items.length} belge
    💳 Kredi kartı: ${this.f(topKk)}  ·  💵 Nakit: ${this.f(topNk)}
-📋 Klibborda kopyalandı (JSON paket).
-🎯 Defter Beyan → Cihan sayfasında BATTAL panel → "📥 Panodan e-SMM Gönder" butonuna bas.
-   İlk sefer: kayıtlı bir e-SMM'ye tıkla → "Belgeyi Güncelle" (casus şablonu yakalar) → tekrar butona bas.`);
-      }).catch(e=>alert('Kopyalama hatası: '+e.message));
+📋 Panoya kopyalandı + modalda görünüyor.
+🎯 DB → ${m.ad} → 📥 Panodan e-SMM Gönder`);
       return;
     }
 
@@ -1548,6 +1561,7 @@ if(fails.length)console.log('Hatalı: '+fails.slice(0,10).join(' | '));
     this.uretilenAd = m.ad;
     document.getElementById('modal-mukname').textContent = m.ad+' ('+this.aktifVkn+')';
     this.scriptKopyala();
+    document.getElementById('modal-script-ta').style.display='none';
     this.modalAc('modal-script');
     this.log('g-log', `✅ Script üretildi: ${arr.length} makbuz · ${this.f(arr.reduce((a,r)=>a+r.matrah,0))} matrah\n📋 Klibborda kopyalandı.\n💡 Defter Beyan'a geç → F12 → Konsol → Ctrl+V → Enter`);
   },
