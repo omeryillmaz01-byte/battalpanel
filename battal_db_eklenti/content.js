@@ -1344,15 +1344,20 @@
             P.kayitlar = satirlar.map(s => {
               const mm = r2(+s.matrah || 0), kk = r2(+s.kdv || 0), oo = +s.kdvOran || 0;
               toplamMatrah += mm; toplamKdv += kk;
-              const k = JSON.parse(JSON.stringify(kTmpl));
-              k.tutar = mm; k.isKdvDahil = false; k.kdv = kk; k.kdvOrani = oo;
-              k.gelirKayitAltTuruKodu = String(s.altKod || paket.altKod || k.gelirKayitAltTuruKodu || '');
-              k.naceKodu = String(paket.nace || k.naceKodu || '');
-              k.aciklama = acikBase + ' - ' + (s.altAd || paket.altAd || 'HİZMET');
-              // Salt istisna satırlar (kdv=0 hepsi): satisTuruKodu override edilebilir (özel matrah/istisna)
-              if (s.satisTuruKodu) k.satisTuruKodu = String(s.satisTuruKodu);
-              if (s.tevkifatUygulanmayanKodu) k.tevkifatUygulanmayanKodu = String(s.tevkifatUygulanmayanKodu);
-              delete k.id; delete k.gelirBelgeId; delete k.key;
+              // Whitelist: template'ten YALNIZCA temel/güvenli alanları al
+              const k = {
+                deleted: false,
+                satisTuruKodu: String(s.satisTuruKodu || kTmpl.satisTuruKodu || '1'),
+                gelirKayitTuruKodu: String(kTmpl.gelirKayitTuruKodu || '2'),
+                gelirKayitAltTuruKodu: String(s.altKod || paket.altKod || kTmpl.gelirKayitAltTuruKodu || ''),
+                aciklama: acikBase + ' - ' + (s.altAd || paket.altAd || 'HİZMET'),
+                tutar: mm,
+                naceKodu: String(paket.nace || kTmpl.naceKodu || ''),
+                isKdvDahil: false,
+                kdv: kk,
+                kdvOrani: oo,
+                tevkifatUygulanmayanKodu: String(s.tevkifatUygulanmayanKodu || kTmpl.tevkifatUygulanmayanKodu || '1100')
+              };
               return k;
             });
             const matrah = r2(toplamMatrah), kdv = r2(toplamKdv), gross = r2(matrah + kdv);
