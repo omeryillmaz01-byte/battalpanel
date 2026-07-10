@@ -1098,6 +1098,8 @@ const App = {
         }
       }
       if(/^\d{4}-\d{2}-\d{2}/.test(tar)){const a=tar.split('-');tar=a[2].slice(0,2)+'.'+a[1]+'.'+a[0]}
+      if(/^\d{2}-\d{2}-\d{4}/.test(tar)){const a=tar.split('-');tar=a[0]+'.'+a[1]+'.'+a[2]}
+      if(/^\d{2}\/\d{2}\/\d{4}/.test(tar)){tar=tar.replace(/\//g,'.')}
       tar = tar.replace(/^(\d)\./,'0$1.').replace(/\.(\d)\./,'.0$1.');
       let vkn = (g('vkn').match(/\b(\d{10,11})\b/)||[,''])[1];
       let unvan = g('unvan').replace(vkn||'','').replace(/\s+/g,' ').trim();
@@ -1244,6 +1246,8 @@ const App = {
       const bn = (bc.match(/[A-Z]{2,3}\d{8,16}/)||[''])[0]||bc.trim();
       let tar = g('tarih').split(' ')[0];
       if(/^\d{4}-\d{2}-\d{2}/.test(tar)){const a=tar.split('-');tar=a[2].slice(0,2)+'.'+a[1]+'.'+a[0]}
+      if(/^\d{2}-\d{2}-\d{4}/.test(tar)){const a=tar.split('-');tar=a[0]+'.'+a[1]+'.'+a[2]}
+      if(/^\d{2}\/\d{2}\/\d{4}/.test(tar)){tar=tar.replace(/\//g,'.')}
       tar = tar.replace(/^(\d)\./,'0$1.').replace(/\.(\d)\./,'.0$1.');
       const vkn = (g('vkn').match(/\b(\d{10,11})\b/)||[,''])[1];
       let unvan = g('unvan').replace(vkn,'').replace(/\s+/g,' ').trim();
