@@ -1178,8 +1178,10 @@
               // Template-level id/key + geçersiz tevkifat/stopaj alanları sil
               delete rec.id; delete rec.gelirBelgeId; delete rec.key;
               delete rec.kismiTevkifatKodu; delete rec.kismiTevkifatOrani; delete rec.kismiTevkifatTutari;
-              delete rec.tevkifatOrani; delete rec.tevkifatTutari;
-              delete rec.stopajKodu; delete rec.stopajOran; delete rec.stopajTutari;
+              delete rec.tevkifatOrani; delete rec.tevkifatTutari; delete rec.tevkifatKodu;
+              delete rec.stopajKodu; delete rec.stopajOran; delete rec.stopajTutari; delete rec.stopajOrani;
+              delete rec.istegeBagliTamTevkifatKodu; delete rec.istegeBagliTamTevkifatOrani; delete rec.istegeBagliTamTevkifatTutari;
+              delete rec.tamTevkifatKodu; delete rec.tamTevkifatOrani; delete rec.tamTevkifatTutari;
               return rec;
             });
             P.belgeTutari = r2(toplamM);
