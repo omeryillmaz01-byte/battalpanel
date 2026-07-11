@@ -1892,7 +1892,8 @@ if(fails.length)console.log('Hatalı: '+fails.slice(0,10).join(' | '));
       belge: f('makbuz no','belge no','fatura no','belge numara','gib belge','fatura sıra','fatura sira'),
       belgeSeri: f('fatura seri','belge seri'),
       tarih: fN(['belge tarih','fatura tarih','düzenleme tarih','tarih'],['oluştur']),
-      unvan: fN(['alıcı','alici','ünvan','unvan','gönderici','gönderen','cari','satıcı','ad soyad','müşteri','musteri'],['vkn','tckn','kimlik','vergi no','vergi numara']),
+      // Alıcı öncelikli — gönderici/satıcı hariç (satan mükellef kendisidir, açıklamaya yazılmaz)
+      unvan: fN(['alıcı','alici','ünvan','unvan','cari','ad soyad','müşteri','musteri'],['vkn','tckn','kimlik','vergi no','vergi numara','gönderici','gönderen','satıcı']),
       vkn:   f('vkn/tckn','vkn','tckn','vergi no','kimlik','vergi numara','müşteri vergi'),
       matrah:tip==='gider'?f('vergiler hariç','kdv hariç','matrah'):f('kdv matrah','mal hizmet','matrah','vergiler hariç','brüt toplam','ara toplam'),
       kdv:   f('toplam kdv','hesaplanan kdv','kdv tutar'),
