@@ -1141,7 +1141,12 @@ const App = {
           {oran:20, m: cm.cols.kdv20m>=0 ? this.num(String(r[cm.cols.kdv20m]||'')) : 0, v: cm.cols.kdv20v>=0 ? this.num(String(r[cm.cols.kdv20v]||'')) : 0}
         ].filter(x=>x.m>0);
         if(perOran.length>1){
-          satirlar = perOran.map(x=>({matrah:this.r2(x.m),kdv:this.r2(x.v||x.m*x.oran/100),kdvOran:x.oran}));
+          // Karışık: %0 satırlarına satisTuruKodu='3' (istisna), diğerlerine template default
+          satirlar = perOran.map(x=>{
+            const s={matrah:this.r2(x.m),kdv:this.r2(x.v||x.m*x.oran/100),kdvOran:x.oran};
+            if(x.oran===0) s.satisTuruKodu='3';
+            return s;
+          });
           matrah = satirlar.reduce((a,s)=>a+s.matrah,0);
           kdv = satirlar.reduce((a,s)=>a+s.kdv,0);
         } else if(perOran.length===1 && perOran[0].oran===0){
