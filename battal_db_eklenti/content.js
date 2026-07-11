@@ -1177,11 +1177,8 @@
               rec.tevkifatUygulanmayanKodu = String(src.tevkifatUygulanmayanKodu || '1100');
               // Template-level id/key + geçersiz tevkifat/stopaj alanları sil
               delete rec.id; delete rec.gelirBelgeId; delete rec.key;
-              delete rec.kismiTevkifatKodu; delete rec.kismiTevkifatOrani; delete rec.kismiTevkifatTutari;
-              delete rec.tevkifatOrani; delete rec.tevkifatTutari; delete rec.tevkifatKodu;
-              delete rec.stopajKodu; delete rec.stopajOran; delete rec.stopajTutari; delete rec.stopajOrani;
-              delete rec.istegeBagliTamTevkifatKodu; delete rec.istegeBagliTamTevkifatOrani; delete rec.istegeBagliTamTevkifatTutari;
-              delete rec.tamTevkifatKodu; delete rec.tamTevkifatOrani; delete rec.tamTevkifatTutari;
+              // İstisna kayitlarda: TÜM template değerlerini KORU (0 dahi olsa, silme)
+              // Sadece override edilen alanlar (tutar, kdv, aciklama vs) yukarıda set edildi
               return rec;
             });
             P.belgeTutari = r2(toplamM);
