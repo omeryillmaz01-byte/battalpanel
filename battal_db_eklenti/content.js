@@ -1175,8 +1175,11 @@
               rec.kdv = kk;
               rec.kdvOrani = oo;
               rec.tevkifatUygulanmayanKodu = String(src.tevkifatUygulanmayanKodu || '1100');
-              // Template-level id/key alanları sil
+              // Template-level id/key + geçersiz tevkifat/stopaj alanları sil
               delete rec.id; delete rec.gelirBelgeId; delete rec.key;
+              delete rec.kismiTevkifatKodu; delete rec.kismiTevkifatOrani; delete rec.kismiTevkifatTutari;
+              delete rec.tevkifatOrani; delete rec.tevkifatTutari;
+              delete rec.stopajKodu; delete rec.stopajOran; delete rec.stopajTutari;
               return rec;
             });
             P.belgeTutari = r2(toplamM);

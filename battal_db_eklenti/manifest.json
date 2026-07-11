@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "BATTAL · Defter Beyan + Uyumsoft Kontrol",
-  "version": "7.3",
+  "version": "7.4",
   "description": "Defter Beyan + Uyumsoft tam otomasyon: gelen fatura XML detay cekme, otomatik gider siniflandirma (SINIF_KURALLAR), capraz kontrol, eksik giderleri otomatik gonderme, alici bilgi kontrolu.",
   "permissions": ["storage"],
   "host_permissions": [
