@@ -431,10 +431,20 @@
         const belgeSec = o => (o && o.gelirBelgeTuruKodu && o.kayitlar && o.kayitlar.length) ? o : null;
         const cand = belgeSec(d.req) || belgeSec(d.res && (d.res.resultContainer || d.res.result)) || belgeSec(d.res);
         if (d.status === 200 && cand && cand.gelirBelgeTuruKodu) {
-          // Z Raporu mu, satış e-Fatura/e-Arşiv mi ayır (belge türü koduna göre)
           const isZ = /z.?raporu/i.test(JSON.stringify(cand.kayitlar || []) + ' ' + (cand.aciklama || ''));
-          const key = isZ ? 'zTemplate' : 'satisTemplate';
-          try { chrome.storage.local.set({ [key]: { req: cand, ts: Date.now() } }); } catch (x) {}
+          const kod0 = cand.kayitlar && cand.kayitlar[0] && String(cand.kayitlar[0].satisTuruKodu || '');
+          // İstisna template: satisTuruKodu != "1" (normal) ise ayrı slot'a kaydet
+          const isIstisna = !isZ && kod0 && kod0 !== '1';
+          const key = isZ ? 'zTemplate' : (isIstisna ? 'istisnaTemplate' : 'satisTemplate');
+          try {
+            chrome.storage.local.set({ [key]: { req: cand, ts: Date.now() } });
+            const kayitKods = (cand.kayitlar||[]).map(k=>'st:'+k.satisTuruKodu+' altKod:'+k.gelirKayitAltTuruKodu).join(' | ');
+            const toast = document.createElement('div');
+            toast.style.cssText = 'position:fixed;bottom:20px;left:20px;z-index:2147483647;background:#0f1830;border:2px solid #f59e0b;color:#e8edf5;padding:14px 18px;border-radius:12px;font:13px Segoe UI,sans-serif;max-width:520px;box-shadow:0 8px 30px rgba(0,0,0,.5)';
+            toast.innerHTML = '<b style="color:#fcd34d;font-size:14px">🎯 ' + key.toUpperCase() + ' YAKALANDI</b><br><span style="font-size:11px;color:#9aa6c0">' + kayitKods + '</span><button style="margin-top:8px;background:#af0003;color:#fff;border:0;padding:5px 12px;border-radius:6px;cursor:pointer" onclick="this.parentNode.remove()">Kapat</button>';
+            document.body.appendChild(toast);
+            setTimeout(() => { try { toast.remove(); } catch (e) {} }, 12000);
+          } catch (x) {}
         }
         // ── GİDER kodu yakala: elle girilen gider kaydından alt tür kodunu öğren ──
         const gsec = o => (o && o.giderBelgeTuruKodu && Array.isArray(o.kayitlar) && o.kayitlar.length) ? o : null;
@@ -1071,8 +1081,8 @@
       if (!kilitG.gecer) { kilitRed(bar, kilitG.mesaj); return; }
       const D = document, r2 = v => Math.round(v * 100) / 100;
       const iso = t => { const a = String(t).split('.'); return a.length === 3 ? a[2] + '-' + a[1] + '-' + a[0] + ' 00:00:00' : t; };
-      let tmpl = null, giden = null, panoPaket = null;
-      try { const s = await chrome.storage.local.get(['satisTemplate', 'uyumGiden']); tmpl = s.satisTemplate && s.satisTemplate.req; giden = s.uyumGiden && s.uyumGiden.list; } catch (e) {}
+      let tmpl = null, tmplIst = null, giden = null, panoPaket = null;
+      try { const s = await chrome.storage.local.get(['satisTemplate', 'istisnaTemplate', 'uyumGiden']); tmpl = s.satisTemplate && s.satisTemplate.req; tmplIst = s.istisnaTemplate && s.istisnaTemplate.req; giden = s.uyumGiden && s.uyumGiden.list; } catch (e) {}
       // FALLBACK: Uyumsoft cache yoksa panodaki 'battal-esmm-gonder' paketini oku (Sinan/Trendyol gibi Uyumsoft-suz mükellefler)
       if (!giden || !giden.length) {
         try {
@@ -1145,22 +1155,32 @@
             // Kayıt satırları — karışık ise satirlar[], değilse tek satır (whitelist alanlar)
             const satirlar = hasSatirlar ? x.satirlar : [{ matrah, kdv, kdvOran: oran }];
             let toplamM = 0, toplamK = 0;
+            const kIstTmpl = (tmplIst && tmplIst.kayitlar && tmplIst.kayitlar[0]) || null;
             P.kayitlar = satirlar.map(s => {
               const mm = r2(+s.matrah || 0), kk = r2(+s.kdv || 0), oo = +s.kdvOran || 0;
               toplamM += mm; toplamK += kk;
-              return {
+              // İstisna satır (%0 KDV veya satisTuruKodu override): varsa istisnaTemplate kullan
+              const useIst = kIstTmpl && (oo === 0 || (s.satisTuruKodu && s.satisTuruKodu !== '1'));
+              const src = useIst ? kIstTmpl : kTmpl;
+              const rec = {
                 deleted: false,
-                satisTuruKodu: String(s.satisTuruKodu || kTmpl.satisTuruKodu || '1'),
-                gelirKayitTuruKodu: String(kTmpl.gelirKayitTuruKodu || '2'),
-                gelirKayitAltTuruKodu: String(s.altKod || (panoPaket && panoPaket.altKod) || kTmpl.gelirKayitAltTuruKodu || ''),
-                aciklama: acikBase + ' - ' + (s.altAd || (panoPaket && panoPaket.altAd) || 'MAL SATIŞI'),
+                satisTuruKodu: String(s.satisTuruKodu || src.satisTuruKodu || '1'),
+                gelirKayitTuruKodu: String(src.gelirKayitTuruKodu || '2'),
+                gelirKayitAltTuruKodu: String(s.altKod || (useIst ? src.gelirKayitAltTuruKodu : ((panoPaket && panoPaket.altKod) || src.gelirKayitAltTuruKodu || ''))),
+                aciklama: acikBase + ' - ' + (s.altAd || (useIst ? '' : (panoPaket && panoPaket.altAd) || 'MAL SATIŞI')).trim(),
                 tutar: mm,
-                naceKodu: String((panoPaket && panoPaket.nace) || kTmpl.naceKodu || ''),
+                naceKodu: String((panoPaket && panoPaket.nace) || src.naceKodu || ''),
                 isKdvDahil: false,
                 kdv: kk,
                 kdvOrani: oo,
-                tevkifatUygulanmayanKodu: String(kTmpl.tevkifatUygulanmayanKodu || '1100')
+                tevkifatUygulanmayanKodu: String(src.tevkifatUygulanmayanKodu || '1100')
               };
+              // İstisna template'ten spesifik alanları kopyala (bildirim türü, özel matrah alanı vs)
+              if (useIst) {
+                ['bildirimTuruKodu','ozelMatrahKodu','istisnaKodu','digerIslemlerKodu','kdvHesaplanmasin','kismiTevkifatKodu']
+                  .forEach(f => { if (src[f] != null && src[f] !== '') rec[f] = src[f]; });
+              }
+              return rec;
             });
             P.belgeTutari = r2(toplamM);
             delete P.id; delete P.gelirBelgeId; delete P.key;
