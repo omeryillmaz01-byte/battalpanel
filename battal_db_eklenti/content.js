@@ -1162,25 +1162,21 @@
               // İstisna satır (%0 KDV veya satisTuruKodu override): varsa istisnaTemplate kullan
               const useIst = kIstTmpl && (oo === 0 || (s.satisTuruKodu && s.satisTuruKodu !== '1'));
               const src = useIst ? kIstTmpl : kTmpl;
-              // İstisna template varsa: satisTuruKodu ve altKod tamamen template'ten (panel override'ı yoksay)
-              const rec = {
-                deleted: false,
-                satisTuruKodu: String(useIst ? (src.satisTuruKodu || '2') : (s.satisTuruKodu || src.satisTuruKodu || '1')),
-                gelirKayitTuruKodu: String(src.gelirKayitTuruKodu || '2'),
-                gelirKayitAltTuruKodu: String(useIst ? (src.gelirKayitAltTuruKodu || '') : (s.altKod || (panoPaket && panoPaket.altKod) || src.gelirKayitAltTuruKodu || '')),
-                aciklama: acikBase + ' - ' + (s.altAd || (useIst ? '' : (panoPaket && panoPaket.altAd) || 'MAL SATIŞI')).trim(),
-                tutar: mm,
-                naceKodu: String((panoPaket && panoPaket.nace) || src.naceKodu || ''),
-                isKdvDahil: false,
-                kdv: kk,
-                kdvOrani: oo,
-                tevkifatUygulanmayanKodu: String(src.tevkifatUygulanmayanKodu || '1100')
-              };
-              // İstisna template'ten spesifik alanları kopyala (bildirim türü, özel matrah alanı vs)
-              if (useIst) {
-                ['bildirimTuruKodu','ozelMatrahKodu','istisnaKodu','digerIslemlerKodu','kdvHesaplanmasin','kismiTevkifatKodu']
-                  .forEach(f => { if (src[f] != null && src[f] !== '') rec[f] = src[f]; });
-              }
+              // İstisna template varsa: TÜM alanları kopyala (bilinmeyen istisna field'ları için), sonra override
+              const rec = useIst ? JSON.parse(JSON.stringify(src)) : {};
+              rec.deleted = false;
+              rec.satisTuruKodu = String(useIst ? (src.satisTuruKodu || '2') : (s.satisTuruKodu || src.satisTuruKodu || '1'));
+              rec.gelirKayitTuruKodu = String(src.gelirKayitTuruKodu || '2');
+              rec.gelirKayitAltTuruKodu = String(useIst ? (src.gelirKayitAltTuruKodu || '') : (s.altKod || (panoPaket && panoPaket.altKod) || src.gelirKayitAltTuruKodu || ''));
+              rec.aciklama = acikBase + ' - ' + (s.altAd || (useIst ? '' : (panoPaket && panoPaket.altAd) || 'MAL SATIŞI')).trim();
+              rec.tutar = mm;
+              rec.naceKodu = String((panoPaket && panoPaket.nace) || src.naceKodu || '');
+              rec.isKdvDahil = false;
+              rec.kdv = kk;
+              rec.kdvOrani = oo;
+              rec.tevkifatUygulanmayanKodu = String(src.tevkifatUygulanmayanKodu || '1100');
+              // Template-level id/key alanları sil
+              delete rec.id; delete rec.gelirBelgeId; delete rec.key;
               return rec;
             });
             P.belgeTutari = r2(toplamM);
