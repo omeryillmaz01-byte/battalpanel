@@ -1162,24 +1162,36 @@
               // İstisna satır (%0 KDV veya satisTuruKodu override): varsa istisnaTemplate kullan
               const useIst = kIstTmpl && (oo === 0 || (s.satisTuruKodu && s.satisTuruKodu !== '1'));
               const src = useIst ? kIstTmpl : kTmpl;
-              // İstisna template varsa: TÜM alanları kopyala (bilinmeyen istisna field'ları için), sonra override
-              const rec = useIst ? JSON.parse(JSON.stringify(src)) : {};
-              rec.deleted = false;
-              rec.satisTuruKodu = String(useIst ? (src.satisTuruKodu || '2') : (s.satisTuruKodu || src.satisTuruKodu || '1'));
-              rec.gelirKayitTuruKodu = String(src.gelirKayitTuruKodu || '2');
-              rec.gelirKayitAltTuruKodu = String(useIst ? (src.gelirKayitAltTuruKodu || '') : (s.altKod || (panoPaket && panoPaket.altKod) || src.gelirKayitAltTuruKodu || ''));
-              rec.aciklama = acikBase + ' - ' + (s.altAd || (useIst ? '' : (panoPaket && panoPaket.altAd) || 'MAL SATIŞI')).trim();
-              rec.tutar = mm;
-              rec.naceKodu = String((panoPaket && panoPaket.nace) || src.naceKodu || '');
-              rec.isKdvDahil = false;
-              rec.kdv = kk;
-              rec.kdvOrani = oo;
-              rec.tevkifatUygulanmayanKodu = String(src.tevkifatUygulanmayanKodu || '1100');
-              // Template-level id/key + geçersiz tevkifat/stopaj alanları sil
-              delete rec.id; delete rec.gelirBelgeId; delete rec.key;
-              // İstisna kayitlarda: TÜM template değerlerini KORU (0 dahi olsa, silme)
-              // Sadece override edilen alanlar (tutar, kdv, aciklama vs) yukarıda set edildi
-              return rec;
+              // İstisna kayit MİNİMAL payload (gerçek DB payload'ından öğrenildi):
+              // {deleted, satisTuruKodu, gelirKayitTuruKodu, gelirKayitAltTuruKodu, aciklama, miktar, tutar, naceKodu, isKdvDahil, kdvsizIslem}
+              // Normal kayit: template + override
+              if (useIst) {
+                return {
+                  deleted: false,
+                  satisTuruKodu: String(src.satisTuruKodu || '6'),
+                  gelirKayitTuruKodu: String(src.gelirKayitTuruKodu || '1'),
+                  gelirKayitAltTuruKodu: String(src.gelirKayitAltTuruKodu || ''),
+                  aciklama: acikBase.slice(0, 250) || 'İSTİSNA',
+                  miktar: 1,
+                  tutar: mm,
+                  naceKodu: String(src.naceKodu || (panoPaket && panoPaket.nace) || ''),
+                  isKdvDahil: false,
+                  kdvsizIslem: true
+                };
+              }
+              return {
+                deleted: false,
+                satisTuruKodu: String(s.satisTuruKodu || kTmpl.satisTuruKodu || '1'),
+                gelirKayitTuruKodu: String(kTmpl.gelirKayitTuruKodu || '2'),
+                gelirKayitAltTuruKodu: String(s.altKod || (panoPaket && panoPaket.altKod) || kTmpl.gelirKayitAltTuruKodu || ''),
+                aciklama: acikBase + ' - ' + (s.altAd || (panoPaket && panoPaket.altAd) || 'MAL SATIŞI'),
+                tutar: mm,
+                naceKodu: String((panoPaket && panoPaket.nace) || kTmpl.naceKodu || ''),
+                isKdvDahil: false,
+                kdv: kk,
+                kdvOrani: oo,
+                tevkifatUygulanmayanKodu: String(kTmpl.tevkifatUygulanmayanKodu || '1100')
+              };
             });
             P.belgeTutari = r2(toplamM);
             delete P.id; delete P.gelirBelgeId; delete P.key;
