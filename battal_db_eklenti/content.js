@@ -1162,11 +1162,12 @@
               // İstisna satır (%0 KDV veya satisTuruKodu override): varsa istisnaTemplate kullan
               const useIst = kIstTmpl && (oo === 0 || (s.satisTuruKodu && s.satisTuruKodu !== '1'));
               const src = useIst ? kIstTmpl : kTmpl;
+              // İstisna template varsa: satisTuruKodu ve altKod tamamen template'ten (panel override'ı yoksay)
               const rec = {
                 deleted: false,
-                satisTuruKodu: String(s.satisTuruKodu || src.satisTuruKodu || '1'),
+                satisTuruKodu: String(useIst ? (src.satisTuruKodu || '2') : (s.satisTuruKodu || src.satisTuruKodu || '1')),
                 gelirKayitTuruKodu: String(src.gelirKayitTuruKodu || '2'),
-                gelirKayitAltTuruKodu: String(s.altKod || (useIst ? src.gelirKayitAltTuruKodu : ((panoPaket && panoPaket.altKod) || src.gelirKayitAltTuruKodu || ''))),
+                gelirKayitAltTuruKodu: String(useIst ? (src.gelirKayitAltTuruKodu || '') : (s.altKod || (panoPaket && panoPaket.altKod) || src.gelirKayitAltTuruKodu || '')),
                 aciklama: acikBase + ' - ' + (s.altAd || (useIst ? '' : (panoPaket && panoPaket.altAd) || 'MAL SATIŞI')).trim(),
                 tutar: mm,
                 naceKodu: String((panoPaket && panoPaket.nace) || src.naceKodu || ''),
