@@ -1328,6 +1328,11 @@ const App = {
         r.uyari=u; return;
       }
       if(!(r.matrah>0))u.push('Matrah?');
+      // Tedarikçi haritasından altKod geldiyse metin sınıflandırmasını atla
+      if(r.altKod && r.altAd){
+        r.sinif=r.altAd; r.stopajGider=0; r.hasOIV=false; r.sabitKiymet=false;
+        r.uyari=u; return;
+      }
       // Sınıflandırma
       let sinif='Diğer Hizmet', altKod=195, altAd='Diğer Hizmet Giderleri (GVK 40/1)', stopajGider=0, hasOIV=false;
       const txt = (r.unvan||'').toLocaleLowerCase('tr');
