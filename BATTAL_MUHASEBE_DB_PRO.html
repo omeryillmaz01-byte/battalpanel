@@ -724,8 +724,10 @@ const MUKELLEFLER = {
     kkAyrim:true, earsivFatura:true, // Excel'de per-oran matrah kolonları kullanılır
     // GİDER: tedarikçi VKN → altKod/altAd/turKod haritası (elle öğrenilen kodlar)
     tedarikciMap:{
-      '2650179910':{ altKod:'194', altAd:'Dışarıdan Sağlanan Fayda ve Hizmetler ( GVK 40/1)', turKod:'4', prefixMap:{'HD1':{altKod:'193',altAd:'Kargo ,Posta ve Kurye Giderleri ( GVK 40/1)'}} }, // D-MARKET (Hepsiburada)
-      '4090017206':{ altKod:'186', altAd:'Mal Alışı', turKod:'1' }, // GÖRDES ithalat mal alışı
+      // D-MARKET (Hepsiburada): tek fatura iki kalem - Kargo (193) + Komisyon+Tahsilat+Hizmet (194)
+      // XML açıklamasında MP Kargo Destek Yansıtma tutarı 193, kalan 194'e gider. XML yoksa ortalama %36.5 kargo.
+      '2650179910':{ splitRatio:{ '193':0.365, '194':0.635 }, altAdMap:{ '193':'Kargo ,Posta ve Kurye Giderleri ( GVK 40/1)', '194':'Dışarıdan Sağlanan Fayda ve Hizmetler ( GVK 40/1)' }, turKod:'4' },
+      '4090017206':{ altKod:'186', altAd:'Mal Alışı', turKod:'1' }, // GÖRDES mal alışı
       '34241131728':{ altKod:'186', altAd:'Mal Alışı', turKod:'1', kdvsizIslem:true } // DİLAVER YAYLACI (kdvsiz mal alışı)
     }
   },
@@ -1283,10 +1285,19 @@ const App = {
       const mAkt = MUKELLEFLER[this.aktifVkn];
       const tMap = mAkt && mAkt.tedarikciMap;
       let ted = tMap && tMap[vkn] ? tMap[vkn] : null;
-      if(ted && ted.prefixMap){ // D-MARKET HD1/HD2 gibi prefix bazlı alt kural
+      if(ted && ted.prefixMap){
         for(const pre in ted.prefixMap){ if(bn.startsWith(pre)){ ted = Object.assign({},ted,ted.prefixMap[pre]); break; } }
       }
       oranlar.forEach((x,idx)=>{
+        // splitRatio varsa: aynı belge farklı altKod ile birden fazla satır (D-MARKET Kargo+Komisyon)
+        if(ted && ted.splitRatio){
+          for(const kod in ted.splitRatio){
+            const r=ted.splitRatio[kod];
+            const mm=this.r2(x.matrah*r), kk=this.r2(x.kdv*r);
+            out.push({belgeNo:bn,tarih:tar,vkn,unvan,matrah:mm,kdv:kk,oran:x.oran,oiv:0,odenecek,iptal,iade,altKod:kod,altAd:ted.altAdMap[kod]||'',giderTuruKodu:ted.turKod||'4'});
+          }
+          return;
+        }
         const rec={belgeNo:bn,tarih:tar,vkn,unvan,matrah:x.matrah,kdv:x.kdv,oran:x.oran,oiv:(idx===0 && oivFark>1)?oivFark:0,odenecek,iptal,iade};
         if(ted){ rec.altKod=ted.altKod; rec.altAd=ted.altAd; rec.giderTuruKodu=ted.turKod||'4'; if(ted.kdvsizIslem||x.oran===0)rec.kdvsizIslem=true; }
         out.push(rec);
