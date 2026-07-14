@@ -519,7 +519,15 @@
         if (!grup[k]) grup[k] = [];
         grup[k].push(it);
       }
-      const gruplar = Object.values(grup);
+      // Mükerrer kontrol: DB'deki mevcut gider belge nolar → gruptan çıkar
+      const mevcut = new Set();
+      let atlanmisMuk = 0;
+      try { const R = await pullDB(null); R.all.forEach(r => { if (r.belgeSiraNo) mevcut.add(norm(r.belgeSiraNo)); }); } catch (e) {}
+      const gruplar = Object.entries(grup).filter(([bno, its]) => {
+        const n = norm((bno || '').replace(/[^0-9A-Za-z]/g, ''));
+        if (mevcut.has(n)) { atlanmisMuk++; return false; }
+        return true;
+      }).map(([, its]) => its);
       async function islem(items) {
         const d = items[0];
         try {
@@ -554,7 +562,7 @@
         } catch (e) { return { bno: d.bno, s: '❌', m: e.message }; }
       }
       let ok = 0, er = 0; const rows = [];
-      bar.innerHTML = '<div id="__gonderStatus">Gönderiliyor… 0/' + gruplar.length + '</div><div id="__gonderRows" style="margin-top:10px"></div>';
+      bar.innerHTML = '<div id="__gonderStatus">Gönderiliyor… 0/' + gruplar.length + (atlanmisMuk ? ' · ⏭ ' + atlanmisMuk + ' mükerrer atlandı' : '') + '</div><div id="__gonderRows" style="margin-top:10px"></div>';
       for (let i = 0; i < gruplar.length; i += 5) {
         const res = await Promise.all(gruplar.slice(i, i + 5).map(islem));
         res.forEach(r => { if (r.s === '✅') ok++; else er++; rows.push(r); });
