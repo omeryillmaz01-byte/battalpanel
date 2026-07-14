@@ -721,7 +721,13 @@ const MUKELLEFLER = {
     giderEvet:true, malAlis:true,
     // GELİR: Trendyol e-Arşiv Fatura, nihai tüketici, %20 KDV veya karışık (özel matrah + %20)
     altKod:'', altAd:'MAL SATIŞI', kdvOrani:20, nihaiTuketici:true, kdvDahil:false,
-    kkAyrim:true, earsivFatura:true // Excel'de per-oran matrah kolonları kullanılır
+    kkAyrim:true, earsivFatura:true, // Excel'de per-oran matrah kolonları kullanılır
+    // GİDER: tedarikçi VKN → altKod/altAd/turKod haritası (elle öğrenilen kodlar)
+    tedarikciMap:{
+      '2650179910':{ altKod:'194', altAd:'Dışarıdan Sağlanan Fayda ve Hizmetler ( GVK 40/1)', turKod:'4', prefixMap:{'HD1':{altKod:'193',altAd:'Kargo ,Posta ve Kurye Giderleri ( GVK 40/1)'}} }, // D-MARKET (Hepsiburada)
+      '4090017206':{ altKod:'186', altAd:'Mal Alışı', turKod:'1' }, // GÖRDES ithalat mal alışı
+      '34241131728':{ altKod:'186', altAd:'Mal Alışı', turKod:'1', kdvsizIslem:true } // DİLAVER YAYLACI (kdvsiz mal alışı)
+    }
   },
   '3460330305':{
     ad:'Altuğ Erden', emoji:'☕', tip:'ISL', vd:'ÜSKÜDAR',
@@ -1270,14 +1276,20 @@ const App = {
       // İADE faturası: normal alış gibi işlenmemeli — iade/return olarak ayrı kaydedilir.
       // Fatura Tipi "İade" ise (veya durum/ünvanda "iade" geçiyorsa) işaretle, otomatik gönderme.
       const iade=/iade/i.test(g('faturaTipi'))||/iade/i.test(g('durum'));
-      const oranlar=[{oran:20,matrah:k20,kdv:v20},{oran:10,matrah:k10,kdv:v10},{oran:18,matrah:k18,kdv:v18},{oran:8,matrah:k8,kdv:v8},{oran:1,matrah:k1,kdv:v1}].filter(x=>x.matrah>0);
+      const oranlar=[{oran:20,matrah:k20,kdv:v20},{oran:10,matrah:k10,kdv:v10},{oran:18,matrah:k18,kdv:v18},{oran:8,matrah:k8,kdv:v8},{oran:1,matrah:k1,kdv:v1},{oran:0,matrah:k0,kdv:0}].filter(x=>x.matrah>0);
       if(!oranlar.length && haricToplam>0) oranlar.push({oran:toplamKdv>0?Math.round(toplamKdv/haricToplam*100):0,matrah:haricToplam,kdv:toplamKdv});
-      // ÖİV: ödenecek, oran toplamından fazlaysa gerçek fark ÖİV'dir.
-      // ÖİV'i AYRI satır/belge yapma — ana (ilk oran) satırına iliştir; gönderimde AYNI belgeye
-      // 2. kayıt olarak eklenir (turKod 5, altKod 218). Böylece mükerrer belge-no ve GVK40 hatası önlenir.
       const oivFark = this.r2(odenecek - haricToplam - toplamKdv);
+      // Tedarikçi VKN → altKod haritası (Sinan gibi mükelleflerde otomatik sınıflandırma)
+      const mAkt = MUKELLEFLER[this.aktifVkn];
+      const tMap = mAkt && mAkt.tedarikciMap;
+      let ted = tMap && tMap[vkn] ? tMap[vkn] : null;
+      if(ted && ted.prefixMap){ // D-MARKET HD1/HD2 gibi prefix bazlı alt kural
+        for(const pre in ted.prefixMap){ if(bn.startsWith(pre)){ ted = Object.assign({},ted,ted.prefixMap[pre]); break; } }
+      }
       oranlar.forEach((x,idx)=>{
-        out.push({belgeNo:bn,tarih:tar,vkn,unvan,matrah:x.matrah,kdv:x.kdv,oran:x.oran,oiv:(idx===0 && oivFark>1)?oivFark:0,odenecek,iptal,iade});
+        const rec={belgeNo:bn,tarih:tar,vkn,unvan,matrah:x.matrah,kdv:x.kdv,oran:x.oran,oiv:(idx===0 && oivFark>1)?oivFark:0,odenecek,iptal,iade};
+        if(ted){ rec.altKod=ted.altKod; rec.altAd=ted.altAd; rec.giderTuruKodu=ted.turKod||'4'; if(ted.kdvsizIslem||x.oran===0)rec.kdvsizIslem=true; }
+        out.push(rec);
       });
     }
     this.giderData = out;
@@ -1669,7 +1681,7 @@ if(fails.length)console.log('Hatalı: '+fails.slice(0,10).join(' | '));
       items: gonderilebilir.map(r=>({
         bno:r.belgeNo, vkn:r.vkn, matrah:r.matrah, kdv:r.kdv, oran:r.oran,
         tarih:r.tarih, altKod:String(r.altKod), oiv:r.oiv||0, altAd:r.altAd||'',
-        turKod:r.giderTuruKodu||'4'
+        turKod:r.giderTuruKodu||'4', kdvsizIslem:!!r.kdvsizIslem
       }))
     };
     navigator.clipboard.writeText(JSON.stringify(paket)).then(()=>{
@@ -1892,8 +1904,10 @@ if(fails.length)console.log('Hatalı: '+fails.slice(0,10).join(' | '));
       belge: f('makbuz no','belge no','fatura no','belge numara','gib belge','fatura sıra','fatura sira'),
       belgeSeri: f('fatura seri','belge seri'),
       tarih: fN(['belge tarih','fatura tarih','düzenleme tarih','tarih'],['oluştur']),
-      // Alıcı öncelikli — gönderici/satıcı hariç (satan mükellef kendisidir, açıklamaya yazılmaz)
-      unvan: fN(['alıcı','alici','ünvan','unvan','cari','ad soyad','müşteri','musteri'],['vkn','tckn','kimlik','vergi no','vergi numara','gönderici','gönderen','satıcı']),
+      // Gelirde alıcı, giderde gönderici/tedarikçi öncelikli
+      unvan: tip==='gider'
+        ? fN(['gönderici','gönderen','satıcı','tedarikçi','tedarikci','cari','ünvan','unvan','ad soyad'],['vkn','tckn','kimlik','vergi no','vergi numara','alıcı','alici'])
+        : fN(['alıcı','alici','ünvan','unvan','cari','ad soyad','müşteri','musteri'],['vkn','tckn','kimlik','vergi no','vergi numara','gönderici','gönderen','satıcı']),
       vkn:   f('vkn/tckn','vkn','tckn','vergi no','kimlik','vergi numara','müşteri vergi'),
       matrah:tip==='gider'?f('vergiler hariç','kdv hariç','matrah'):f('kdv matrah','mal hizmet','matrah','vergiler hariç','brüt toplam','ara toplam'),
       kdv:   f('toplam kdv','hesaplanan kdv','kdv tutar'),
