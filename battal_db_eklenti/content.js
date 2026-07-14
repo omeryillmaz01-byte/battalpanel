@@ -512,7 +512,16 @@
       // "UYGUN DEĞİL" işaretli fatura no'ları gider gönderimine SOKULMAZ.
       let alkMap = {};
       try { const s = await chrome.storage.local.get('aliciKontrol'); alkMap = (s.aliciKontrol && s.aliciKontrol.map) || {}; } catch (e) {}
-      async function islem(d) {
+      // Aynı bno için birden fazla item → tek belgede birden fazla kayit satırı (D-MARKET Kargo+Komisyon)
+      const grup = {};
+      for (const it of paket.items) {
+        const k = (it.bno || '').toString();
+        if (!grup[k]) grup[k] = [];
+        grup[k].push(it);
+      }
+      const gruplar = Object.values(grup);
+      async function islem(items) {
+        const d = items[0];
         try {
           const alkNo = norm((d.bno || '').toString().replace(/[^0-9A-Za-z]/g, ''));
           const alk = alkMap[alkNo];
@@ -522,19 +531,19 @@
           if (!rc) return { bno: d.bno, s: '❌', m: 'Tedarikçi sorgu boş' };
           const t = iso(d.tarih);
           const ad = ((rc.soyad || '') + ' ' + (rc.ad || '')).trim().toLocaleUpperCase('tr');
-          const turKod = d.turKod || '4';
-          const kdvsiz = d.kdvsizIslem === true || (d.kdv === 0 && d.oran === 0);
-          const ana = kdvsiz
-            ? { deleted: false, alisTuruKodu: '1', giderKayitTuruKodu: turKod, giderKayitAltTuruKodu: String(d.altKod), aciklama: ad + ' - ' + d.altAd, naceKodu: paket.nace, tutar: d.matrah, isKdvDahil: false, kdvsizIslem: true }
-            : { deleted: false, alisTuruKodu: '1', giderKayitTuruKodu: turKod, giderKayitAltTuruKodu: String(d.altKod), aciklama: ad + ' - ' + d.altAd, naceKodu: paket.nace, tutar: d.matrah, isKdvDahil: false, kdvsizIslem: false, kdv: d.kdv, kdvOrani: d.oran };
-          // Dönemsellik ilkesi: normal indirilecek giderde (turKod 4) seçim ZORUNLU (gerçek API ile
-          // doğrulandı: donemsellik:false). Mal Alışı (1) ve ÖİV (5) bu alanı istemez/kabul etmez.
-          if (turKod === '4') ana.donemsellik = false;
-          const kayitlar = [ana];
-          if (d.oiv > 0) {
-            kayitlar.push({ deleted: false, alisTuruKodu: '1', giderKayitTuruKodu: '5', giderKayitAltTuruKodu: '218', aciklama: ad + ' - ÖZEL İLETİŞİM VERGİSİ', naceKodu: paket.nace, tutar: d.oiv, isKdvDahil: false, kdvsizIslem: true });
+          const kayitlar = [];
+          for (const x of items) {
+            const turKod = x.turKod || '4';
+            const kdvsiz = x.kdvsizIslem === true || (x.kdv === 0 && x.oran === 0);
+            const ana = kdvsiz
+              ? { deleted: false, alisTuruKodu: '1', giderKayitTuruKodu: turKod, giderKayitAltTuruKodu: String(x.altKod), aciklama: ad + ' - ' + x.altAd, naceKodu: paket.nace, tutar: x.matrah, isKdvDahil: false, kdvsizIslem: true }
+              : { deleted: false, alisTuruKodu: '1', giderKayitTuruKodu: turKod, giderKayitAltTuruKodu: String(x.altKod), aciklama: ad + ' - ' + x.altAd, naceKodu: paket.nace, tutar: x.matrah, isKdvDahil: false, kdvsizIslem: false, kdv: x.kdv, kdvOrani: x.oran };
+            if (turKod === '4') ana.donemsellik = false;
+            kayitlar.push(ana);
+            if (x.oiv > 0) {
+              kayitlar.push({ deleted: false, alisTuruKodu: '1', giderKayitTuruKodu: '5', giderKayitAltTuruKodu: '218', aciklama: ad + ' - ÖZEL İLETİŞİM VERGİSİ', naceKodu: paket.nace, tutar: x.oiv, isKdvDahil: false, kdvsizIslem: true });
+            }
           }
-          // Fatura no: sadece harf/rakam bırak (Excel'den gelen apostrof/boşluk vb. temizlenir), en çok 16 karakter
           const belgeNo = (d.bno || '').toString().replace(/[^0-9A-Za-z]/g, '').slice(0, 16);
           const P = { giderBelgeTuruKodu: '9', versiyon: 11, kayitTarihi: t, belgeTarihi: t, belgeSiraNo: belgeNo, tcknVkn: d.vkn, ad: rc.ad, soyad: rc.soyad, vergiDairesiKodu: rc.vergiDairesiKodu, adresiGuncelleme: false, kayitlar };
           if (rc.subeNo) P.subeNo = rc.subeNo;
@@ -545,11 +554,11 @@
         } catch (e) { return { bno: d.bno, s: '❌', m: e.message }; }
       }
       let ok = 0, er = 0; const rows = [];
-      bar.innerHTML = '<div id="__gonderStatus">Gönderiliyor… 0/' + paket.items.length + '</div><div id="__gonderRows" style="margin-top:10px"></div>';
-      for (let i = 0; i < paket.items.length; i += 5) {
-        const res = await Promise.all(paket.items.slice(i, i + 5).map(islem));
+      bar.innerHTML = '<div id="__gonderStatus">Gönderiliyor… 0/' + gruplar.length + '</div><div id="__gonderRows" style="margin-top:10px"></div>';
+      for (let i = 0; i < gruplar.length; i += 5) {
+        const res = await Promise.all(gruplar.slice(i, i + 5).map(islem));
         res.forEach(r => { if (r.s === '✅') ok++; else er++; rows.push(r); });
-        document.getElementById('__gonderStatus').textContent = 'Gönderiliyor… ' + (ok + er) + '/' + paket.items.length + ' (✅' + ok + ' ❌' + er + ')';
+        document.getElementById('__gonderStatus').textContent = 'Gönderiliyor… ' + (ok + er) + '/' + gruplar.length + ' (✅' + ok + ' ❌' + er + ')';
       }
       const rowsHtml = rows.map(r => '<div style="padding:5px 0;border-top:1px solid #1f2840">' + (r.s === '✅' ? '<span style="color:#6ee7b7">✅</span>' : '<span style="color:#fca5a5">❌</span>') + ' ' + r.bno + (r.m ? ' — <span style="color:#fca5a5">' + r.m + '</span>' : '') + '</div>').join('');
       document.getElementById('__gonderStatus').innerHTML = '<b style="font-size:16px;color:' + (er ? '#fca5a5' : '#6ee7b7') + '">🎉 ' + paket.mukellefAdi + ' — Tamamlandı: ' + ok + '/' + paket.items.length + (er ? ' (' + er + ' hata)' : '') + '</b>';
