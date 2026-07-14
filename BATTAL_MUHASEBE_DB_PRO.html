@@ -1333,6 +1333,12 @@ const App = {
         r.sinif=r.altAd; r.stopajGider=0; r.hasOIV=false; r.sabitKiymet=false;
         r.uyari=u; return;
       }
+      // Mükellefte tedarikciMap tanımlıysa ve bu tedarikçi haritada yoksa → ATLA (İGDAŞ/ECO gibi özel giderler)
+      if(m && m.tedarikciMap){
+        u.push('⏭ Tedarikçi haritada değil — özel/işletme dışı gider olabilir, elle kontrol');
+        r.sinif='ATLANDI'; r.altKod=0; r.altAd=''; r.stopajGider=0; r.hasOIV=false; r.sabitKiymet=false;
+        r.uyari=u; return;
+      }
       // Sınıflandırma
       let sinif='Diğer Hizmet', altKod=195, altAd='Diğer Hizmet Giderleri (GVK 40/1)', stopajGider=0, hasOIV=false;
       const txt = (r.unvan||'').toLocaleLowerCase('tr');
