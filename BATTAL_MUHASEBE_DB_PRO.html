@@ -724,11 +724,12 @@ const MUKELLEFLER = {
     kkAyrim:true, earsivFatura:true, // Excel'de per-oran matrah kolonları kullanılır
     // GİDER: tedarikçi VKN → altKod/altAd/turKod haritası (elle öğrenilen kodlar)
     tedarikciMap:{
-      // D-MARKET (Hepsiburada): tek fatura iki kalem - Kargo (193) + Komisyon+Tahsilat+Hizmet (194)
-      // XML açıklamasında MP Kargo Destek Yansıtma tutarı 193, kalan 194'e gider. XML yoksa ortalama %36.5 kargo.
+      // D-MARKET (Hepsiburada operatörü): Kargo (193) + Komisyon+Tahsilat+Hizmet (194)
       '2650179910':{ splitRatio:{ '193':0.365, '194':0.635 }, altAdMap:{ '193':'Kargo ,Posta ve Kurye Giderleri ( GVK 40/1)', '194':'Dışarıdan Sağlanan Fayda ve Hizmetler ( GVK 40/1)' }, turKod:'4' },
-      '4090017206':{ altKod:'186', altAd:'Mal Alışı', turKod:'1' }, // GÖRDES mal alışı
-      '34241131728':{ altKod:'186', altAd:'Mal Alışı', turKod:'1', kdvsizIslem:true } // DİLAVER YAYLACI (kdvsiz mal alışı)
+      // DSM Grup (Trendyol operatörü): aynı yapı (kargo + komisyon)
+      '3130557669':{ splitRatio:{ '193':0.365, '194':0.635 }, altAdMap:{ '193':'Kargo ,Posta ve Kurye Giderleri ( GVK 40/1)', '194':'Dışarıdan Sağlanan Fayda ve Hizmetler ( GVK 40/1)' }, turKod:'4' },
+      '4090017206':{ altKod:'186', altAd:'Mal Alışı', turKod:'1' }, // GÖRDES
+      '34241131728':{ altKod:'186', altAd:'Mal Alışı', turKod:'1', kdvsizIslem:true } // DİLAVER (kdvsiz)
     }
   },
   '3460330305':{
