@@ -1931,7 +1931,10 @@ if(fails.length)console.log('Hatalı: '+fails.slice(0,10).join(' | '));
       unvan: tip==='gider'
         ? fN(['gönderici','gönderen','satıcı','tedarikçi','tedarikci','cari','ünvan','unvan','ad soyad'],['vkn','tckn','kimlik','vergi no','vergi numara','alıcı','alici'])
         : fN(['alıcı','alici','ünvan','unvan','cari','ad soyad','müşteri','musteri'],['vkn','tckn','kimlik','vergi no','vergi numara','gönderici','gönderen','satıcı']),
-      vkn:   f('vkn/tckn','vkn','tckn','vergi no','kimlik','vergi numara','müşteri vergi'),
+      // Giderde gönderici VKN, gelirde alıcı/genel VKN
+      vkn:   tip==='gider'
+        ? f('gönderici vkn','gönderen vkn','satıcı vkn','tedarikçi vkn','vkn/tckn','vkn','tckn')
+        : f('vkn/tckn','vkn','tckn','vergi no','kimlik','vergi numara','müşteri vergi'),
       matrah:tip==='gider'?f('vergiler hariç','kdv hariç','matrah'):f('kdv matrah','mal hizmet','matrah','vergiler hariç','brüt toplam','ara toplam'),
       kdv:   f('toplam kdv','hesaplanan kdv','kdv tutar'),
       odenecek:f('ödenecek','net tahsil','genel toplam','toplam tahsil'),
