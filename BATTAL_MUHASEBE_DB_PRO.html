@@ -724,10 +724,12 @@ const MUKELLEFLER = {
     kkAyrim:true, earsivFatura:true, // Excel'de per-oran matrah kolonları kullanılır
     // GİDER: tedarikçi VKN → altKod/altAd/turKod haritası (elle öğrenilen kodlar)
     tedarikciMap:{
-      // D-MARKET (Hepsiburada operatörü): Kargo (193) + Komisyon+Tahsilat+Hizmet (194)
-      '2650179910':{ splitRatio:{ '193':0.365, '194':0.635 }, altAdMap:{ '193':'Kargo ,Posta ve Kurye Giderleri ( GVK 40/1)', '194':'Dışarıdan Sağlanan Fayda ve Hizmetler ( GVK 40/1)' }, turKod:'4' },
-      // DSM Grup (Trendyol operatörü): aynı yapı (kargo + komisyon)
-      '3130557669':{ splitRatio:{ '193':0.365, '194':0.635 }, altAdMap:{ '193':'Kargo ,Posta ve Kurye Giderleri ( GVK 40/1)', '194':'Dışarıdan Sağlanan Fayda ve Hizmetler ( GVK 40/1)' }, turKod:'4' },
+      // D-MARKET (Hepsiburada operatörü): tek faturada Kargo (193) + Komisyon (188). 194 YOK.
+      '2650179910':{ splitRatio:{ '193':0.365, '188':0.635 }, altAdMap:{ '193':'Kargo ,Posta ve Kurye Giderleri ( GVK 40/1)', '188':'Komisyon ve Pos Giderleri ( GVK 40/1)' }, turKod:'4' },
+      // DSM Grup (Trendyol operatörü): her hizmet AYRI fatura — bölme YOK, belge-no ön ekine göre tek kod.
+      //  DCF... = Komisyon (188) · DDF... = Kargo (193) veya Tahsilat/Hizmet=Dışarıdan Sağlanan (194).
+      //  DDF'de 193/194 fatura içeriğine bağlı → varsayılan 193, DDF satırları 'DDF-KONTROL' ile işaretlenir.
+      '3130557669':{ prefixMap:{ 'DCF':{ altKod:'188', altAd:'Komisyon ve Pos Giderleri ( GVK 40/1)' }, 'DDF':{ altKod:'193', altAd:'Kargo ,Posta ve Kurye Giderleri ( GVK 40/1)', ddfKontrol:true } }, turKod:'4' },
       '4090017206':{ altKod:'186', altAd:'Mal Alışı', turKod:'1' }, // GÖRDES
       '34241131728':{ altKod:'186', altAd:'Mal Alışı', turKod:'1', kdvsizIslem:true } // DİLAVER (kdvsiz)
     }
@@ -1300,7 +1302,7 @@ const App = {
           return;
         }
         const rec={belgeNo:bn,tarih:tar,vkn,unvan,matrah:x.matrah,kdv:x.kdv,oran:x.oran,oiv:(idx===0 && oivFark>1)?oivFark:0,odenecek,iptal,iade};
-        if(ted){ rec.altKod=ted.altKod; rec.altAd=ted.altAd; rec.giderTuruKodu=ted.turKod||'4'; if(ted.kdvsizIslem||x.oran===0)rec.kdvsizIslem=true; }
+        if(ted){ rec.altKod=ted.altKod; rec.altAd=ted.altAd; rec.giderTuruKodu=ted.turKod||'4'; if(ted.kdvsizIslem||x.oran===0)rec.kdvsizIslem=true; if(ted.ddfKontrol)rec.ddfKontrol=true; }
         out.push(rec);
       });
     }
@@ -1333,6 +1335,7 @@ const App = {
       const u=[];
       if(say[mkey(r)]>1)u.push('MÜKERRER');
       if(!r.vkn||r.vkn.length<10)u.push('VKN?');
+      if(r.ddfKontrol)u.push('❓ DDF: Kargo(193) varsayıldı — fatura Tahsilat/Hizmet ise 194 yap');
       if(r.iade)u.push('🔁 İADE FATURASI — iade/return olarak elle kaydet, normal alış değil');
       // ÖİV satırı: matrah=0 olması normal, ayrı kayıt olarak deftere yazılır
       if(r.isOivRow){
