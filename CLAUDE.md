@@ -62,6 +62,16 @@ Elle girilen: Battal Taner muhasebe ücreti (TNR·24679499156) — kaynakta yok,
   (önce kuru çalışma, sonra `window.GO=true`). `/gider/update` kullanır.
 - Açıklama toplu düzeltme (gelir): `scratchpad/bulk_aciklama_fix_v5.js`. `/gelir/update`, kayıtta `updated:true` şart.
 
+## ÖMER YILMAZ KİŞİSEL PANELİ (`OMERYILMAZ.html` — masaüstü, repoda değil, kullanıcı yükler)
+Tek dosya HTML komut merkezi. Her alt panel `SRCDOC={...}` içinde template-literal olarak gömülü, iframe'e `srcdoc` ile yüklenir. Sürüm: **v5000**.
+- **Fuat Hoca** paneli (`KGK-FuatHoca-Panel.html`) altın standart tasarım: konu→`HAZIR_SORULAR={konu:[{q,a,anahtar,puf}]}`, `HAZIR_GECMIS=[{yil,sinav,konu,q,a}]`, `KGK_KONULAR=[{ad,tip,ic,hoca}]`. Sekmeler: anasayfa/calisma/gecmis/deneme/gunun/bilgi/flashcard/infografik/referans/sozluk/simulasyon/favoriler/yanlislarim/analiz.
+- **KGK Sınav** ve **Soru-Cevap** ve **Güncel Mevzuat** panelleri Fuat Hoca şablonundan üretilir (Excel/SheetJS söküldü, sorular JS'e gömülü).
+- Jeneratör: `scratchpad/generate.py` (KGK+Soru-Cevap), `scratchpad/generate2.py` (Güncel Mevzuat). Fuat Hoca değerini alır, `KGK_KONULAR/HAZIR_SORULAR/HAZIR_GECMIS` sabitlerini değiştirir.
+- **İki seviyeli escape ŞART:** JS string (json.dumps) + template-literal (`\`,${,\` kaçışı) → `emb()` fonksiyonu.
+- Genel kültür/mevzuat panelinde muhasebe sekmeleri CSS ile gizlenir: `[data-tab="bilgi"|"gecmis"|"infografik"|"referans"|"simulasyon"]`, `.hero-card.blue`, `button[onclick*="fileInput"]` (Excel Yükle).
+- **Güncel Mevzuat iş akışı:** muhasebetr/verginet/alomaliye/ozdogrular/turmob yazılarını **WebSearch ile bul** (doğrudan WebFetch 403 verir), konuyu özetle, **10 soru-cevap + anahtar** yap, `scratchpad/mevzuat_data.json`'a tarihli makale olarak ekle (her makale=1 konu, ad="tarih · başlık"), generate2.py çalıştır. Otomatik günlük çekme YOK (siteler botu bloklar + yerel HTML CORS) — kullanıcı "güncel mevzuat çek" der, o an çekilir; veya kullanıcı makale metnini/ekranını atar.
+- Doğrulama: node ile `SRCDOC` değerini `eval('\`'+val+'\`')` ile aç, `new Function(script)` syntax kontrol, playwright (`/opt/node22/lib/node_modules/playwright`, `chromium.launch()`) ile render + screenshot.
+
 ## GENEL KURALLAR
 - Geliştirme dalı: `claude/project-development-continue-ni27io`. Repo: `omeryillmaz01-byte/battalpanel`.
 - Kullanıcı **panele gömülmesini** ister, ayrı HTML/manuel giriş istemez ("PANELE GÖM").

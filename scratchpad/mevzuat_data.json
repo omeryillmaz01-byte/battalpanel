@@ -1,0 +1,49 @@
+{
+ "articles": [
+  {
+   "tarih":"16.07.2026","baslik":"Damga Vergisi","yazar":"Bumin Doğrusöz","kaynak":"muhasebetr / ekonomim",
+   "sorular":[
+    {"q":"Damga vergisini doğuran olay nedir?","a":"Bir kağıdın yazılıp imzalanması veya imza yerine geçen bir işaret konarak düzenlenmesi ve ibraz edilebilir hale gelmesidir.","anahtar":"Vergiyi doğuran olay = imzalı kağıdın düzenlenmesi/ibrazı"},
+    {"q":"DVK'da 'kağıt' kavramına neler girer?","a":"Yazılıp imzalanan veya imza yerine geçen işaret konan, bir hususu ispat için ibraz edilebilen belgeler; ayrıca e-imza ile manyetik ortamda/elektronik veri şeklinde oluşturulan belgeler.","anahtar":"Kağıt = fiziki + elektronik (e-imza)"},
+    {"q":"Vergiye tabi kağıtlar ile istisna/muaf kağıtlar hangi tablolarda düzenlenir?","a":"(I) sayılı tablo vergiye tabi, (II) sayılı tablo istisna/muaf kağıtları gösterir.","anahtar":"(I) tabi · (II) istisna-muaf"},
+    {"q":"Damga vergisi hangi tarihsel olayda öne çıkar?","a":"Amerika Bağımsızlık Mücadelesi — kolonilere konan damga ve çay vergisine 'temsil edilmediğimiz vergiyi kabul etmeyiz' tepkisi (Boston).","anahtar":"Temsilsiz vergi olmaz · Boston"},
+    {"q":"'Temsilsiz vergi olmaz' ilkesi ilk hangi belgeyle benimsendi?","a":"1215 tarihli Magna Carta ile.","anahtar":"Magna Carta 1215"},
+    {"q":"Damga vergisi Türk hukukunda ne zaman uygulanmaya başladı?","a":"1858 tarihli bir Nizamname ile.","anahtar":"1858 Nizamname"},
+    {"q":"Neden 'ticari hayatın tartışmalı vergisi' denir?","a":"Yüksek maliyeti, tarafları yazılı sözleşme yerine sözlü anlaşmaya itip kayıt dışılığı teşvik ettiği eleştirisi nedeniyle.","anahtar":"Maliyet ↑ → sözlü anlaşma → kayıt dışı"},
+    {"q":"Yazıda eleştirilen iki temel etki nedir?","a":"(1) Yazılı işlemin maliyetini artırması, (2) tarafları kayıt dışına itmesi.","anahtar":"Maliyet artışı + kayıt dışılık"},
+    {"q":"Tanıtılan 'Damga Vergisi Kanunu Şerhi' kimin ve hangi özellikte?","a":"Prof. Dr. Ahmet Kırman; madde madde tahlil, öğreti + yargı kararları, 890 sayfa, 3. baskı (Yetkin Yayınevi).","anahtar":"Ahmet Kırman · 890 sf · 3. baskı"},
+    {"q":"Genel kural: bir kağıdın birden fazla imzalı nüshası varsa vergileme nasıl olur?","a":"Her nüsha ayrı ayrı aynı nispet/tutarda damga vergisine tabidir.","anahtar":"Her nüsha ayrı DV · DVK md.5"}
+   ]
+  },
+  {
+   "tarih":"14.07.2026","baslik":"Vergi Yargısı Açısından Adli Tatil","yazar":"—","kaynak":"muhasebetr",
+   "sorular":[
+    {"q":"2026 adli tatil hangi tarihler arasıdır?","a":"20 Temmuz – 31 Ağustos (dahil) arasıdır.","anahtar":"20 Tem – 31 Ağu"},
+    {"q":"Adli tatilde dava açma/başvuru süreleri durur mu?","a":"Durmaz, işlemeye devam eder; yalnızca sürenin SON günü adli tatile denk gelirse süre uzar.","anahtar":"Süre durmaz; son gün denk gelirse uzar"},
+    {"q":"Adli tatile denk gelen süre ne kadar uzar?","a":"Adli tatilin bittiği günü izleyen tarihten itibaren 7 gün uzar (İYUK md.8).","anahtar":"+7 gün · İYUK md.8"},
+    {"q":"Vergi davasında genel dava açma süresi nedir?","a":"30 gündür.","anahtar":"Dava açma 30 gün"},
+    {"q":"İstinaf başvuru ve istinafa cevap süreleri nedir?","a":"İstinaf başvuru 30 gün; istinafa cevap 30 gündür.","anahtar":"İstinaf 30 / cevap 30"},
+    {"q":"Adli tatilden etkilenen süreler hangi İYUK maddelerindedir?","a":"Dava açma (md.7), cevap (md.16), istinaf/temyiz (md.45-46) gibi İYUK'ta belirlenen süreler.","anahtar":"md.7-16-45/46"},
+    {"q":"Temyiz başvuru süresi adli tatilden etkilenir mi?","a":"Evet; istinaf ve temyiz başvuru süreleri de adli tatil uzamasına dahildir.","anahtar":"Temyiz de dahil"},
+    {"q":"Davalının cevap verme süresi adli tatilden etkilenir mi?","a":"Evet, cevap süreleri de kapsam içindedir.","anahtar":"Cevap süresi dahil"},
+    {"q":"Adli tatil ile mali tatil aynı şey midir?","a":"Hayır; mali tatil beyanname/ödeme sürelerini, adli tatil ise yargı sürelerini etkiler.","anahtar":"Mali tatil ≠ adli tatil"},
+    {"q":"Adli tatilde ivedi işler nerede görülür?","a":"İYUK md.8 kapsamında yürütmeyi durdurma gibi ivedi işlere nöbetçi mahkeme bakar.","anahtar":"Nöbetçi mahkeme · YD ivedi işler"}
+   ]
+  },
+  {
+   "tarih":"16.07.2026","baslik":"Yemek Servis ve Organizasyon Hizmetlerinde KDV Tevkifatı","yazar":"—","kaynak":"muhasebetr",
+   "sorular":[
+    {"q":"Yemek servis ve organizasyon hizmetlerinde KDV tevkifat oranı nedir?","a":"5/10 oranındadır.","anahtar":"5/10 tevkifat"},
+    {"q":"Bu tevkifatın tebliğ dayanağı nedir?","a":"KDV Genel Uygulama Tebliği'nin (3.2.4) bölümü (eski 117 Seri No.lu KDV GUT).","anahtar":"KDV GUT 3.2.4 (117)"},
+    {"q":"Tevkifatı kimler (alıcılar) yapar?","a":"Tebliğin (3.1.2/b) ayrımında sayılan 'belirlenmiş alıcılar' (idare, kurum, kuruluşlar).","anahtar":"3.1.2/b belirlenmiş alıcılar"},
+    {"q":"Yemek servis hizmetinin kapsamı nedir?","a":"Personel, öğrenci, hasta, müşteri, misafir, yolcu vb.nin yemek ihtiyacını karşılamak için alınan hizmetler.","anahtar":"Personel/öğrenci/hasta yemeği"},
+    {"q":"Organizasyon hizmeti kapsamına neler girer?","a":"Konser, fuar, kutlama, parti, kokteyl, davet, kongre, seminer, panel, tanıtım ve benzeri hizmetler.","anahtar":"Konser/kongre/davet/tanıtım"},
+    {"q":"Tevkifat kapsamı dışında kalan önemli istisna nedir?","a":"Hizmeti verenin, organizasyonun yapılacağı yeri (salon, otel vb.) işletenlerden aldığı hizmetler tevkifata tabi değildir.","anahtar":"Salon/otel işletmecisinden alım hariç"},
+    {"q":"Kısmi tevkifatta alt tutar sınırı var mı?","a":"Evet; belirlenen alt sınırı (KDV dahil) aşmayan işlemlerde tevkifat uygulanmaz.","anahtar":"Alt limit altı tevkifatsız"},
+    {"q":"Tevkif edilen KDV'yi alıcı hangi beyanname ile beyan eder?","a":"2 No.lu KDV beyannamesi ile.","anahtar":"2 No.lu KDV beyannamesi"},
+    {"q":"Satıcı tevkifatlı işlemi hangi beyannamede gösterir?","a":"1 No.lu KDV beyannamesinde; tevkif edilen kısım iade mekanizmasında takip edilir.","anahtar":"1 No.lu beyanname · iade"},
+    {"q":"Salon/otel işletmecisinden alınan yer hizmeti neden tevkifat dışıdır?","a":"Bu, organizasyonu düzenleyenin girdisi niteliğinde ayrı bir hizmet olduğundan nihai organizasyon hizmetinden ayrı tutulmuştur.","anahtar":"Yer hizmeti girdi → tevkifat dışı"}
+   ]
+  }
+ ]
+}
