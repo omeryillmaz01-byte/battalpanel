@@ -95,8 +95,11 @@ sc = json.load(open(SC+"data_sorucevap.json", encoding="utf-8"))
 # 2026 duzeltmelerini uygula (q_icerir eslesirse cevabi guncelle)
 import os
 _duz_say = 0
-if os.path.exists(SC+"duzeltmeler_sorucevap.json"):
-    _duz = json.load(open(SC+"duzeltmeler_sorucevap.json", encoding="utf-8"))["duzeltmeler"]
+_duz = []
+for _f in ["duzeltmeler_sorucevap.json","zenginlestirme_sorucevap.json"]:
+    if os.path.exists(SC+_f):
+        _duz += json.load(open(SC+_f, encoding="utf-8"))["duzeltmeler"]
+if _duz:
     def _uygula(item):
         global _duz_say
         qu = (item.get("q","")).upper()
