@@ -122,9 +122,9 @@ sc_tpl = replace_const(sc_tpl, "const HAZIR_SORULAR = {", "};", build_sorular(sc
 sc_tpl = replace_const(sc_tpl, "const HAZIR_SORULAR_EK", "};", "const HAZIR_SORULAR_EK = {}"+";")
 sc_tpl = replace_const(sc_tpl, "const HAZIR_GECMIS=[", "];", "const HAZIR_GECMIS=[]"+";")
 # --- Soru-Cevap markalama (genel kultur) ---
-sc_tpl = sc_tpl.replace("KGK SINAV PANELİ · Fuat Hoca Tarzı · Pro", "SORU-CEVAP · GENEL KÜLTÜR · Pro")
-sc_tpl = sc_tpl.replace("KGK SINAV", "SORU-CEVAP")
-sc_tpl = sc_tpl.replace("KGK Konuları", "Genel Kültür Konuları")
+sc_tpl = sc_tpl.replace("KGK SINAV PANELİ · Fuat Hoca Tarzı · Pro", "GENEL SORU-CEVAP · Pro")
+sc_tpl = sc_tpl.replace("KGK SINAV", "GENEL SORU-CEVAP")
+sc_tpl = sc_tpl.replace("KGK Konuları", "Soru-Cevap Konuları")
 sc_tpl = sc_tpl.replace("Fuat Hoca'nın püf noktasını öğren", "anahtar kavramı öğren")
 sc_tpl = sc_tpl.replace(">8 Konu<", ">"+str(len(sc_konular))+" Konu<").replace("8 Konu", str(len(sc_konular))+" Konu")
 # muhasebeye ozel sekmeleri + gecmis yillar kartini gizle (CSS, JS'e dokunmadan)
@@ -143,6 +143,8 @@ new = replace_srcdoc(new, "KGK-Sinav-Paneli", strip_excel(kgk_tpl))
 new = replace_srcdoc(new, "Soru-Paneli", strip_excel(sc_tpl))
 # surum v1000 -> v5000
 new = new.replace("v1000", "v5000")
+# panel tile adi: Soru - Cevap -> Genel Soru-Cevap
+new = new.replace('nm:"Soru – Cevap"', 'nm:"Genel Soru-Cevap"')
 
 open(SC+"OMERYILMAZ_v5000.html","w",encoding="utf-8").write(new)
 import os
