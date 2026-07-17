@@ -92,6 +92,22 @@ kgk_tpl = replace_const(kgk_tpl, "const HAZIR_GECMIS=[", "];", build_gecmis(kgk[
 
 # ============ SORU-CEVAP PANEL (genel kultur) ============
 sc = json.load(open(SC+"data_sorucevap.json", encoding="utf-8"))
+# 2026 duzeltmelerini uygula (q_icerir eslesirse cevabi guncelle)
+import os
+_duz_say = 0
+if os.path.exists(SC+"duzeltmeler_sorucevap.json"):
+    _duz = json.load(open(SC+"duzeltmeler_sorucevap.json", encoding="utf-8"))["duzeltmeler"]
+    def _uygula(item):
+        global _duz_say
+        qu = (item.get("q","")).upper()
+        for d in _duz:
+            if d["q_icerir"].upper() in qu:
+                item["a"] = d["yeni_cevap"]; _duz_say += 1
+        return item
+    for _k in sc["konular"]:
+        sc["konular"][_k] = [_uygula(it) for it in sc["konular"][_k]]
+    sc["yeni"] = [_uygula(it) for it in sc["yeni"]]
+    print("Uygulanan 2026 düzeltmesi:", _duz_say)
 sc_konular = dict(sc["konular"])
 for y in sc["yeni"]:
     k = y.get("konu") or "YENİ SORULAR"
