@@ -1,0 +1,13 @@
+{
+  "_aciklama": "Genel Kültür, Vatandaşlık, Din konularında bulduğumuz hatalı soruları düzelt",
+  "duzeltmeler": [
+    {
+      "q_icerir": "BİR İNSANIN DNA'SI İLE MUZUN DNA'SI YÜZDE KAÇ BENZERDİR",
+      "yeni_cevap": "İnsan ve muz DNA'sının benzerliği yaklaşık yüzde 41 oranındadır."
+    },
+    {
+      "q_icerir": "BİR TÜMÖR OLUŞMASI İÇİN KAÇ HÜCRENİN MUTASYONA UĞRAMASI YETE",
+      "yeni_cevap": "Bir hücrenin tamamen kanserleşebilmesi için yaklaşık 4-7 (yarım düzine) mutasyonun DNA'sında birikmesi gerekir."
+    }
+  ]
+}
