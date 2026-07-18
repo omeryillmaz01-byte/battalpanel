@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """Guncel Mevzuat panelini Fuat Hoca sablonuyla kur, OMERYILMAZ_v5000.html'e goc."""
-import json
-SC = "/tmp/claude-0/-home-user-battalpanel/80fac67a-e403-5b78-bdd7-3d8e155b8cf5/scratchpad/"
+import json, os
+SC = os.path.dirname(os.path.abspath(__file__))+"/"
 html = open(SC+"OMERYILMAZ_v5000.html", encoding="utf-8").read()
 
 def emb(s):

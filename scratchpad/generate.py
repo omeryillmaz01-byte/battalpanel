@@ -3,8 +3,10 @@
 """OMERYILMAZ.html: KGK-Sinav ve Soru-Cevap panellerini Fuat Hoca sablonuyla yeniden uret."""
 import json, re, io
 
-SC = "/tmp/claude-0/-home-user-battalpanel/80fac67a-e403-5b78-bdd7-3d8e155b8cf5/scratchpad/"
-html = open(SC+"OMERYILMAZ.html", encoding="utf-8").read()
+import os
+SC = os.path.dirname(os.path.abspath(__file__))+"/"
+# Önceki output'ı kaynak olarak kullan (versionning)
+html = open(SC+"OMERYILMAZ_v5000.html", encoding="utf-8").read()
 
 # ---- iki seviyeli escape: JS string (") + template-literal (`,${,\) ----
 def emb(s):
