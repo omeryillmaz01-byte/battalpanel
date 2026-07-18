@@ -1,0 +1,82 @@
+name: "KGK Paneli — Günlük Soru Güncelleme"
+
+on:
+  schedule:
+    - cron: "0 10 * * *"  # Her gün saat 10:00 UTC'de çalış
+  workflow_dispatch:      # Manual tetikleme de mümkün
+
+jobs:
+  daily-update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Repo'yu klonla"
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: "Python yükle"
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: "Günlük 30 soru ekle"
+        run: |
+          python3 << 'EOF'
+          import json
+          import os
+
+          repo_root = "/home/runner/work/battalpanel/battalpanel"
+          sc_dir = f"{repo_root}/scratchpad"
+
+          # Havuzdan ilk 30 soruyu çek
+          pool_file = f"{sc_dir}/daily_soru_pool.json"
+          data_file = f"{sc_dir}/data_kgk.json"
+
+          if not os.path.exists(pool_file) or not os.path.exists(data_file):
+              print("❌ Dosyalar bulunamadı")
+              exit(1)
+
+          pool = json.load(open(pool_file, encoding="utf-8"))
+          data = json.load(open(data_file, encoding="utf-8"))
+
+          # Havuz boşsa, ek 30 soru ekle (template)
+          if len(pool["sorular"]) < 30:
+              print(f"⚠️ Havuzda {len(pool['sorular'])} soru var, doldurulmak gerekli")
+
+          # İlk 30 soruyu çek
+          gunluk_sorular = pool["sorular"][:30]
+          if not gunluk_sorular:
+              print("❌ Havuzda yeterli soru yok")
+              exit(1)
+
+          # data_kgk.json'a ekle
+          data["yeni"].extend(gunluk_sorular)
+
+          # Havuzdan çıkart
+          pool["sorular"] = pool["sorular"][30:]
+
+          # Dosyaları kaydet
+          json.dump(data, open(data_file, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+          json.dump(pool, open(pool_file, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+
+          print(f"✓ {len(gunluk_sorular)} soru eklendi")
+          print(f"✓ Kalan havuz soruları: {len(pool['sorular'])}")
+          EOF
+
+      - name: "Panel'i regenerate et"
+        run: |
+          cd scratchpad && python3 generate.py
+
+      - name: "Değişiklikleri git'e stage et"
+        run: |
+          cd /home/runner/work/battalpanel/battalpanel
+          git config user.name "KGK Panel Bot"
+          git config user.email "panel@battalpanel.local"
+          git add scratchpad/data_kgk.json scratchpad/daily_soru_pool.json scratchpad/OMERYILMAZ_v5000.html
+          git diff --cached --quiet && echo "❌ Değişiklik yok" && exit 0
+          git commit -m "✨ Günlük 30 soru eklendi — $(date '+%Y-%m-%d %H:%M')"
+
+      - name: "Değişiklikleri push et"
+        run: |
+          cd /home/runner/work/battalpanel/battalpanel
+          git push -u origin claude/project-development-continue-ni27io
