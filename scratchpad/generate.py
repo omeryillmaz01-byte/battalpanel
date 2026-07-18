@@ -84,6 +84,22 @@ for y in kgk["yeni"]:
     k = y.get("konu") or "YENİ SORULAR"
     kgk_konular.setdefault(k, []).append({"q":y["q"],"a":y.get("a","")})
 
+# --- KGK: sadece resmi 4 modul kalsin; digerlerini Genel Soru-Cevap'a tasi ---
+kgk_tasinan = {}                       # Genel Soru-Cevap'a eklenecek konular
+for _k in ["VERGİ MEVZUATI", "GENEL HUKUK"]:
+    if _k in kgk_konular:
+        kgk_tasinan[_k] = kgk_konular.pop(_k)
+# KGK Mevzuati -> Denetim ile birlestir (denetim mevzuati/mesleki etik)
+if "KGK MEVZUATI" in kgk_konular:
+    kgk_konular.setdefault("DENETİM", []).extend(kgk_konular.pop("KGK MEVZUATI"))
+# Finans -> Kurumsal Yonetim ile birlestir (Kurumsal Yonetim Ilkeleri ve Finansal Yonetim tek modul)
+if "FİNANS" in kgk_konular:
+    kgk_konular.setdefault("KURUMSAL YÖNETİM", []).extend(kgk_konular.pop("FİNANS"))
+# resmi modul adlarina gore yeniden adlandir
+_kgk_rename = {"TMS-TFRS": "MUHASEBE STANDARTLARI (TMS-TFRS)",
+               "KURUMSAL YÖNETİM": "KURUMSAL YÖNETİM VE FİNANSAL YÖNETİM"}
+kgk_konular = { _kgk_rename.get(k, k): v for k, v in kgk_konular.items() }
+
 kgk_tpl = TEMPLATE
 kgk_tpl = replace_const(kgk_tpl, "const KGK_KONULAR = [", "];", build_konular(list(kgk_konular.keys()))+";")
 kgk_tpl = replace_const(kgk_tpl, "const HAZIR_SORULAR = {", "};", build_sorular(kgk_konular)+";")
@@ -115,6 +131,22 @@ sc_konular = dict(sc["konular"])
 for y in sc["yeni"]:
     k = y.get("konu") or "YENİ SORULAR"
     sc_konular.setdefault(k, []).append({"q":y["q"],"a":y.get("a","")})
+
+# --- kalkan mevzuat: Form Ba/Bs sorularini cikar (565 VUK GT, Eylul 2024) ---
+def _kalkan(it):
+    t = (it.get("q","")+" "+it.get("a","")).upper()
+    return ("FORM BA" in t) or ("FORM BS" in t) or ("BA-BS" in t) or ("BA/BS" in t) or ("BA VE BS" in t)
+_babs_say = 0
+for _k in list(sc_konular.keys()):
+    before = len(sc_konular[_k])
+    sc_konular[_k] = [it for it in sc_konular[_k] if not _kalkan(it)]
+    _babs_say += before - len(sc_konular[_k])
+print("Cikarilan kalkan-mevzuat (Ba/Bs) sorusu:", _babs_say)
+
+# --- KGK'dan tasinan konular (Vergi Mevzuati, Genel Hukuk) Genel Soru-Cevap'a ---
+for _k, _arr in kgk_tasinan.items():
+    sc_konular.setdefault(_k, []).extend(_arr)
+    print("KGK'dan tasindi -> Genel Soru-Cevap:", _k, len(_arr))
 
 sc_tpl = TEMPLATE
 sc_tpl = replace_const(sc_tpl, "const KGK_KONULAR = [", "];", build_konular(list(sc_konular.keys()))+";")
